@@ -171,15 +171,6 @@ proyecto/
 └── frontend/index.html            → dashboard (Chart.js)
 ```
 
-## Roles sugeridos (5 integrantes)
-
-- **Datos:** `loader.py`, informe de limpieza y métricas de ALOS.
-- **Modelos:** `estancia.py`, `demanda.py` y `modelo_estancia.py`.
-- **Agente:** `camas_agent.py` y `alertas.py`.
-- **API:** schemas, routers, errores y tests.
-- **Frontend e integración:** dashboard, Docker, README y repositorio.
-
-Cada uno en su rama, con pull requests a `main`.
 
 ## Limitaciones y mejoras
 
