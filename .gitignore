@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.vscode/
+.ipynb_checkpoints/
+/backend/HDHI Admission data.csv
