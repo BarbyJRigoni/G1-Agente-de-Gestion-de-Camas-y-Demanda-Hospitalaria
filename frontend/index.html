@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pronóstico de camas</title>
+<!-- frontend/index.html — Interfaz del agente. Responsable: Bárbara (IA e interfaz) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --tinta: #1d2f3f; --tinta-suave: #5b6b78; --fondo: #eef2f4; --hoja: #fff; --linea: #cfd8de;
+    --vacia: #dfe6ea; --nueva: #6f8fb3;
+    --normal: #3c8d5a; --precaucion: #d6a21e; --riesgo: #dd6b20; --saturacion: #c0392b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--tinta);
+    font-family: "Atkinson Hyperlegible", system-ui, sans-serif; line-height: 1.45; font-variant-numeric: tabular-nums; }
+  header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 1rem;
+    padding: 1.5rem clamp(1rem, 4vw, 3rem) 1rem; border-bottom: 3px solid var(--tinta); }
+  h1 { margin: 0; font-size: clamp(1.6rem, 3vw, 2.3rem); }
+  header p { margin: .2rem 0 0; color: var(--tinta-suave); }
+  nav { display: flex; gap: .4rem; flex-wrap: wrap; }
+  nav button, .sel button { font: inherit; padding: .45rem 1rem; border: 2px solid var(--tinta); background: transparent;
+    color: var(--tinta); border-radius: 999px; cursor: pointer; }
+  nav button[aria-pressed="true"], .sel button[aria-pressed="true"] { background: var(--tinta); color: #fff; }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--precaucion); outline-offset: 2px; }
+  main { padding: 1.25rem clamp(1rem, 4vw, 3rem) 3rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+  h2.seccion { margin: 1rem 0 -.5rem; font-size: 1.5rem; border-top: 3px solid var(--tinta); padding-top: 1rem; }
+  #alerta { padding: 1rem 1.25rem; border-left: 8px solid var(--normal); background: var(--hoja); font-weight: 700; }
+  #alerta.SATURACION { border-color: var(--saturacion); color: var(--saturacion); }
+  #alerta.RIESGO_ALTO { border-color: var(--riesgo); }
+  #alerta.PRECAUCION { border-color: var(--precaucion); }
+  #alerta small { display: block; font-weight: 400; color: var(--tinta-suave); margin-top: .3rem; }
+  .dia-control { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  .dia-control input { flex: 1; min-width: 200px; accent-color: var(--tinta); }
+  #diaEtiqueta { font-weight: 700; min-width: 12ch; }
+  .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .dos > * { min-width: 0; }
+  @media (max-width: 900px) { .dos { grid-template-columns: 1fr; } }
+  .panel { background: var(--hoja); padding: 1.25rem; }
+  .panel h3 { margin: 0 0 .75rem; font-size: 1.15rem; }
+  .area { border-top: 6px solid var(--normal); }
+  .area[data-nivel="PRECAUCION"] { border-top-color: var(--precaucion); }
+  .area[data-nivel="RIESGO_ALTO"] { border-top-color: var(--riesgo); }
+  .area[data-nivel="SATURACION"] { border-top-color: var(--saturacion); }
+  .cifras { display: flex; gap: 1.5rem; margin: .25rem 0 1rem; flex-wrap: wrap; }
+  .cifras b { font-size: 2rem; display: block; line-height: 1.1; }
+  .cifras span { color: var(--tinta-suave); font-size: .9rem; }
+  .camas { display: grid; grid-template-columns: repeat(20, 1fr); gap: 3px; }
+  .cama { aspect-ratio: 1.5; border-radius: 3px; background: var(--vacia); transition: background .25s; }
+  .cama.ocupada { background: var(--tinta); } .cama.nueva { background: var(--nueva); } .cama.excedente { background: var(--saturacion); }
+  .leyenda { display: flex; gap: 1rem; flex-wrap: wrap; font-size: .85rem; color: var(--tinta-suave); }
+  .leyenda i { display: inline-block; width: 1.2em; height: .75em; border-radius: 2px; margin-right: .3em; vertical-align: middle; }
+  .grafico { position: relative; height: 300px; }
+  ul.recs { margin: 0; padding-left: 1.2rem; } ul.recs li { margin-bottom: .5rem; max-width: 75ch; }
+  table { border-collapse: collapse; width: 100%; font-size: .92rem; }
+  th, td { padding: .4rem .5rem; text-align: right; border-bottom: 1px solid var(--linea); }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { border-bottom: 2px solid var(--tinta); vertical-align: bottom; }
+  tr.elegido td { font-weight: 700; }
+  .scroll { overflow-x: auto; }
+  .heat td { text-align: center; color: #fff; font-weight: 700; } .heat td:first-child { color: var(--tinta); font-weight: 400; text-align: left; }
+  .nota { color: var(--tinta-suave); font-size: .9rem; margin: .6rem 0 0; max-width: 90ch; }
+  .sel { display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: .75rem; }
+  .sel button { padding: .25rem .8rem; font-size: .9rem; }
+  .error { color: var(--saturacion); }
+  @media (prefers-reduced-motion: reduce) { .cama { transition: none; } }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Pronóstico de camas</h1>
+    <p id="subtitulo">Cargando…</p>
+  </div>
+  <nav aria-label="Escenario">
+    <button data-esc="normal" aria-pressed="true">Normal</button>
+    <button data-esc="limite" aria-pressed="false">Límite</button>
+    <button data-esc="critico" aria-pressed="false">Crítico</button>
+  </nav>
+</header>
+
+<main>
+  <div id="alerta" role="status"></div>
+
+  <div class="dia-control">
+    <label for="dia">Ver camas del</label>
+    <input id="dia" type="range" min="0" max="7" value="0" step="1">
+    <span id="diaEtiqueta">Hoy</span>
+  </div>
+
+  <section class="dos" id="unidades"></section>
+  <div class="leyenda">
+    <span><i style="background:var(--tinta)"></i>internados hoy que siguen</span>
+    <span><i style="background:var(--nueva)"></i>ingresos y pases proyectados</span>
+    <span><i style="background:var(--vacia)"></i>libre</span>
+    <span><i style="background:var(--saturacion)"></i>sin cama</span>
+  </div>
+
+  <section class="panel">
+    <h3>Ocupación proyectada y lo que realmente pasó</h3>
+    <div class="grafico"><canvas id="gProyeccion"></canvas></div>
+    <p class="nota">Línea gruesa: ocupación esperada. Punteada: escenario pesimista (P90). Gris: ocupación real de esos días en el dataset.
+      Así se puede verificar en vivo si el agente acertó.</p>
+  </section>
+
+  <section class="dos">
+    <div class="panel"><h3>Qué recomienda el agente</h3><ul class="recs" id="recs"></ul></div>
+    <div class="panel"><h3>Estancias prolongadas para revisar</h3><div class="scroll"><table id="revision"></table></div></div>
+  </section>
+
+  <h2 class="seccion">¿Qué tan bien predice?</h2>
+
+  <section class="dos">
+    <div class="panel">
+      <h3>Modelo de ingresos: los cuatro métodos en cada dataset</h3>
+      <div class="scroll"><table id="tDemanda"></table></div>
+      <p class="nota">WAPE: error absoluto total sobre ingresos reales, en 26 semanas de backtesting (siempre pronosticando con datos del pasado).
+        Se elige el de menor error diario, y solo si le gana a la media por 3 % o más. HC es el dataset de control: es aleatorio y el sistema no le encuentra patrones.</p>
+    </div>
+    <div class="panel">
+      <h3>Backtesting: ingresos reales vs. pronóstico</h3>
+      <div class="sel" id="selFuente">
+        <button data-f="HDHI" aria-pressed="true">HDHI</button>
+        <button data-f="LOS" aria-pressed="false">LOS</button>
+        <button data-f="HC" aria-pressed="false">HC (control)</button>
+      </div>
+      <div class="grafico"><canvas id="gBacktest"></canvas></div>
+    </div>
+  </section>
+
+  <section class="dos">
+    <div class="panel">
+      <h3>Error del agente según cuántos días adelante proyecta</h3>
+      <div class="grafico"><canvas id="gHorizonte"></canvas></div>
+      <p class="nota" id="notaHorizonte"></p>
+    </div>
+    <div class="panel">
+      <h3>¿Cuándo avisar? Reglas de alerta evaluadas</h3>
+      <div class="scroll"><table id="tAlertas"></table></div>
+      <p class="nota">Precisión: de las veces que avisó, cuántas efectivamente se saturó. Recall: de las semanas que se saturaron, cuántas anticipó.
+        La regla de la consigna (esperada &gt; 90 %) casi no da falsas alarmas pero se pierde dos de cada tres saturaciones.
+        Por eso se suma la <b>alerta preventiva</b> con probabilidad ≥ 30 %.</p>
+      <p class="nota" id="notaEstancia"></p>
+    </div>
+  </section>
+
+  <h2 class="seccion">Datos</h2>
+
+  <section class="panel">
+    <h3>Estancia media (noches) por patología y grupo etario, HDHI</h3>
+    <div class="scroll"><table class="heat" id="heatmap"></table></div>
+    <p class="nota" id="notaAlos"></p>
+  </section>
+
+  <section class="dos">
+    <div class="panel"><h3>Ocupación mensual histórica, HDHI</h3><div class="grafico"><canvas id="gHistorico"></canvas></div></div>
+    <div class="panel"><h3>Datasets integrados</h3><div class="scroll"><table id="tFuentes"></table></div></div>
+  </section>
+</main>
+
+<script>
+const API = location.protocol === "file:" ? "http://localhost:8000" : "";
+const COLOR = { NORMAL: "#3c8d5a", PRECAUCION: "#d6a21e", RIESGO_ALTO: "#dd6b20", SATURACION: "#c0392b" };
+const NIVEL_TXT = { NORMAL: "Normal", PRECAUCION: "Precaución", RIESGO_ALTO: "Riesgo alto", SATURACION: "Saturación" };
+const TONO = { UTI: "#1d2f3f", General: "#6f8fb3" };
+const NOMBRE_METODO = { media_28d: "Media 28 días", naive_semanal: "Semana anterior", estacional: "Estacional", regresion: "Regresión Ridge" };
+const charts = {};
+let proy = null, real = null, evalModelos = null;
+
+const $ = s => document.querySelector(s);
+const fmt = f => new Date(f + "T00:00").toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "numeric" });
+async function get(url) { const r = await fetch(API + url); if (!r.ok) throw new Error(`${url}: ${r.status}`); return r.json(); }
+function grafico(id, cfg) { if (charts[id]) charts[id].destroy(); charts[id] = new Chart($(id), cfg); }
+const opciones = (extra = {}) => ({ maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+  plugins: { legend: { labels: { boxWidth: 14 } } }, ...extra });
+
+// ---------------- Escenarios ----------------
+async function cargarEscenario(esc) {
+  document.querySelectorAll("nav button").forEach(b => b.setAttribute("aria-pressed", b.dataset.esc === esc));
+  try {
+    [proy, real] = await Promise.all([get(`/proyeccion-camas/escenario/${esc}`), get(`/escenario/${esc}/realidad`)]);
+  } catch (e) {
+    $("#alerta").innerHTML = `<span class="error">No se pudo consultar la API (${e.message}). ¿Está corriendo uvicorn?</span>`;
+    return;
+  }
+  $("#subtitulo").textContent = `Censo real del ${new Date(proy.fecha_referencia + "T00:00").toLocaleDateString("es-AR")} (HDHI), proyección a ${proy.horizonte_dias} días, modelo de ingresos: ${NOMBRE_METODO[proy.metodo_ingresos]}`;
+  const k = proy.kpis, a = $("#alerta");
+  a.className = proy.nivel_global;
+  a.innerHTML = `${proy.mensaje}<small>Tasa de ocupación proyectada (promedio de la semana): UTI ${k.tasa_ocupacion_proyectada_pct.UTI}%, General ${k.tasa_ocupacion_proyectada_pct.General}%, hospital ${k.tasa_ocupacion_proyectada_pct.Hospital}%.
+    ALOS: hospital ${k.alos_dias.Hospital}, UTI ${k.alos_dias.UTI} y sala ${k.alos_dias.General} noches. Índice de presión ${proy.indice_presion}/100.</small>`;
+  $("#dia").max = proy.horizonte_dias;
+  renderCamas(+$("#dia").value);
+  renderProyeccion();
+  $("#recs").innerHTML = proy.recomendaciones.map(r => `<li>${r}</li>`).join("");
+  const rev = proy.pacientes_a_revisar;
+  $("#revision").innerHTML = rev.length
+    ? `<thead><tr><th>Paciente</th><th>Unidad</th><th>Patología</th><th>Edad</th><th>Días</th><th>P90 grupo</th></tr></thead><tbody>` +
+      rev.slice(0, 10).map(p => `<tr><td>${p.id_paciente}</td><td>${p.unidad}</td><td>${p.patologia}</td><td>${p.edad}</td><td>${p.dias_en_unidad}</td><td>${p.p90_estrato}</td></tr>`).join("") + "</tbody>"
+    : "<tr><td>Ningún paciente supera el percentil 90 de su grupo.</td></tr>";
+}
+
+function nivelHoy(pct) {
+  const u = proy.umbral_saturacion_pct;
+  return pct > u ? "SATURACION" : pct <= 75 ? "NORMAL" : pct <= 85 ? "PRECAUCION" : "RIESGO_ALTO";
+}
+
+function renderCamas(dia) {
+  $("#diaEtiqueta").textContent = dia === 0 ? "Hoy" : `Día ${dia}, ${fmt(proy.unidades[0].proyeccion[dia - 1].fecha)}`;
+  $("#unidades").innerHTML = proy.unidades.map(u => {
+    const d = dia === 0 ? null : u.proyeccion[dia - 1];
+    const ocup = dia === 0 ? u.ocupadas_hoy : Math.round(d.camas_ocupadas_esperadas);
+    const pct = dia === 0 ? u.ocupacion_hoy_pct : d.ocupacion_pct;
+    const nivel = dia === 0 ? nivelHoy(pct) : d.nivel;
+    const siguen = dia === 0 ? ocup : Math.round(d.de_internados_actuales);
+    let celdas = "";
+    for (let i = 0; i < Math.max(u.capacidad, ocup); i++) {
+      const c = i >= u.capacidad ? "excedente" : i < Math.min(siguen, ocup) ? "ocupada" : i < ocup ? "nueva" : "";
+      celdas += `<div class="cama ${c}"></div>`;
+    }
+    const extra = dia === 0 ? "" : `<div><b>${d.prob_superar_umbral_pct}%</b><span>prob. de pasar el umbral</span></div>`;
+    return `<article class="panel area" data-nivel="${nivel}">
+      <h3>${u.unidad === "UTI" ? "Terapia intensiva (UTI)" : "Internación general"}, ${u.capacidad} camas</h3>
+      <div class="cifras">
+        <div><b>${ocup}</b><span>ocupadas</span></div>
+        <div><b>${Math.max(u.capacidad - ocup, 0)}</b><span>libres</span></div>
+        <div><b style="color:${COLOR[nivel]}">${pct}%</b><span>${NIVEL_TXT[nivel]}</span></div>${extra}
+      </div>
+      <div class="camas" aria-label="${ocup} de ${u.capacidad} camas ocupadas">${celdas}</div>
+    </article>`;
+  }).join("");
+}
+
+function renderProyeccion() {
+  const etiquetas = ["Hoy", ...proy.unidades[0].proyeccion.map(d => fmt(d.fecha))];
+  const ds = proy.unidades.flatMap(u => [
+    { label: `${u.unidad} esperada`, data: [u.ocupacion_hoy_pct, ...u.proyeccion.map(d => d.ocupacion_pct)],
+      borderColor: TONO[u.unidad], backgroundColor: TONO[u.unidad], borderWidth: 3, tension: .25,
+      pointBackgroundColor: [TONO[u.unidad], ...u.proyeccion.map(d => COLOR[d.nivel])], pointRadius: 5 },
+    { label: `${u.unidad} pesimista (P90)`, data: [u.ocupacion_hoy_pct, ...u.proyeccion.map(d => d.ocupacion_p90_pct)],
+      borderColor: TONO[u.unidad], borderDash: [5, 5], borderWidth: 1.5, pointRadius: 0, tension: .25 },
+    { label: `${u.unidad} real`, data: [u.ocupacion_hoy_pct, ...real[u.unidad]],
+      borderColor: "#9aa7b1", borderWidth: 2, pointRadius: 3, pointStyle: u.unidad === "UTI" ? "rect" : "triangle", tension: .25 },
+  ]);
+  ds.push({ label: "Umbral", data: etiquetas.map(() => proy.umbral_saturacion_pct), borderColor: "#c0392b", borderWidth: 2, pointRadius: 0 });
+  grafico("#gProyeccion", { type: "line", data: { labels: etiquetas, datasets: ds },
+    options: opciones({ scales: { y: { suggestedMin: 40, suggestedMax: 105, ticks: { callback: v => v + "%" } } } }) });
+}
+
+// ---------------- Evaluación de modelos ----------------
+async function cargarEvaluacion() {
+  evalModelos = await get("/modelo/evaluacion");
+  const metodos = ["media_28d", "naive_semanal", "estacional", "regresion"];
+  let filas = "";
+  for (const [f, r] of Object.entries(evalModelos.demanda)) {
+    metodos.forEach((m, i) => {
+      const x = r.backtest.metricas[m];
+      filas += `<tr class="${m === r.metodo_elegido ? "elegido" : ""}"><td>${i === 0 ? `${f} <small>(${r.ingresos_promedio_dia}/día)</small>` : ""}</td>
+        <td style="text-align:left">${NOMBRE_METODO[m]}${m === r.metodo_elegido ? " ✓" : ""}</td>
+        <td>${x.mae}</td><td>${x.wape_pct}%</td><td>${x.wape_semanal_pct}%</td><td>${x.cobertura_80pct}%</td></tr>`;
+    });
+  }
+  $("#tDemanda").innerHTML = `<thead><tr><th>Dataset</th><th style="text-align:left">Método</th><th>MAE</th><th>WAPE diario</th><th>WAPE semanal</th><th>Cobertura IC 80 %</th></tr></thead><tbody>${filas}</tbody>`;
+
+  const ag = evalModelos.agente;
+  grafico("#gHorizonte", { type: "bar",
+    data: { labels: [1, 2, 3, 4, 5, 6, 7].map(d => `Día ${d}`), datasets: ["UTI", "General"].map(u => ({
+      label: `${u} (camas de error)`, data: ag.error_camas_por_horizonte[u].mae, backgroundColor: TONO[u] })) },
+    options: opciones({ scales: { y: { title: { display: true, text: "Error absoluto medio (camas)" } } } }) });
+  $("#notaHorizonte").textContent = `Se proyectó desde ${ag.fechas_evaluadas} fechas reales y se comparó con la ocupación que hubo. El error crece con el horizonte: a 1 día ronda ${ag.error_camas_por_horizonte.UTI.mae[0]} camas en UTI y a 7 días ${ag.error_camas_por_horizonte.UTI.mae[6]}.`;
+  const nombres = { ocupacion_esperada_mayor_90: "Ocupación esperada > 90 % (consigna)", probabilidad_mayor_20: "Probabilidad ≥ 20 %",
+    probabilidad_mayor_30: "Probabilidad ≥ 30 % (preventiva) ✓", probabilidad_mayor_50: "Probabilidad ≥ 50 %" };
+  $("#tAlertas").innerHTML = `<thead><tr><th>Regla</th><th>Alertas</th><th>Precisión</th><th>Recall</th></tr></thead><tbody>` +
+    Object.entries(ag.reglas_de_alerta).map(([k, v]) => `<tr class="${k === "probabilidad_mayor_30" ? "elegido" : ""}"><td>${nombres[k]}</td><td>${v.alertas}</td><td>${Math.round(v.precision * 100)}%</td><td>${Math.round(v.recall * 100)}%</td></tr>`).join("") + "</tbody>";
+  const e = evalModelos.estancia_por_paciente.los_dias;
+  $("#notaEstancia").textContent = `Modelo de estancia por paciente (POST /estimar-estancia): error medio ${e.regresion.mae} noches, contra ${e.baseline_alos_patologia.mae} si se usa el promedio de la patología. Mejora poco: con los datos del ingreso la estancia es difícil de anticipar.`;
+  cargarBacktest("HDHI");
+}
+
+async function cargarBacktest(fuente) {
+  document.querySelectorAll("#selFuente button").forEach(b => b.setAttribute("aria-pressed", b.dataset.f === fuente));
+  const b = await get(`/modelo/backtest/${fuente}`);
+  grafico("#gBacktest", { type: "line", data: { labels: b.fechas.map(f => f.slice(5)), datasets: [
+    { label: "Real", data: b.real, borderColor: "#9aa7b1", borderWidth: 1, pointRadius: 0 },
+    { label: "Regresión Ridge", data: b.regresion, borderColor: "#1d2f3f", borderWidth: 2, pointRadius: 0 },
+    { label: "Media 28 días", data: b.media_28d, borderColor: "#d6a21e", borderWidth: 2, pointRadius: 0, borderDash: [4, 3] },
+  ]}, options: opciones({ scales: { x: { ticks: { maxTicksLimit: 10 } }, y: { title: { display: true, text: "Ingresos por día" } } } }) });
+}
+
+// ---------------- Datos ----------------
+async function cargarDatos() {
+  const alos = await get("/estadisticas/alos?fuente=HDHI&agrupar_por=patologia_grupo");
+  const grupos = ["15-29", "30-44", "45-64", "65-79", "80+"];
+  const pats = [...new Set(alos.datos.map(d => d.patologia))];
+  const idx = Object.fromEntries(alos.datos.map(d => [d.patologia + "|" + d.grupo_etario, d]));
+  const max = Math.max(...alos.datos.filter(d => d.casos >= 30).map(d => d.alos));
+  const celda = d => !d || d.casos < 30
+    ? `<td style="background:#dfe6ea;color:#5b6b78">${d ? d.alos : "–"}</td>`
+    : `<td style="background:rgba(29,47,63,${0.2 + 0.8 * d.alos / max})" title="${d.casos} casos, ${d.pct_uti}% pasa por UTI, mortalidad ${d.mortalidad_pct}%">${d.alos}</td>`;
+  $("#heatmap").innerHTML = `<thead><tr><th>Patología principal</th>${grupos.map(g => `<th>${g}</th>`).join("")}</tr></thead><tbody>` +
+    pats.map(p => `<tr><td>${p}</td>${grupos.map(g => celda(idx[p + "|" + g])).join("")}</tr>`).join("") + "</tbody>";
+  $("#notaAlos").textContent = `ALOS global: ${alos.alos_global} noches. Grises: menos de 30 casos (el agente usa la curva de la patología completa). Pasá el mouse para ver % de UTI y mortalidad.`;
+
+  const h = await get("/estadisticas/ocupacion-historica");
+  grafico("#gHistorico", { type: "line", data: { labels: h.meses, datasets: ["UTI", "General"].map(u => ({
+    label: u, data: h[u].map(v => +(100 * v / h.capacidad[u]).toFixed(1)), borderColor: TONO[u], borderWidth: 2, pointRadius: 2 })) },
+    options: opciones({ scales: { y: { ticks: { callback: v => v + "%" } } } }) });
+
+  const q = await get("/datos/calidad");
+  $("#tFuentes").innerHTML = `<thead><tr><th>Fuente</th><th>Registros</th><th>Período</th><th>Rol en el sistema</th></tr></thead><tbody>` +
+    Object.entries(q.fuentes).map(([f, r]) => `<tr><td>${f}</td><td>${r.registros_limpios.toLocaleString("es-AR")}</td><td>${r.fecha_desde.slice(0, 7)} a ${r.fecha_hasta.slice(0, 7)}</td>
+      <td style="text-align:left">${{ HDHI: "Hospital gestionado por el agente", LOS: "ALOS por comorbilidad y validación del modelo", HC: "Dataset de control (sin patrones)" }[f]}</td></tr>`).join("") +
+    `<tr><td><b>Integrado</b></td><td><b>${q.integracion.registros_totales.toLocaleString("es-AR")}</b></td><td></td><td style="text-align:left">${q.integracion.metodo}</td></tr></tbody>`;
+}
+
+document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", () => cargarEscenario(b.dataset.esc)));
+document.querySelectorAll("#selFuente button").forEach(b => b.addEventListener("click", () => cargarBacktest(b.dataset.f)));
+$("#dia").addEventListener("input", e => proy && renderCamas(+e.target.value));
+cargarEscenario("normal");
+cargarEvaluacion().catch(console.error);
+cargarDatos().catch(console.error);
+</script>
+</body>
+</html>
