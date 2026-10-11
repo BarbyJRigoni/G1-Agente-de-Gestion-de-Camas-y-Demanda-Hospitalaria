@@ -7,8 +7,6 @@ Agente que prevé la ocupación de camas de una red hospitalaria de 5 sedes para
 
 ## Dataset
 
-
-
 ## Estructura
 
 ```
@@ -46,4 +44,7 @@ proyecto/
 
 ## Limitaciones y mejoras
 
+## Documentación
 
+[Limpieza y preparación de datasets](docs/limpieza_datasets.md)
+[Análisis estadístico con Pandas](docs/analisis_estadistico.md)
