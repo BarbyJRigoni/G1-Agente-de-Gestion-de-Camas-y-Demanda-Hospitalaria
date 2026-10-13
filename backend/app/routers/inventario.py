@@ -186,3 +186,14 @@ def proyeccion_camas(censo_actual: CensoActual = Body(openapi_examples=EJEMPLOS_
         )
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
+
+from services.analisis_hdhi import obtener_indicadores_hdhi
+
+@router.get(
+    "/estadisticas/hdhi",
+    tags=["Datos"],
+    summary="ALOS de HDHI por patologia y edad",
+)
+def estadisticas_hdhi():
+    return obtener_indicadores_hdhi()
+
