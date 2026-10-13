@@ -15,6 +15,7 @@ from fastapi.responses import FileResponse
 
 from core import config
 from routers.inventario import router as router_camas
+from routers.prediccion import router as router_prediccion   # modelo de demanda (Barbara)
 
 app = FastAPI(
     title=config.APP_TITULO,
@@ -37,6 +38,7 @@ app.add_middleware(
 
 # Endpoints del agente (paso 4)
 app.include_router(router_camas)
+app.include_router(router_prediccion)
 
 
 @app.get("/salud", tags=["Sistema"], summary="Estado de la API")

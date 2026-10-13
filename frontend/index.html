@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gestión de camas | Grupo 1</title>
+<!-- frontend/index.html — Dashboard del agente. Responsable: Bárbara (IA e interfaz).
+     Consume la API del equipo: /datasets, /estadisticas, /proyeccion-camas y /modelo/* -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --tinta: #1d2f3f; --suave: #5b6b78; --fondo: #eef2f4; --hoja: #fff; --linea: #cfd8de;
+    --vacia: #dfe6ea; --nueva: #6f8fb3;
+    --ok: #3c8d5a; --aviso: #d6a21e; --riesgo: #dd6b20; --alerta: #c0392b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--tinta); line-height: 1.45;
+    font-family: "Atkinson Hyperlegible", system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+  header { padding: 1.5rem clamp(1rem, 4vw, 3rem) 1rem; border-bottom: 3px solid var(--tinta);
+    display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; justify-content: space-between; }
+  h1 { margin: 0; font-size: clamp(1.6rem, 3vw, 2.2rem); }
+  header p { margin: .2rem 0 0; color: var(--suave); }
+  .controles { display: flex; flex-wrap: wrap; gap: .75rem; align-items: end; }
+  .controles label { display: grid; gap: .2rem; font-size: .85rem; color: var(--suave); }
+  select, input[type=date], input[type=number] { font: inherit; padding: .4rem .5rem; border: 2px solid var(--tinta);
+    border-radius: 6px; background: var(--hoja); color: var(--tinta); }
+  input[type=number] { width: 7ch; }
+  .pildoras { display: flex; gap: .4rem; flex-wrap: wrap; }
+  .pildoras button { font: inherit; padding: .4rem .9rem; border: 2px solid var(--tinta); border-radius: 999px;
+    background: transparent; color: var(--tinta); cursor: pointer; }
+  .pildoras button[aria-pressed="true"] { background: var(--tinta); color: #fff; }
+  button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--aviso); outline-offset: 2px; }
+  main { padding: 1.25rem clamp(1rem, 4vw, 3rem) 3rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+  h2 { margin: 1rem 0 -.5rem; font-size: 1.45rem; border-top: 3px solid var(--tinta); padding-top: 1rem; }
+  .panel { background: var(--hoja); padding: 1.25rem; min-width: 0; }
+  .panel h3 { margin: 0 0 .75rem; font-size: 1.1rem; }
+  .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  @media (max-width: 900px) { .dos { grid-template-columns: 1fr; } }
+  #mensaje { padding: 1rem 1.25rem; background: var(--hoja); border-left: 8px solid var(--ok); font-weight: 700; }
+  #mensaje.alerta { border-color: var(--alerta); color: var(--alerta); }
+  #mensaje.preventiva { border-color: var(--riesgo); }
+  #mensaje small { display: block; font-weight: 400; color: var(--suave); margin-top: .3rem; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; }
+  .kpi { background: var(--hoja); padding: 1rem; }
+  .kpi b { display: block; font-size: 1.9rem; line-height: 1.1; }
+  .kpi span { color: var(--suave); font-size: .88rem; }
+  .dia { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: .75rem; }
+  .dia input { flex: 1; min-width: 180px; accent-color: var(--tinta); }
+  #diaTxt { font-weight: 700; min-width: 13ch; }
+  .camas { display: grid; gap: 3px; }
+  .cama { aspect-ratio: 1.5; border-radius: 3px; background: var(--vacia); transition: background .25s; }
+  .cama.ocupada { background: var(--tinta); } .cama.p90 { background: var(--nueva); } .cama.excede { background: var(--alerta); }
+  .leyenda { display: flex; gap: 1rem; flex-wrap: wrap; font-size: .85rem; color: var(--suave); margin-top: .75rem; }
+  .leyenda i { display: inline-block; width: 1.2em; height: .75em; border-radius: 2px; margin-right: .3em; vertical-align: middle; }
+  .grafico { position: relative; height: 300px; }
+  table { border-collapse: collapse; width: 100%; font-size: .92rem; }
+  th, td { padding: .4rem .5rem; text-align: right; border-bottom: 1px solid var(--linea); }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { border-bottom: 2px solid var(--tinta); vertical-align: bottom; }
+  tr.elegido td { font-weight: 700; }
+  td.si { color: var(--alerta); font-weight: 700; }
+  .scroll { overflow-x: auto; }
+  .nota { color: var(--suave); font-size: .9rem; margin: .6rem 0 0; max-width: 90ch; }
+  .error { color: var(--alerta); }
+  @media (prefers-reduced-motion: reduce) { .cama { transition: none; } }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Gestión de camas</h1>
+    <p id="subtitulo">Proyección a 7 días y Alerta de Saturación</p>
+  </div>
+  <div class="controles">
+    <label>Dataset <select id="dataset"></select></label>
+    <label>Fecha del censo <input type="date" id="fecha"></label>
+    <label>Camas <input type="number" id="capacidad" min="1"></label>
+    <div class="pildoras" id="casos" aria-label="Casos de la demo">
+      <button data-fecha="2019-01-01">Normal</button>
+      <button data-fecha="2019-03-05">Límite</button>
+      <button data-fecha="2018-01-09">Crítico</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div id="mensaje" role="status">Cargando…</div>
+
+  <section class="kpis" id="kpis"></section>
+
+  <section class="dos">
+    <div class="panel">
+      <h3>Camas del hospital</h3>
+      <div class="dia">
+        <label for="dia">Ver</label>
+        <input id="dia" type="range" min="0" max="7" value="0">
+        <span id="diaTxt">Hoy</span>
+      </div>
+      <div class="camas" id="camas"></div>
+      <div class="leyenda">
+        <span><i style="background:var(--tinta)"></i>ocupada (esperado)</span>
+        <span><i style="background:var(--nueva)"></i>se ocuparían en el escenario pesimista (P90)</span>
+        <span><i style="background:var(--vacia)"></i>libre</span>
+        <span><i style="background:var(--alerta)"></i>sin cama</span>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Ocupación proyectada y lo que realmente pasó</h3>
+      <div class="grafico"><canvas id="gProy"></canvas></div>
+      <p class="nota">Como el censo es una fecha del pasado, la línea gris muestra la ocupación real de esos días: se puede ver en vivo si el agente acertó.</p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h3>Detalle por día</h3>
+    <div class="scroll"><table id="tDias"></table></div>
+  </section>
+
+  <h2>¿Qué tan bien predice?</h2>
+
+  <section class="dos">
+    <div class="panel">
+      <h3>Modelo de ingresos: cinco métodos en los tres datasets</h3>
+      <div class="scroll"><table id="tMetodos"></table></div>
+      <p class="nota">Backtesting de 26 semanas: en cada semana se entrena solo con el pasado y se pronostican los 7 días siguientes.
+        WAPE = error total / ingresos totales. Se elige el de menor error diario, solo si le gana a la media por 3 % o más.</p>
+    </div>
+    <div class="panel">
+      <h3>Ingresos reales vs. pronóstico</h3>
+      <div class="grafico"><canvas id="gBack"></canvas></div>
+      <p class="nota" id="notaBack"></p>
+    </div>
+  </section>
+
+  <section class="dos">
+    <div class="panel">
+      <h3>Error del agente según los días de anticipación</h3>
+      <div class="grafico"><canvas id="gHorizonte"></canvas></div>
+      <p class="nota" id="notaHorizonte"></p>
+    </div>
+    <div class="panel">
+      <h3>¿Cuándo conviene avisar?</h3>
+      <div class="scroll"><table id="tReglas"></table></div>
+      <p class="nota">Precisión: de las veces que avisó, cuántas efectivamente se superó el 90 %.
+        Recall: de las semanas que lo superaron, cuántas anticipó.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+const API = location.protocol === "file:" ? "http://localhost:8000" : "";
+const NOMBRE = { media_28d: "Media 28 días", semana_anterior: "Semana anterior", dia_semana_8sem: "Día de semana (8 sem.)",
+                 estacional: "Estacional (mes × día)", regresion: "Regresión Ridge" };
+const charts = {};
+let datasets = [], proy = null, real = null;
+
+const $ = s => document.querySelector(s);
+const fmt = f => new Date(f + "T00:00").toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "numeric" });
+const fmtLargo = f => new Date(f + "T00:00").toLocaleDateString("es-AR");
+async function api(url, opciones) {
+  const r = await fetch(API + url, opciones);
+  const datos = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(datos.detail ? JSON.stringify(datos.detail) : `${url}: ${r.status}`);
+  return datos;
+}
+function grafico(id, cfg) { if (charts[id]) charts[id].destroy(); charts[id] = new Chart($(id), cfg); }
+const opc = extra => ({ maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+  plugins: { legend: { labels: { boxWidth: 14 } } }, ...extra });
+
+// ---------------- Proyección ----------------
+async function proyectar() {
+  const dataset = $("#dataset").value, fecha = $("#fecha").value, cap = +$("#capacidad").value || null;
+  document.querySelectorAll("#casos button").forEach(b =>
+    b.setAttribute("aria-pressed", dataset === "hdhi" && b.dataset.fecha === fecha));
+  try {
+    [proy, real] = await Promise.all([
+      api("/proyeccion-camas", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dataset, fecha, capacidad: cap }) }),
+      api(`/modelo/ocupacion-real?dataset=${dataset}&desde=${fecha}`).catch(() => null),
+    ]);
+  } catch (e) {
+    $("#mensaje").className = "alerta";
+    $("#mensaje").innerHTML = `<span class="error">No se pudo proyectar: ${e.message}</span>`;
+    return;
+  }
+  const m = $("#mensaje");
+  m.className = proy.alerta_saturacion ? "alerta" : proy.alerta_preventiva ? "preventiva" : "";
+  m.innerHTML = `${proy.mensaje}<small>Censo del ${fmtLargo(proy.fecha_censo)} (${proy.origen_censo}).
+    Ingresos estimados con: ${NOMBRE[proy.metodo_ingresos] || proy.metodo_ingresos}.</small>`;
+  const kpi = (v, t) => `<div class="kpi"><b>${v}</b><span>${t}</span></div>`;
+  $("#kpis").innerHTML =
+    kpi(`${proy.tasa_ocupacion_hoy_pct}%`, `ocupación hoy (${proy.camas_ocupadas_hoy} de ${proy.capacidad})`) +
+    kpi(`${proy.tasa_ocupacion_maxima_pct}%`, "tasa de ocupación proyectada máxima") +
+    kpi(`${proy.prob_max_superar_umbral_pct}%`, "probabilidad de superar el 90 %") +
+    kpi(`${proy.alos_historico} días`, "ALOS histórico") +
+    kpi(fmt(proy.dia_pico), "día pico");
+  $("#dia").max = proy.proyeccion.length;
+  dibujarCamas(+$("#dia").value);
+  dibujarProyeccion();
+  $("#tDias").innerHTML = `<thead><tr><th>Día</th><th>Ingresos</th><th>Altas</th><th>Ocupadas</th><th>Pesimista (P90)</th>
+    <th>Libres</th><th>Ocupación</th><th>Prob. &gt; 90 %</th><th>Real</th><th>Alerta</th></tr></thead><tbody>` +
+    proy.proyeccion.map((d, i) => `<tr><td>${fmt(d.fecha)}</td><td>${d.ingresos_previstos}</td><td>${d.altas_previstas}</td>
+      <td>${d.camas_ocupadas}</td><td>${d.camas_ocupadas_p90 ?? "–"}</td><td>${d.camas_libres}</td><td>${d.tasa_ocupacion_pct}%</td>
+      <td>${d.prob_superar_umbral_pct ?? "–"}%</td><td>${real?.camas_ocupadas[i] ?? "–"}</td>
+      <td class="${d.alerta_saturacion ? "si" : ""}">${d.alerta_saturacion ? "Saturación" : "–"}</td></tr>`).join("") + "</tbody>";
+}
+
+function dibujarCamas(dia) {
+  const cap = proy.capacidad;
+  const d = dia === 0 ? null : proy.proyeccion[dia - 1];
+  const ocup = dia === 0 ? proy.camas_ocupadas_hoy : Math.round(d.camas_ocupadas);
+  const p90 = dia === 0 ? ocup : Math.round(d.camas_ocupadas_p90 ?? d.camas_ocupadas);
+  $("#diaTxt").textContent = dia === 0 ? "Hoy" : `Día ${dia}, ${fmt(d.fecha)}`;
+  const total = Math.max(cap, p90);
+  const cols = Math.ceil(Math.sqrt(total * 1.8));
+  let html = "";
+  for (let i = 0; i < total; i++) {
+    const c = i >= cap ? "excede" : i < ocup ? "ocupada" : i < p90 ? "p90" : "";
+    html += `<div class="cama ${c}"></div>`;
+  }
+  $("#camas").style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  $("#camas").innerHTML = html;
+}
+
+function dibujarProyeccion() {
+  const etiquetas = ["Hoy", ...proy.proyeccion.map(d => fmt(d.fecha))];
+  const series = [
+    { label: "Esperada", data: [proy.tasa_ocupacion_hoy_pct, ...proy.proyeccion.map(d => d.tasa_ocupacion_pct)],
+      borderColor: "#1d2f3f", borderWidth: 3, tension: .25,
+      pointBackgroundColor: ["#1d2f3f", ...proy.proyeccion.map(d => d.alerta_saturacion ? "#c0392b" : "#1d2f3f")], pointRadius: 5 },
+    { label: "Pesimista (P90)", data: [proy.tasa_ocupacion_hoy_pct, ...proy.proyeccion.map(d =>
+        d.camas_ocupadas_p90 ? +(100 * d.camas_ocupadas_p90 / proy.capacidad).toFixed(1) : null)],
+      borderColor: "#6f8fb3", borderDash: [6, 4], borderWidth: 2, pointRadius: 0, tension: .25 },
+    { label: "Umbral 90 %", data: etiquetas.map(() => 90), borderColor: "#c0392b", borderWidth: 2, pointRadius: 0 },
+  ];
+  if (real) series.splice(2, 0, { label: "Real", data: [proy.tasa_ocupacion_hoy_pct, ...real.tasa_ocupacion_pct],
+    borderColor: "#9aa7b1", borderWidth: 2, pointRadius: 3, tension: .25 });
+  grafico("#gProy", { type: "line", data: { labels: etiquetas, datasets: series },
+    options: opc({ scales: { y: { suggestedMin: 50, suggestedMax: 105, ticks: { callback: v => v + "%" } } } }) });
+}
+
+// ---------------- Evaluación ----------------
+async function cargarEvaluacion() {
+  const modelos = await Promise.all(datasets.map(d => api(`/modelo/demanda?dataset=${d.clave}`)));
+  let filas = "";
+  modelos.forEach(r => Object.keys(NOMBRE).forEach((k, i) => {
+    const x = r.backtest.metricas[k];
+    filas += `<tr class="${k === r.metodo_elegido ? "elegido" : ""}">
+      <td>${i === 0 ? `${r.dataset} <small>(${r.ingresos_promedio_dia}/día)</small>` : ""}</td>
+      <td style="text-align:left">${NOMBRE[k]}${k === r.metodo_elegido ? " ✓" : ""}</td>
+      <td>${x.mae}</td><td>${x.wape_pct}%</td><td>${x.wape_semanal_pct}%</td><td>${x.cobertura_80pct}%</td></tr>`;
+  }));
+  $("#tMetodos").innerHTML = `<thead><tr><th>Dataset</th><th style="text-align:left">Método</th><th>MAE</th>
+    <th>WAPE diario</th><th>WAPE semanal</th><th>Cobertura IC 80 %</th></tr></thead><tbody>${filas}</tbody>`;
+
+  const b = await api("/modelo/backtest?dataset=hdhi");
+  grafico("#gBack", { type: "line", data: { labels: b.fechas.map(f => f.slice(5)), datasets: [
+    { label: "Real", data: b.real, borderColor: "#9aa7b1", borderWidth: 1, pointRadius: 0 },
+    { label: NOMBRE[b.metodo_elegido], data: b[b.metodo_elegido], borderColor: "#1d2f3f", borderWidth: 2, pointRadius: 0 },
+    { label: "Media 28 días", data: b.media_28d, borderColor: "#d6a21e", borderWidth: 2, borderDash: [4, 3], pointRadius: 0 },
+  ]}, options: opc({ scales: { x: { ticks: { maxTicksLimit: 10 } }, y: { title: { display: true, text: "Ingresos por día" } } } }) });
+  $("#notaBack").textContent = `HDHI, ${b.fechas[0]} a ${b.fechas.at(-1)}. El modelo sigue el patrón semanal; los picos de un solo día son azar y ningún método los anticipa.`;
+
+  const ev = await api("/modelo/evaluacion-agente?dataset=hdhi");
+  grafico("#gHorizonte", { type: "bar", data: { labels: ev.error_por_dia.mae_camas.map((_, i) => `Día ${i + 1}`),
+    datasets: [{ label: "Error medio (camas)", data: ev.error_por_dia.mae_camas, backgroundColor: "#1d2f3f" }] },
+    options: opc({ scales: { y: { title: { display: true, text: "Camas" } } } }) });
+  $("#notaHorizonte").textContent = `Se proyectó desde ${ev.fechas_evaluadas} fechas reales de HDHI y se comparó con lo que pasó.
+    A 1 día el error es de ${ev.error_por_dia.mae_camas[0]} camas (${ev.error_por_dia.mae_pct_capacidad[0]} % de la capacidad);
+    a 7 días, ${ev.error_por_dia.mae_camas.at(-1)} (${ev.error_por_dia.mae_pct_capacidad.at(-1)} %).`;
+  const reglas = { ocupacion_esperada_mayor_90: "Ocupación esperada > 90 % (consigna)",
+                   p90_mayor_90: "Escenario pesimista (P90) > 90 %", probabilidad_mayor_30: "Probabilidad ≥ 30 % (preventiva)" };
+  $("#tReglas").innerHTML = `<thead><tr><th>Regla</th><th>Alertas</th><th>Aciertos</th><th>Precisión</th><th>Recall</th></tr></thead><tbody>` +
+    Object.entries(ev.reglas_de_alerta).map(([k, v]) => `<tr><td>${reglas[k]}</td><td>${v.alertas}</td><td>${v.aciertos}</td>
+      <td>${Math.round(100 * v.precision)}%</td><td>${Math.round(100 * v.recall)}%</td></tr>`).join("") +
+    `</tbody><caption style="caption-side:bottom;text-align:left" class="nota">Semanas que realmente superaron el 90 %: ${ev.semanas_que_realmente_superaron_el_umbral} de ${ev.fechas_evaluadas}.</caption>`;
+}
+
+// ---------------- Inicio ----------------
+async function iniciar() {
+  try { datasets = await api("/datasets"); }
+  catch (e) { $("#mensaje").innerHTML = `<span class="error">No se pudo conectar con la API. ¿Está corriendo uvicorn? (${e.message})</span>`; return; }
+  $("#dataset").innerHTML = datasets.map(d => `<option value="${d.clave}">${d.nombre}</option>`).join("");
+  const elegirDataset = () => {
+    const d = datasets.find(x => x.clave === $("#dataset").value);
+    $("#fecha").value = d.fecha_demo;
+    $("#capacidad").value = d.capacidad_total;
+    $("#casos").hidden = d.clave !== "hdhi";
+    $("#subtitulo").textContent = `${d.nombre}, ${d.capacidad_total} camas. Proyección a 7 días y Alerta de Saturación.`;
+  };
+  $("#dataset").addEventListener("change", () => { elegirDataset(); proyectar(); });
+  $("#fecha").addEventListener("change", proyectar);
+  $("#capacidad").addEventListener("change", proyectar);
+  document.querySelectorAll("#casos button").forEach(b => b.addEventListener("click", () => {
+    $("#fecha").value = b.dataset.fecha; proyectar(); }));
+  $("#dia").addEventListener("input", e => proy && dibujarCamas(+e.target.value));
+  elegirDataset();
+  $("#fecha").value = "2019-01-01";
+  await proyectar();
+  cargarEvaluacion().catch(e => console.error(e));
+}
+iniciar();
+</script>
+</body>
+</html>
