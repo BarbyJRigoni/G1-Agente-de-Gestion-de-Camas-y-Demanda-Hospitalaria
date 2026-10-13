@@ -47,6 +47,8 @@ class DiaProyectado(BaseModel):
     ingresos_previstos: float
     altas_previstas: float
     camas_ocupadas: float
+    camas_ocupadas_p90: Optional[float] = Field(None, description="Escenario pesimista (percentil 90)")
+    prob_superar_umbral_pct: Optional[float] = None
     camas_libres: int
     tasa_ocupacion_pct: float
     alerta_saturacion: bool
@@ -54,6 +56,9 @@ class DiaProyectado(BaseModel):
 
 class ProyeccionRespuesta(BaseModel):
     dataset: str
+    metodo_ingresos: Optional[str] = Field(None, description="Metodo del modelo de demanda usado")
+    prob_max_superar_umbral_pct: Optional[float] = None
+    alerta_preventiva: Optional[bool] = Field(None, description="Sin saturacion esperada, pero prob. >= 30 %")
     fecha_censo: date
     origen_censo: str
     capacidad: int
