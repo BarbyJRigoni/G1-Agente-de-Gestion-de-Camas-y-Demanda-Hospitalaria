@@ -1,0 +1,24 @@
+DEMO DEL AGENTE DE GESTION DE CAMAS (Grupo 1)
+=============================================
+
+Hay dos formas de ver el sistema sin abrir VS Code:
+
+1) dashboard_sin_servidor.html  (no necesita nada)
+   Doble clic y se abre en el navegador. Funciona sin internet y sin Python.
+   Tiene grabadas las respuestas reales del agente para los casos de la demo:
+     - HDHI: Normal (04/06/2018), Limite (05/03/2019) y Critico (09/01/2018)
+     - LengthOfStay: 01/12/2012
+     - Healthcare: 01/04/2024
+   No se pueden cambiar la fecha ni la cantidad de camas.
+   Sirve como respaldo si en la exposicion falla la computadora o el servidor.
+
+2) iniciar_demo.bat  (el sistema completo, en vivo)
+   Doble clic: levanta el servidor y abre el dashboard y /docs en el navegador.
+   Requisitos: tener el proyecto completo (esta carpeta "demo" adentro del repo),
+   Python instalado y el entorno .venv con las dependencias
+   (pip install -r requirements.txt).
+   La primera carga tarda unos segundos: el sistema entrena y evalua los modelos.
+   Para cerrarlo, cerrar la ventana negra.
+
+Si el navegador se abre antes de que el servidor este listo, esperar unos
+segundos y recargar la pagina (F5).
