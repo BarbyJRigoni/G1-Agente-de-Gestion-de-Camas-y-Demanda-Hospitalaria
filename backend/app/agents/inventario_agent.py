@@ -29,8 +29,6 @@ from services.prediccion import Z_80, modelo_demanda, predecir_ingresos
 
 PROB_ALERTA_PREVENTIVA = 0.30   # elegido evaluando precision / recall (ver docs/modelo_prediccion.md)
 
-SEMANAS_HISTORIA = 8     # semanas usadas para la tasa de ingresos
-
 
 # ------------------------------------------------------------
 # 1. Datos
@@ -84,21 +82,6 @@ def censo_en_fecha(internaciones, fecha):
 def calcular_prob_seguir(duraciones, dias_max):
     duraciones = np.asarray(duraciones)
     return np.array([(duraciones > t).mean() for t in range(dias_max + 1)])
-
-
-# Ingresos esperados por dia de la semana (0 = lunes ... 6 = domingo),
-# promediando las ultimas semanas anteriores a la fecha del censo.
-def calcular_tasa_ingresos(internaciones, fecha):
-    fecha = pd.Timestamp(fecha)
-    desde = fecha - pd.Timedelta(weeks=SEMANAS_HISTORIA)
-
-    ultimos = internaciones[
-        (internaciones["ingreso"] > desde) & (internaciones["ingreso"] <= fecha)
-    ]
-    por_dia = ultimos["ingreso"].value_counts().reindex(
-        pd.date_range(desde + pd.Timedelta(days=1), fecha), fill_value=0
-    )
-    return por_dia.groupby(por_dia.index.dayofweek).mean()
 
 
 # ------------------------------------------------------------

@@ -1,22 +1,15 @@
-# Cambios de la rama Barby
+# Cambios de la rama Barby (corrección de errores)
 
-Copiar estos archivos respetando las carpetas (reemplazan a los que ya están en la rama).
+Responden al documento "Errores_Agente_camas".
 
-## Archivos de Bárbara
+| Problema | Arreglo | Archivo |
+|---|---|---|
+| El método de ingresos se elegía con las últimas 26 semanas del dataset, incluyendo meses posteriores a la fecha del censo | Ahora se elige con las 26 semanas **anteriores** a cada censo. `/modelo/demanda` y `/modelo/backtest` aceptan `?fecha=` para ver esa elección | `services/prediccion.py`, `routers/prediccion.py` |
+| El ALOS aparecía con valores distintos (6,47 / 6,44 / 6,38) | La tarjeta dice "ALOS hasta la fecha del censo" y el mensaje explica por qué cambia | `frontend/index.html` |
+| El dashboard necesitaba internet (Chart.js por CDN) | Chart.js 4.4.1 va incluido dentro del HTML; la fuente es opcional | `frontend/index.html` |
+| Los botones Normal/Límite/Crítico seguían visibles con otros datasets y mandaban fechas de HDHI (errores 400/404) | `.pildoras[hidden] { display: none; }` | `frontend/index.html` |
+| Código sin uso: `calcular_tasa_ingresos` y `SEMANAS_HISTORIA` | Eliminado | `agents/inventario_agent.py` |
+| Archivos vacíos de la plantilla | Eliminados `backend/app/templates/index.html` y `backend/data/data.csv` | — |
+| Caso Normal (01/01/2019): la ocupación real subió a ~84 % y el agente proyectaba 66 % | El botón Normal pasa a 04/06/2018 (proyectó 62 %, fue 65 %) | `frontend/index.html` |
 
-| Archivo | Qué cambió |
-|---|---|
-| `backend/app/services/prediccion.py` | Reescrito para la estructura del equipo: modelo de demanda (5 métodos + backtesting) y evaluación del agente |
-| `backend/app/agents/inventario_agent.py` | Ingresos desde el modelo, escenario pesimista (P90), probabilidad de saturación, alerta preventiva y lectura del CSV una sola vez |
-| `backend/app/routers/prediccion.py` | **Nuevo**: endpoints `/modelo/...` |
-| `frontend/index.html` | Reescrito para consumir la API del equipo |
-| `docs/modelo_prediccion.md` | **Nuevo**: documentación del modelo, la evaluación y la interfaz |
-
-## Cambios chicos en archivos de Darío (avisarle)
-
-| Archivo | Qué cambió |
-|---|---|
-| `backend/app/main.py` | +2 líneas: importa y registra `routers/prediccion.py` |
-| `backend/app/routers/inventario.py` | +5 campos opcionales en `DiaProyectado` y `ProyeccionRespuesta`, para que `/proyeccion-camas` muestre P90, probabilidad, método y alerta preventiva. No cambia nada de lo que ya devolvía. |
-
-No se tocó nada de Sabrina (limpieza, `analisis.py`, `data/procesados/`).
+**Para Darío:** en `config.py`, la `fecha_demo` de HDHI conviene que sea `2018-06-04` (en vez de 2019-01-01), para que coincida con el caso Normal. Y en `guia_demo.md`, el caso Normal pasa a ser esa fecha.

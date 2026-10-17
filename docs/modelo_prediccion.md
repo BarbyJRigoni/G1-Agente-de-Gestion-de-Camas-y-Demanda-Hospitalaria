@@ -39,6 +39,10 @@ La regresión está programada con numpy (solución cerrada de Ridge), sin libre
 
 **Regla de elección:** gana el de menor WAPE diario, **pero solo si le gana a la media por 3 % o más**. Si no, se usa la media, que es más simple (principio de parsimonia).
 
+**La elección se hace con datos anteriores al censo.** Para cada fecha de censo, la comparación usa las 26 semanas que **ya habían terminado** en esa fecha. Para un censo del 1/1/2019, por ejemplo, se comparan los métodos entre julio y diciembre de 2018, nunca con enero a marzo de 2019, que en esa simulación todavía no pasaron. Si hay menos de 8 semanas de historia, se usa la media.
+
+Así, el método puede cambiar según la fecha: el 9/1/2018 y el 5/3/2019 gana el de día de la semana, y el 1/1/2019 gana la regresión, por muy poco (21,2 % contra 21,3 % de error). La tabla de abajo es la evaluación final, con las últimas 26 semanas de cada dataset.
+
 ### Resultados
 
 | Dataset | Método | MAE | WAPE diario | WAPE semanal | Cobertura IC 80 % |
@@ -78,8 +82,8 @@ Se reconstruyó el censo real de **91 fechas** de HDHI (una por semana), se proy
 
 | Día | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
 |---|---|---|---|---|---|---|---|
-| Error medio (camas) | 6,3 | 10,5 | 13,2 | 15,5 | 15,4 | 16,9 | 18,3 |
-| % de la capacidad | 3,3 | 5,6 | 6,9 | 8,2 | 8,1 | 8,9 | 9,6 |
+| Error medio (camas) | 6,2 | 10,3 | 13,0 | 15,7 | 16,0 | 17,5 | 18,8 |
+| % de la capacidad | 3,2 | 5,4 | 6,8 | 8,3 | 8,4 | 9,2 | 9,9 |
 
 El error crece con la anticipación, como es esperable. También hay un **sesgo de unas 3 a 5 camas hacia abajo**: el agente subestima un poco. Dos causas probables son que el hospital creció en el período (el promedio de 8 semanas va "atrasado") y que la curva de estancia usa solo internaciones ya terminadas, que tienden a ser las más cortas.
 
@@ -88,10 +92,10 @@ El error crece con la anticipación, como es esperable. También hay un **sesgo 
 | Regla | Alertas | Aciertos | Precisión | Recall |
 |---|---|---|---|---|
 | Ocupación esperada > 90 % (consigna) | 1 | 1 | 100 % | 12 % |
-| Escenario pesimista (P90) > 90 % | 8 | 3 | 38 % | 38 % |
+| Escenario pesimista (P90) > 90 % | 9 | 4 | 44 % | 50 % |
 | Probabilidad ≥ 30 % (preventiva) | 3 | 2 | 67 % | 25 % |
 
-En el período hubo **8 semanas que superaron el 90 %**. La regla de la consigna nunca se equivoca cuando avisa, pero **anticipa solo 1 de esas 8**. La alerta preventiva suma una más con buena precisión, y la regla del P90 anticipa 3 a cambio de más falsas alarmas.
+En el período hubo **8 semanas que superaron el 90 %**. La regla de la consigna nunca se equivoca cuando avisa, pero **anticipa solo 1 de esas 8**. La alerta preventiva suma una más con buena precisión, y la regla del P90 anticipa la mitad a cambio de más falsas alarmas.
 
 Con solo 8 eventos, estas diferencias son orientativas. La conclusión sí es clara: **esperar a que el valor esperado supere el 90 % es tarde**, y usar la incertidumbre mejora la anticipación.
 
@@ -110,15 +114,19 @@ Además, `POST /proyeccion-camas` ahora devuelve también `metodo_ingresos`, `al
 
 Se abre en `http://localhost:8000/`. Es HTML, CSS y JavaScript sin frameworks, con Chart.js para los gráficos, y consume la API en vivo.
 
-- **Controles:** dataset, fecha del censo, cantidad de camas y los tres casos de la demo (Normal 01/01/2019, Límite 05/03/2019, Crítico 09/01/2018).
+- **Controles:** dataset, fecha del censo, cantidad de camas y los tres casos de la demo (Normal 04/06/2018, Límite 05/03/2019, Crítico 09/01/2018).
 - **Mensaje del agente y KPIs:** ocupación de hoy, tasa de ocupación proyectada máxima, probabilidad de superar el 90 %, ALOS y día pico.
 - **Mapa de camas:** una celda por cama. Moviendo el control de días se ve cómo se llena: oscuro es lo esperado, celeste lo que se ocuparía en el escenario pesimista, rojo los pacientes sin cama.
 - **Proyección vs. realidad:** como el censo es una fecha pasada, se muestra la ocupación real de esos días para verificar si el agente acertó.
 - **Detalle por día:** ingresos, altas, ocupación esperada y pesimista, probabilidad y valor real.
 - **"¿Qué tan bien predice?":** la tabla de los cinco métodos en los tres datasets, el gráfico de backtesting, el error por día de anticipación y la tabla de reglas de alerta.
 
+**Funciona sin internet:** Chart.js está incluido dentro del archivo, así que los gráficos aparecen aunque el aula no tenga conexión. La fuente se descarga si hay internet; si no, se usa la del sistema.
+
+**Por qué el caso Normal es el 04/06/2018:** el 01/01/2019 el agente proyectaba ~66 %, pero la ocupación real subió hasta ~84 % después de Año Nuevo, por encima incluso del escenario pesimista. Para la demo se eligió una fecha donde la línea gris confirma lo que dice el agente (proyectó 62 % y fueron 65 %). El error del 1/1/2019 queda como ejemplo honesto de un límite del modelo: no conoce los feriados.
+
 ## 8. Limitaciones y mejoras
 
-- Mejorar la predicción de ingresos requiere información externa: clima, feriados y datos epidemiológicos.
+- Mejorar la predicción de ingresos requiere información externa: clima, **feriados** (se ve el 1/1/2019) y datos epidemiológicos.
 - Corregir el sesgo del agente: incorporar a la curva de estancia los pacientes que siguen internados (estimador de Kaplan-Meier) y una tendencia en el modelo de ingresos.
 - Con más semanas de saturación se podría ajustar mejor el umbral de la alerta preventiva.

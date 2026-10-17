@@ -7,7 +7,10 @@ Qué predice: cuántos pacientes INGRESAN por día en los próximos días. Es el
 que el agente (agents/inventario_agent.py) necesita para saber cuántas camas se
 van a ocupar.
 
-Compiten cinco métodos y se elige el mejor con backtesting:
+Compiten cinco métodos y se elige el mejor con backtesting. La elección se hace
+SOLO con datos anteriores a la fecha del censo: para un censo del 1/1/2019 se
+comparan los métodos en las 26 semanas previas a esa fecha, nunca con meses
+posteriores (que en esa simulación todavía no pasaron).
   - media_28d       promedio de los últimos 28 días (referencia mínima)
   - semana_anterior lo que entró el mismo día de la semana pasada
   - dia_semana_8sem promedio por día de la semana de las últimas 8 semanas
@@ -32,7 +35,8 @@ from core import config
 from services.analisis import cargar_datos
 
 # Parámetros del modelo (propios de este módulo)
-BACKTEST_SEMANAS = 26        # semanas evaluadas en el backtesting
+BACKTEST_SEMANAS = 26        # semanas evaluadas para elegir el método
+MIN_SEMANAS_ELECCION = 8     # con menos historia que esto se usa la media (no hay con qué comparar)
 RIDGE_LAMBDA = 1.0           # regularización de la regresión
 MEJORA_MINIMA_PCT = 3.0      # ventaja mínima sobre la media para elegir un método más complejo
 Z_80 = 1.2816                # cuantil 90 de la normal: intervalo del 80 % y percentil 90
@@ -88,9 +92,11 @@ class ModeloDemanda:
         self.y = serie.astype(float)
         self.origen = self.y.index.min()
         self.X = self._calendario(self.y.index)
-        self.evaluacion = self._backtest()
-        self.metodo_elegido = self._elegir()
-        self.rmse = {m: self.evaluacion["metricas"][m]["rmse"] for m in METODOS}
+        # Pronósticos de prueba de TODA la historia, semana por semana. Después, para cada
+        # fecha de censo se miran solo las semanas que ya habían terminado en esa fecha.
+        self._semanas = self._pronosticos_semanales()
+        self.evaluacion = self._evaluar(self.y.index.max() + pd.Timedelta(days=1))
+        self.metodo_elegido = self.evaluacion["metodo_elegido"]   # con toda la historia (informe final)
 
     # ---------- variables ----------
     @staticmethod
@@ -142,48 +148,58 @@ class ModeloDemanda:
 
     def predecir(self, desde, dias: int, metodo: str = "auto"):
         """Ingresos esperados para desde+1 .. desde+dias, error típico (RMSE) y método usado.
-        Solo usa datos hasta `desde`: sirve también para fechas históricas (demo)."""
-        metodo = self.metodo_elegido if metodo == "auto" else metodo
+        Todo sale de datos hasta `desde`: el pronóstico, la elección del método y el RMSE."""
+        ev = self._evaluar(pd.Timestamp(desde))
+        metodo = ev["metodo_elegido"] if metodo == "auto" else metodo
+        rmse = ev["metricas"][metodo]["rmse"] if ev["metricas"] else float(np.sqrt(max(self.y.mean(), 1)))
         hasta = min(pd.Timestamp(desde), self.y.index.max())
         fechas = pd.date_range(pd.Timestamp(desde) + pd.Timedelta(days=1), periods=dias, freq="D")
-        return self._pronostico(metodo, hasta, fechas), self.rmse[metodo], metodo
+        return self._pronostico(metodo, hasta, fechas), rmse, metodo
 
     # ---------- evaluación ----------
-    def _backtest(self) -> dict:
-        """Backtesting con origen móvil: cada 7 días se entrena SOLO con el pasado y se
-        pronostican los 7 días siguientes, igual que en el uso real. Se repite 26 semanas."""
-        ultimo = self.y.index.max()
-        origenes = [ultimo - pd.Timedelta(days=7 * (i + 1)) for i in range(BACKTEST_SEMANAS)][::-1]
-        origenes = [o for o in origenes if (o - self.origen).days >= 120]
-        reales, preds, fechas = [], {m: [] for m in METODOS}, []
-        for o in origenes:
+    def _pronosticos_semanales(self) -> list[dict]:
+        """Backtesting con origen móvil sobre toda la serie: cada 7 días se entrena SOLO
+        con el pasado y se pronostican los 7 días siguientes, igual que en el uso real."""
+        semanas = []
+        o = self.origen + pd.Timedelta(days=120)          # primero, 4 meses de historia mínima
+        while o + pd.Timedelta(days=7) <= self.y.index.max():
             f = pd.date_range(o + pd.Timedelta(days=1), periods=7, freq="D")
-            reales.extend(self.y.loc[f])
-            fechas.extend(f)
             ajuste = self._ajustar_regresion(o)
-            for m in METODOS:
-                preds[m].extend(self._pronostico(m, o, f, ajuste))
-        reales = np.array(reales)
+            semanas.append({"origen": o, "fechas": f, "real": self.y.loc[f].to_numpy(),
+                            "pred": {m: self._pronostico(m, o, f, ajuste) for m in METODOS}})
+            o += pd.Timedelta(days=7)
+        return semanas
+
+    @lru_cache(maxsize=512)
+    def _evaluar(self, fecha: pd.Timestamp) -> dict:
+        """Compara los métodos en las últimas 26 semanas que YA habían terminado en `fecha`
+        y elige uno. Es lo que vería alguien parado ese día en el hospital."""
+        previas = [s for s in self._semanas if s["fechas"][-1] < fecha][-BACKTEST_SEMANAS:]
+        if len(previas) < MIN_SEMANAS_ELECCION:
+            return {"semanas_evaluadas": len(previas), "periodo": "", "metricas": {},
+                    "metodo_elegido": "media_28d", "serie": {}}
+        reales = np.concatenate([s["real"] for s in previas])
+        preds = {m: np.concatenate([s["pred"][m] for s in previas]) for m in METODOS}
         res = {m: metricas(reales, preds[m]) for m in METODOS}
         semana_real = reales.reshape(-1, 7).sum(axis=1)
         for m in METODOS:
-            p = np.array(preds[m])
             # error del TOTAL semanal: lo que importa para planificar camas
-            semana_pred = p.reshape(-1, 7).sum(axis=1)
+            semana_pred = preds[m].reshape(-1, 7).sum(axis=1)
             res[m]["wape_semanal_pct"] = round(float(100 * np.abs(semana_real - semana_pred).sum() / semana_real.sum()), 2)
             # ¿el intervalo del 80 % contiene al valor real ~80 % de las veces?
-            res[m]["cobertura_80pct"] = round(float(100 * np.mean(np.abs(reales - p) <= Z_80 * res[m]["rmse"])), 1)
-        return {"semanas_evaluadas": len(origenes), "dias_evaluados": len(reales),
-                "periodo": f"{fechas[0].date()} a {fechas[-1].date()}" if fechas else "",
-                "metricas": res,
+            res[m]["cobertura_80pct"] = round(float(100 * np.mean(np.abs(reales - preds[m]) <= Z_80 * res[m]["rmse"])), 1)
+        fechas = [d for s in previas for d in s["fechas"]]
+        return {"semanas_evaluadas": len(previas), "dias_evaluados": len(reales),
+                "periodo": f"{fechas[0].date()} a {fechas[-1].date()}",
+                "metricas": res, "metodo_elegido": self._elegir(res),
                 "serie": {"fechas": [d.date().isoformat() for d in fechas], "real": reales.tolist(),
                           **{m: np.round(preds[m], 2).tolist() for m in METODOS}}}
 
-    def _elegir(self) -> str:
+    @staticmethod
+    def _elegir(m: dict) -> str:
         """El de menor WAPE diario, solo si le gana a la media por MEJORA_MINIMA_PCT o más.
         Si no, la media: no se justifica un modelo más complejo (parsimonia) y se evita
         'aprender' ruido, como pasa con el dataset Healthcare, que es aleatorio."""
-        m = self.evaluacion["metricas"]
         mejor = min(METODOS, key=lambda k: m[k]["wape_pct"])
         base = m["media_28d"]["wape_pct"]
         return mejor if 100 * (base - m[mejor]["wape_pct"]) / base >= MEJORA_MINIMA_PCT else "media_28d"
@@ -193,14 +209,17 @@ class ModeloDemanda:
         coef, *_ = self._ajustar_regresion(self.y.index.max())
         return dict(zip(["intercepto", *self.X.columns], np.round(coef, 3).tolist()))
 
-    def resumen(self) -> dict:
-        m = self.evaluacion["metricas"]
-        base, mejor = m["media_28d"]["wape_pct"], m[self.metodo_elegido]["wape_pct"]
-        return {"dataset": self.nombre, "ingresos_promedio_dia": round(float(self.y.mean()), 2),
-                "dias_historia": len(self.y), "metodo_elegido": self.metodo_elegido,
-                "nombre_metodo": NOMBRES[self.metodo_elegido],
-                "mejora_vs_media_pct": round(100 * (base - mejor) / base, 1) if base else 0.0,
-                "backtest": {k: v for k, v in self.evaluacion.items() if k != "serie"}}
+    def resumen(self, fecha=None) -> dict:
+        """Evaluación con las 26 semanas anteriores a `fecha` (por defecto, el final del dataset)."""
+        fecha = pd.Timestamp(fecha) if fecha else self.y.index.max() + pd.Timedelta(days=1)
+        ev = self._evaluar(fecha)
+        m, elegido = ev["metricas"], ev["metodo_elegido"]
+        mejora = round(100 * (m["media_28d"]["wape_pct"] - m[elegido]["wape_pct"]) / m["media_28d"]["wape_pct"], 1) if m else 0.0
+        return {"dataset": self.nombre, "evaluado_hasta": (fecha - pd.Timedelta(days=1)).date().isoformat(),
+                "ingresos_promedio_dia": round(float(self.y.mean()), 2),
+                "dias_historia": len(self.y), "metodo_elegido": elegido, "nombre_metodo": NOMBRES[elegido],
+                "mejora_vs_media_pct": mejora,
+                "backtest": {k: v for k, v in ev.items() if k not in ("serie", "metodo_elegido")}}
 
 
 @lru_cache(maxsize=None)
