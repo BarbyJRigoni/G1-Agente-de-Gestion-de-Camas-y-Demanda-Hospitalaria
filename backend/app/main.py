@@ -36,7 +36,20 @@ app = FastAPI(
 async def proteger_acceso(request: Request, siguiente):
     request.state.usuario = acceso.usuario_de_sesion(request.cookies.get(acceso.COOKIE))
     ruta = request.url.path
-    publica = ruta in {"/", "/ingresar", "/auth/sesion", "/auth/ingresar", "/auth/salir", "/salud", "/portada/hospital", "/favicon.ico"} or ruta.startswith("/vendor/")
+    
+    publica = ruta in {
+    "/",
+    "/ingresar",
+    "/auth/sesion",
+    "/auth/ingresar",
+    "/auth/registrar",
+    "/auth/salir",
+    "/salud",
+    "/portada/hospital",
+    "/portada/logo-politecnico",
+    "/favicon.ico"
+} or ruta.startswith("/vendor/")
+
     if not publica and not request.state.usuario:
         respuesta = (RedirectResponse("/ingresar", status_code=303) if ruta in {"/panel", "/docs", "/redoc", "/docs/oauth2-redirect"}
                      else JSONResponse(status_code=401, content={"detail":"Inicia sesion para acceder al agente."}))
@@ -113,6 +126,12 @@ def imagen_hospital():
             return FileResponse(ruta)
     return FileResponse(carpeta / "hospital-base.svg", media_type="image/svg+xml")
 
+@app.get("/portada/logo-politecnico", include_in_schema=False)
+def logo_politecnico():
+    return FileResponse(
+        config.RUTA_FRONTEND.parent / "assets" / "logo-politecnico.jpeg",
+        media_type="image/jpeg"
+    )
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():

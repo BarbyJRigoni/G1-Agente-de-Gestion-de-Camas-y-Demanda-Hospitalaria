@@ -11,6 +11,10 @@ class Credenciales(BaseModel):
     usuario: str = Field(min_length=1, max_length=40)
     clave: str = Field(min_length=1, max_length=128)
 
+class Registro(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    usuario: str = Field(min_length=3, max_length=40)
+    clave: str = Field(min_length=12, max_length=128)
 
 @router.get("/sesion")
 def sesion(request: Request):
@@ -38,3 +42,47 @@ def salir(request: Request, response: Response):
     acceso.cerrar_sesion(request.cookies.get(acceso.COOKIE))
     response.delete_cookie(acceso.COOKIE, path="/", httponly=True, samesite="strict", secure=request.url.scheme == "https")
     return {"autenticado": False}
+
+@router.post("/registrar", status_code=201)
+def registrar(datos: Registro, request: Request):
+    # Solo permite el registro desde el servidor local.
+    cliente = request.client.host if request.client else ""
+    if cliente not in ("127.0.0.1", "::1"):
+        raise HTTPException(
+            status_code=403,
+            detail="El registro solo esta disponible localmente."
+        )
+
+    # Evita que un sitio externo solicite registros desde el navegador.
+    origen = request.headers.get("origin")
+    if origen:
+        from urllib.parse import urlsplit
+
+        origen_url = urlsplit(origen)
+        servidor_url = urlsplit(str(request.base_url))
+
+        if (
+            origen_url.scheme != servidor_url.scheme
+            or origen_url.netloc != servidor_url.netloc
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Origen no permitido."
+            )
+
+    try:
+        acceso.crear_usuario(
+            usuario=datos.usuario,
+            clave=datos.clave,
+            reemplazar=False
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        )
+
+    return {
+        "mensaje": "Usuario registrado correctamente. Ya podes iniciar sesion.",
+        "usuario": acceso.normalizar_usuario(datos.usuario)
+    }
