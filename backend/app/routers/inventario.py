@@ -47,7 +47,7 @@ class DiaProyectado(BaseModel):
     ingresos_previstos: float
     altas_previstas: float
     camas_ocupadas: float
-    camas_ocupadas_p90: Optional[float] = Field(None, description="Escenario pesimista (percentil 90)")
+    camas_ocupadas_p90: Optional[float] = Field(None, description="Limite superior nominal 90 %; cobertura futura no garantizada")
     prob_superar_umbral_pct: Optional[float] = None
     camas_libres: int
     tasa_ocupacion_pct: float
@@ -57,8 +57,11 @@ class DiaProyectado(BaseModel):
 class ProyeccionRespuesta(BaseModel):
     dataset: str
     metodo_ingresos: Optional[str] = Field(None, description="Metodo del modelo de demanda usado")
+    metodo_ocupacion: Optional[str] = None
+    calibracion_incertidumbre: Optional[dict] = None
+    advertencias: list[str] = Field(default_factory=list)
     prob_max_superar_umbral_pct: Optional[float] = None
-    alerta_preventiva: Optional[bool] = Field(None, description="Sin saturacion esperada, pero prob. >= 30 %")
+    alerta_preventiva: Optional[bool] = Field(None, description="Sin saturacion esperada, pero estimacion de excedencia >= 30 %")
     fecha_censo: date
     origen_censo: str
     capacidad: int
@@ -102,14 +105,14 @@ class Censo(BaseModel):
 
 # Ejemplos que aparecen en /docs para la demo (fechas reales de HDHI)
 EJEMPLOS_CENSO = {
-    "normal": {"summary": "Caso normal (HDHI, 65 % de ocupacion)",
-               "value": {"dataset": "hdhi", "fecha": "2019-01-01"}},
-    "limite": {"summary": "Caso limite (HDHI, ~89 %)",
-               "value": {"dataset": "hdhi", "fecha": "2019-03-05"}},
-    "critico": {"summary": "Caso critico (HDHI, 100 % -> alerta)",
-                "value": {"dataset": "hdhi", "fecha": "2018-01-09"}},
-    "menos_camas": {"summary": "Mismo dia que el normal, pero con 50 camas menos (140)",
-                    "value": {"dataset": "hdhi", "fecha": "2019-01-01", "capacidad": 140}},
+    "capacidad_base": {"summary": "HDHI: censo historico con capacidad supuesta de 190",
+                       "value": {"dataset": "hdhi", "fecha": "2019-01-01", "capacidad": 190}},
+    "capacidad_reducida": {"summary": "HDHI: misma fecha, escenario de capacidad reducida (120)",
+                           "value": {"dataset": "hdhi", "fecha": "2019-01-01", "capacidad": 120}},
+    "lengthofstay": {"summary": "Length of Stay: escenario base",
+                     "value": {"dataset": "lengthofstay", "fecha": "2012-12-01"}},
+    "healthcare": {"summary": "Healthcare sintetico: escenario base",
+                   "value": {"dataset": "healthcare", "fecha": "2024-04-01"}},
 }
 
 
@@ -197,3 +200,26 @@ from services.analisis_hdhi import obtener_indicadores_hdhi
 def estadisticas_hdhi():
     return obtener_indicadores_hdhi()
 
+
+
+@router.get('/escenarios', tags=['Agente'], summary='Escenarios simulados de capacidad para la demostracion')
+def escenarios(dataset: NombreDataset = Query(config.DATASET_POR_DEFECTO)):
+    """Conserva las fechas y los ingresos; varia explicitamente la capacidad supuesta.
+    Los nombres describen el maximo proyectado, no eventos historicos de saturacion.
+    """
+    import math
+    r = agente.proyectar_camas(dataset)
+    pico = max(d['camas_ocupadas'] for d in r['proyeccion'])
+    superior = max(d.get('camas_ocupadas_p90', d['camas_ocupadas']) for d in r['proyeccion'])
+    if pico <= 0:
+        return {'dataset': dataset, 'fecha': r['fecha_censo'], 'casos': [],
+                'descripcion': 'Sin demanda proyectada positiva para construir estos escenarios.'}
+    capacidades = {'normal': max(math.ceil(pico / .8), math.ceil(superior / .9) + 1),
+                   'limite': max(1, math.ceil(pico / .9)),
+                   'critico': max(1, math.floor(pico / .95))}
+    return {'dataset': dataset, 'fecha': r['fecha_censo'],
+            'capacidad_base': config.DATASETS[dataset]['capacidad_total'],
+            'descripcion': 'Escenarios simulados: cambia la capacidad supuesta; se conservan fecha y demanda.',
+            'casos': [{'tipo': tipo, 'fecha': r['fecha_censo'], 'capacidad': capacidad,
+                       'maximo_proyectado_pct': round(100 * pico / capacidad, 1)}
+                      for tipo, capacidad in capacidades.items()]}

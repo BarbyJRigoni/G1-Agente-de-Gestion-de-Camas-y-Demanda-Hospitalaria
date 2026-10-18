@@ -25,7 +25,7 @@ import pandas as pd
 from core import config
 from services import alertas
 from services.analisis import cargar_datos
-from services.prediccion import Z_80, modelo_demanda, predecir_ingresos
+from services.prediccion import Z_80, modelo_demanda_hasta, predecir_ingresos
 
 PROB_ALERTA_PREVENTIVA = 0.30   # elegido evaluando precision / recall (ver docs/modelo_prediccion.md)
 
@@ -62,7 +62,14 @@ def _cargar_internaciones(dataset):
 
     # Se descartan registros sin fechas confirmadas (por ejemplo, las
     # fechas "ambiguas" o "sin coincidencia" que marco la limpieza de HDHI).
-    return internaciones.dropna().reset_index(drop=True)
+    if internaciones.empty or internaciones.isna().any().any():
+        raise ValueError(f"{dataset}: faltan internaciones con fechas y duraciones validas.")
+    if not np.isfinite(internaciones['duracion']).all() or (internaciones['noches'] < 0).any():
+        raise ValueError(f"{dataset}: hay duraciones o fechas invalidas.")
+    esperada = internaciones['noches'] + (1 if dataset == 'hdhi' else 0)
+    if not np.allclose(internaciones['duracion'], esperada):
+        raise ValueError(f"{dataset}: la duracion no coincide con ingreso y egreso.")
+    return internaciones.reset_index(drop=True)
 
 
 # Censo de una fecha: pacientes que ocupan cama esa noche (ingresaron ese dia
@@ -82,7 +89,9 @@ def censo_en_fecha(internaciones, fecha):
 # Probabilidad de que una internacion dure MAS de t noches, para t = 0, 1, 2...
 # Ejemplo: prob_seguir[3] = 0.60 -> el 60 % de las internaciones dura mas de 3 noches.
 def calcular_prob_seguir(duraciones, dias_max):
-    duraciones = np.asarray(duraciones)
+    duraciones = np.asarray(duraciones, dtype=float)
+    if len(duraciones) == 0 or not np.isfinite(duraciones).all() or (duraciones < 0).any():
+        raise ValueError("No hay duraciones historicas validas para estimar altas.")
     return np.array([(duraciones > t).mean() for t in range(dias_max + 1)])
 
 
@@ -105,7 +114,7 @@ def calcular_tasa_ingresos(internaciones, fecha):
 # 3. Proyeccion
 # ------------------------------------------------------------
 
-def proyectar_camas(dataset, fecha=None, dias_internados=None,
+def _proyectar_camas_base(dataset, fecha=None, dias_internados=None,
                     capacidad=None, dias=config.DIAS_PROYECCION):
     """
     dataset          : "hdhi", "lengthofstay" o "healthcare".
@@ -117,7 +126,11 @@ def proyectar_camas(dataset, fecha=None, dias_internados=None,
     """
     datos = config.DATASETS.get(dataset, {})
     fecha = pd.Timestamp(fecha or datos.get("fecha_demo"))
-    capacidad = capacidad or datos.get("capacidad_total")
+    capacidad = datos.get("capacidad_total") if capacidad is None else capacidad
+    if not isinstance(dias, (int, np.integer)) or not 1 <= dias <= 14:
+        raise ValueError("La proyeccion admite entre 1 y 14 dias.")
+    if capacidad is None or not np.isfinite(capacidad) or capacidad <= 0:
+        raise ValueError("La capacidad debe ser mayor a cero.")
 
     internaciones = cargar_internaciones(dataset)
     if not internaciones["ingreso"].min() <= fecha <= internaciones["ingreso"].max():
@@ -133,12 +146,18 @@ def proyectar_camas(dataset, fecha=None, dias_internados=None,
 
     # Historia anterior a la fecha del censo (no se usan datos del "futuro")
     pasado = internaciones[internaciones["egreso"] < fecha]
-    dias_max = int(max(dias_internados, default=0) + dias + 1)
+    if any(not isinstance(d, (int, np.integer)) or d < 1 for d in dias_internados):
+        raise ValueError("Cada estancia del censo debe ser una cantidad entera de noches mayor a cero.")
+    max_historia = int(pasado['noches'].max()) if not pasado.empty else 0
+    sin_soporte = sum(d > max_historia for d in dias_internados)
+    if origen_censo == 'recibido' and sin_soporte:
+        raise ValueError("El censo manual incluye estancias mayores al soporte historico; no se pueden estimar sus altas.")
+    dias_max = max_historia + dias + 1
     prob_seguir = calcular_prob_seguir(pasado["noches"], dias_max)
     # Ingresos esperados de cada dia: modelo de demanda (services/prediccion.py)
     ingresos_modelo, rmse_ingresos, metodo_ingresos = predecir_ingresos(dataset, fecha, dias)
     # Sobredispersion: cuanto mas varian los ingresos reales que una Poisson pura
-    phi = max(1.0, rmse_ingresos ** 2 / max(modelo_demanda(dataset).y.mean(), 1.0))
+    phi = max(1.0, rmse_ingresos ** 2 / max(modelo_demanda_hasta(dataset, fecha.date().isoformat()).y.mean(), 1.0))
     umbral_camas = config.UMBRAL_SATURACION * capacidad
 
     proyeccion = []
@@ -153,7 +172,8 @@ def proyectar_camas(dataset, fecha=None, dias_internados=None,
         #    noches, sabiendo que ya dura mas de d-1: prob_seguir[d+j-1] / prob_seguir[d-1].
         p_siguen = np.array([
             prob_seguir[d + j - 1] / prob_seguir[d - 1]
-            for d in dias_internados if prob_seguir[d - 1] > 0
+            if d <= max_historia and prob_seguir[d - 1] > 0 else 1.0
+            for d in dias_internados
         ])
         siguen_actuales = p_siguen.sum()
 
@@ -203,10 +223,13 @@ def proyectar_camas(dataset, fecha=None, dias_internados=None,
     mensaje = evaluacion["mensaje"]
     if alerta_preventiva:
         mensaje += (f" ALERTA PREVENTIVA: hay {prob_max:.0f} % de probabilidad de superar el "
-                    f"{config.UMBRAL_SATURACION:.0%} en los proximos {dias} dias.")
+                    f"{config.UMBRAL_SATURACION:.0%} en al menos un dia proyectado. "
+                    "Es la mayor probabilidad diaria, no la conjunta semanal.")
 
     return {
         "dataset": dataset,
+        "advertencias": ([f"{sin_soporte} pacientes del censo reconstruido superan el soporte de estancias; "
+                           "en el modelo por estancias se conservan sin estimar altas."] if sin_soporte else []),
         "metodo_ingresos": metodo_ingresos,
         "prob_max_superar_umbral_pct": prob_max,
         "alerta_preventiva": alerta_preventiva,
@@ -224,6 +247,14 @@ def proyectar_camas(dataset, fecha=None, dias_internados=None,
     }
 
 
+def proyectar_camas(dataset, fecha=None, dias_internados=None, capacidad=None,
+                    dias=config.DIAS_PROYECCION):
+    from services.modelo_ocupacion import aplicar_modelo
+    resultado = _proyectar_camas_base(dataset, fecha, dias_internados, capacidad, dias)
+    return aplicar_modelo(resultado, dias_internados)
+
+
+
 # Prueba rapida: los tres casos de la demo con fechas reales de HDHI.
 if __name__ == "__main__":
     casos = {
@@ -239,3 +270,4 @@ if __name__ == "__main__":
               f"({r['tasa_ocupacion_hoy_pct']} %) ===")
         print(pd.DataFrame(r["proyeccion"]).to_string(index=False))
         print(r["mensaje"])
+# MODELO_OCUPACION_HDHI_V2

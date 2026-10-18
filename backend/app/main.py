@@ -11,7 +11,8 @@ Documentacion interactiva:
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse
 
 from core import config
 from routers.inventario import router as router_camas
@@ -39,17 +40,27 @@ app.add_middleware(
 # Endpoints del agente (paso 4)
 app.include_router(router_camas)
 app.include_router(router_prediccion)
+app.mount("/vendor", StaticFiles(directory=config.RUTA_FRONTEND.parent / "vendor", check_dir=False), name="vendor")
 
 
 @app.get("/salud", tags=["Sistema"], summary="Estado de la API")
 def salud():
     """Permite comprobar rapidamente que el servidor esta funcionando."""
-    return {
-        "estado": "ok",
-        "version": config.APP_VERSION,
-        "datasets": list(config.DATASETS),
-        "datos_disponibles": config.CARPETA_PROCESADOS.exists(),
-    }
+    archivos = {}
+    for nombre in config.DATASETS:
+        ruta = (config.CARPETA_PROCESADOS / 'revision_hdhi' / 'episodios' / 'hdhi_episodios_candidatos.csv'
+                if nombre == 'hdhi' else config.CARPETA_PROCESADOS / f'{nombre}_limpio.csv')
+        archivos[nombre] = ruta.is_file() and ruta.stat().st_size > 0
+    return {"estado": "ok" if all(archivos.values()) else "datos_incompletos",
+            "version": config.APP_VERSION, "datasets": list(config.DATASETS),
+            "datos_disponibles": all(archivos.values()), "archivos_disponibles": archivos}
+
+
+@app.exception_handler(FileNotFoundError)
+def archivo_faltante(request, error):
+    return JSONResponse(status_code=503, content={
+        "detail": "Falta un archivo de datos necesario. Revise /salud y los CSV procesados."})
+
 
 
 @app.get("/", include_in_schema=False)

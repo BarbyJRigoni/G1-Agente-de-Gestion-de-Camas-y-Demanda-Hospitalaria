@@ -44,7 +44,8 @@ def evaluar_proyeccion(proyeccion, capacidad):
         for dia in proyeccion
     ]
 
-    dia_pico = max(dias, key=lambda d: d["tasa_ocupacion_pct"])
+    indice_pico = max(range(len(proyeccion)), key=lambda i: proyeccion[i]["camas_ocupadas"])
+    dia_pico = dias[indice_pico]
     dias_saturados = [d["fecha"] for d in dias if d["alerta_saturacion"]]
     hay_alerta = len(dias_saturados) > 0
     umbral_pct = config.UMBRAL_SATURACION * 100
@@ -57,7 +58,7 @@ def evaluar_proyeccion(proyeccion, capacidad):
         )
     else:
         mensaje = (
-            f"Sin alerta: la ocupacion proyectada se mantiene por debajo del {umbral_pct:.0f} %. "
+            f"Sin alerta: la ocupacion proyectada no supera el {umbral_pct:.0f} %. "
             f"Maximo: {dia_pico['tasa_ocupacion_pct']} % el {dia_pico['fecha']}."
         )
 

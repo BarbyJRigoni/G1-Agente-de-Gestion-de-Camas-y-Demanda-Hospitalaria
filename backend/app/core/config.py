@@ -25,9 +25,8 @@ APP_VERSION = "1.0.0"
 # ============================================================
 # Cada dataset nombra distinto las mismas columnas. Este mapa las traduce
 # para que el backend trabaje con los tres sin modificar la limpieza.
-#   capacidad_total: el dataset no trae la capacidad real. Se estima como el
-#   percentil 95 de la ocupacion historica (camas ocupadas cada noche)
-#   dividido 0,90, asi la alerta del 90 % se activa solo en los picos de demanda.
+#   capacidad_total: capacidad supuesta para la simulacion academica.
+#   Estos CSV no documentan camas habilitadas reales; no se infieren de los picos.
 #   fecha_demo: "hoy" simulado para las pruebas (dentro del rango de datos).
 DATASETS = {
     "hdhi": {
@@ -35,7 +34,7 @@ DATASETS = {
         "ingreso": "fecha_ingreso",
         "egreso": "fecha_egreso",
         "duracion": "duration_of_stay",
-        "capacidad_total": 190,                          # p95 = 163 camas
+        "capacidad_total": 190,                          # escenario de capacidad
         "fecha_demo": "2019-03-01",
     },
     "lengthofstay": {
@@ -43,7 +42,7 @@ DATASETS = {
         "ingreso": "vdate",
         "egreso": "discharged",
         "duracion": "lengthofstay",
-        "capacidad_total": 1280,                         # p95 = 1.144 camas
+        "capacidad_total": 1280,                         # escenario de capacidad
         "fecha_demo": "2012-12-01",
     },
     "healthcare": {
@@ -51,7 +50,7 @@ DATASETS = {
         "ingreso": "date_of_admission",
         "egreso": "discharge_date",
         "duracion": "duracion_internacion",
-        "capacidad_total": 570,                          # p95 = 508 camas
+        "capacidad_total": 570,                          # escenario de capacidad
         "fecha_demo": "2024-04-01",
     },
 }

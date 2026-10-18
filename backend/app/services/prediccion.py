@@ -125,7 +125,7 @@ class ModeloDemanda:
         if metodo == "media_28d":
             return np.full(len(fechas), hist.iloc[-28:].mean())
         if metodo == "semana_anterior":
-            return np.array([self.y.get(f - pd.Timedelta(days=7), hist.iloc[-7:].mean()) for f in fechas])
+            return np.array([hist.get(f - pd.Timedelta(days=7), hist.iloc[-7:].mean()) for f in fechas])
         if metodo == "dia_semana_8sem":
             ult = hist.iloc[-56:]
             por_dia = ult.groupby(ult.index.dayofweek).mean()
@@ -137,15 +137,24 @@ class ModeloDemanda:
         coef, mu, sd = ajuste or self._ajustar_regresion(hasta)
         X = self._calendario(fechas)
         Z = np.column_stack([np.ones(len(X)), ((X - mu) / sd).to_numpy()])
-        nivel = self._nivel(fechas).fillna(hist.iloc[-28:].mean()).to_numpy()
+        nivel = (self.y.loc[:hasta].reindex(fechas.union(hist.index)).shift(7).rolling(28, min_periods=14).mean().reindex(fechas).fillna(hist.iloc[-28:].mean()).to_numpy())
         return np.clip(Z @ coef + nivel, 0, None)
 
     def predecir(self, desde, dias: int, metodo: str = "auto"):
-        """Ingresos esperados para desde+1 .. desde+dias, error típico (RMSE) y método usado.
-        Solo usa datos hasta `desde`: sirve también para fechas históricas (demo)."""
+        """Seleccion y calibracion conocidas al cierre de la fecha del censo."""
+        fecha = pd.Timestamp(desde).normalize()
+        if not 1 <= dias <= 14:
+            raise ValueError("La proyeccion admite entre 1 y 14 dias.")
+        hasta = min(fecha, self.y.index.max())
+        historia = self.y.loc[:hasta]
+        if len(historia) < 148:
+            raise ValueError("Se necesitan al menos 148 dias de historia hasta el censo.")
+        if hasta < self.y.index.max():
+            return ModeloDemanda(historia, self.nombre).predecir(fecha, dias, metodo)
         metodo = self.metodo_elegido if metodo == "auto" else metodo
-        hasta = min(pd.Timestamp(desde), self.y.index.max())
-        fechas = pd.date_range(pd.Timestamp(desde) + pd.Timedelta(days=1), periods=dias, freq="D")
+        if metodo not in METODOS:
+            raise ValueError(f"Metodo desconocido: {metodo}")
+        fechas = pd.date_range(fecha + pd.Timedelta(days=1), periods=dias, freq="D")
         return self._pronostico(metodo, hasta, fechas), self.rmse[metodo], metodo
 
     # ---------- evaluación ----------
@@ -155,6 +164,8 @@ class ModeloDemanda:
         ultimo = self.y.index.max()
         origenes = [ultimo - pd.Timedelta(days=7 * (i + 1)) for i in range(BACKTEST_SEMANAS)][::-1]
         origenes = [o for o in origenes if (o - self.origen).days >= 120]
+        if not origenes:
+            raise ValueError("No hay historia suficiente para backtesting.")
         reales, preds, fechas = [], {m: [] for m in METODOS}, []
         for o in origenes:
             f = pd.date_range(o + pd.Timedelta(days=1), periods=7, freq="D")
@@ -186,7 +197,7 @@ class ModeloDemanda:
         m = self.evaluacion["metricas"]
         mejor = min(METODOS, key=lambda k: m[k]["wape_pct"])
         base = m["media_28d"]["wape_pct"]
-        return mejor if 100 * (base - m[mejor]["wape_pct"]) / base >= MEJORA_MINIMA_PCT else "media_28d"
+        return mejor if base > 0 and 100 * (base - m[mejor]["wape_pct"]) / base >= MEJORA_MINIMA_PCT else "media_28d"
 
     def coeficientes(self) -> dict:
         """Ingresos que suma o resta cada variable respecto del nivel reciente (estandarizadas)."""
@@ -210,8 +221,9 @@ def modelo_demanda(dataset: str) -> ModeloDemanda:
 
 
 def predecir_ingresos(dataset: str, fecha, dias: int, metodo: str = "auto"):
-    """Lo que usa el agente: (ingresos esperados por día, RMSE, método usado)."""
-    return modelo_demanda(dataset).predecir(fecha, dias, metodo)
+    fecha = pd.Timestamp(fecha).normalize()
+    modelo = modelo_demanda_hasta(dataset, fecha.date().isoformat())
+    return modelo.predecir(fecha, dias, metodo)
 
 
 # ======================================================================
@@ -227,43 +239,82 @@ def ocupacion_real(internaciones: pd.DataFrame) -> pd.Series:
 
 
 @lru_cache(maxsize=None)
-def evaluar_agente(dataset: str = "hdhi", cada_dias: int = 7) -> dict:
-    """Proyecta desde muchas fechas pasadas y compara con lo que realmente pasó."""
-    from agents import inventario_agent as agente          # import acá para evitar import circular
-
+def evaluar_agente(dataset: str = 'hdhi', cada_dias: int = 7) -> dict:
+    from agents import inventario_agent as agente
+    from services.modelo_ocupacion import INICIO_VALIDACION_HDHI
     internaciones = agente.cargar_internaciones(dataset)
     real = ocupacion_real(internaciones)
-    capacidad = config.DATASETS[dataset]["capacidad_total"]
+    capacidad = config.DATASETS[dataset]['capacidad_total']
     umbral = config.UMBRAL_SATURACION
-    fechas = real.index[90:-8:cada_dias]           # se saltea el arranque (hospital "vacío")
-    errores, casos = [], []
+    fechas = real.index[147:-8:cada_dias]
+    if not len(fechas):
+        raise ValueError('No hay historia suficiente para evaluar el agente.')
+    errores, anteriores, referencias, casos = [], [], [], []
+    cubre, cubre_ant = [], []
     for f in fechas:
         r = agente.proyectar_camas(dataset, fecha=f.date())
-        pred = np.array([d["camas_ocupadas"] for d in r["proyeccion"]])
-        obs = real.loc[f + pd.Timedelta(days=1): f + pd.Timedelta(days=len(pred))].to_numpy()
+        pred = np.array([d['camas_ocupadas'] for d in r['proyeccion']])
+        viejo = np.array([d.get('camas_ocupadas_agente_anterior', d['camas_ocupadas']) for d in r['proyeccion']])
+        obs = real.reindex(pd.date_range(f + pd.Timedelta(days=1), periods=len(pred))).to_numpy()
         errores.append(pred - obs)
+        anteriores.append(viejo - obs)
+        referencias.append(r['camas_ocupadas_hoy'] - obs)
         casos.append((pred.max() / capacidad,
-                      max(d["camas_ocupadas_p90"] for d in r["proyeccion"]) / capacidad,
-                      r["prob_max_superar_umbral_pct"] / 100,
+                      max(d['camas_ocupadas_p90'] for d in r['proyeccion']) / capacidad,
+                      r['prob_max_superar_umbral_pct'] / 100,
                       bool((obs / capacidad > umbral).any())))
-    e, c = np.array(errores), np.array(casos)
+        if r.get('calibracion_incertidumbre', {}).get('metodo') == 'residuos_modelo_ocupacion':
+            cubre.append(obs <= np.array([d['camas_ocupadas_p90'] for d in r['proyeccion']]))
+            cubre_ant.append(obs <= np.array([d['camas_ocupadas_p90_agente_anterior'] for d in r['proyeccion']]))
+    e, anterior, ref, c = np.array(errores), np.array(anteriores), np.array(referencias), np.array(casos)
     saturo = c[:, 3] > 0
+    def regla(aviso):
+        aciertos = int((aviso & saturo).sum())
+        return {'alertas': int(aviso.sum()), 'aciertos': aciertos,
+                'precision': round(aciertos / int(aviso.sum()), 2) if aviso.any() else None,
+                'recall': round(aciertos / int(saturo.sum()), 2) if saturo.any() else None}
+    resultado = {
+        'dataset': dataset, 'fechas_evaluadas': len(fechas), 'capacidad': capacidad,
+        'semanas_que_realmente_superaron_el_umbral': int(saturo.sum()),
+        'error_por_dia': {'mae_camas': np.abs(e).mean(axis=0).round(1).tolist(),
+                         'mae_pct_capacidad': (100 * np.abs(e).mean(axis=0) / capacidad).round(1).tolist(),
+                         'sesgo_camas': e.mean(axis=0).round(1).tolist()},
+        'reglas_de_alerta': {'ocupacion_esperada_mayor_90': regla(c[:, 0] > umbral),
+                            'p90_mayor_90': regla(c[:, 1] > umbral),
+                            'probabilidad_mayor_30': regla(c[:, 2] >= .30)},
+        'comparacion_referencia': {
+            'nombre': 'Mantener la ocupacion del censo',
+            'mae_camas_por_dia': np.abs(ref).mean(axis=0).round(2).tolist(),
+            'mae_agente_anterior_por_dia': np.abs(anterior).mean(axis=0).round(2).tolist(),
+            'mae_global_referencia': round(float(np.abs(ref).mean()), 3),
+            'mae_global_agente_anterior': round(float(np.abs(anterior).mean()), 3),
+            'mae_global_agente': round(float(np.abs(e).mean()), 3),
+            'nota': 'Mismas fechas. El total incluye el periodo de desarrollo.'},
+        'cobertura_limite_superior': {
+            'objetivo_nominal_pct': 90, 'fechas_con_calibracion': len(cubre),
+            'pronosticos_comparables': int(np.asarray(cubre).size),
+            'empirico_pct': round(float(100 * np.mean(cubre)), 1) if cubre else None,
+            'aproximacion_original_pct': round(float(100 * np.mean(cubre_ant)), 1) if cubre_ant else None,
+            'nota': 'Calibracion anterior a cada censo. Cobertura futura no garantizada.'}}
+    if dataset == 'hdhi':
+        mascara = np.array([f >= pd.Timestamp(INICIO_VALIDACION_HDHI) for f in fechas])
+        if mascara.any():
+            resultado['validacion_posterior'] = {
+                'primer_censo': fechas[mascara][0].date().isoformat(),
+                'ultimo_censo': fechas[mascara][-1].date().isoformat(),
+                'fechas': int(mascara.sum()),
+                'mae_agente': round(float(np.abs(e[mascara]).mean()), 3),
+                'mae_agente_anterior': round(float(np.abs(anterior[mascara]).mean()), 3),
+                'mae_referencia': round(float(np.abs(ref[mascara]).mean()), 3),
+                'nota': 'Parametros elegidos con el periodo anterior; cada ajuste usa solo el pasado.'}
+    return resultado
 
-    def regla(alerta):
-        aciertos = int((alerta & saturo).sum())
-        return {"alertas": int(alerta.sum()), "aciertos": aciertos,
-                "precision": round(aciertos / max(int(alerta.sum()), 1), 2),
-                "recall": round(aciertos / max(int(saturo.sum()), 1), 2)}
 
-    return {
-        "dataset": dataset, "fechas_evaluadas": len(fechas), "capacidad": capacidad,
-        "semanas_que_realmente_superaron_el_umbral": int(saturo.sum()),
-        "error_por_dia": {"mae_camas": np.abs(e).mean(axis=0).round(1).tolist(),
-                          "mae_pct_capacidad": (100 * np.abs(e).mean(axis=0) / capacidad).round(1).tolist(),
-                          "sesgo_camas": e.mean(axis=0).round(1).tolist()},
-        "reglas_de_alerta": {
-            "ocupacion_esperada_mayor_90": regla(c[:, 0] > umbral),
-            "p90_mayor_90": regla(c[:, 1] > umbral),
-            "probabilidad_mayor_30": regla(c[:, 2] >= 0.30),
-        },
-    }
+# CORRECCION_TEMPORAL_HDHI_V1
+@lru_cache(maxsize=128)
+def modelo_demanda_hasta(dataset: str, fecha_iso: str) -> ModeloDemanda:
+    """Backtesting y modelo calculados solo con ingresos hasta el censo."""
+    serie = serie_ingresos(dataset).loc[:pd.Timestamp(fecha_iso)]
+    if len(serie) < 148:
+        raise ValueError("Se necesitan al menos 148 dias de historia hasta el censo.")
+    return ModeloDemanda(serie, dataset)

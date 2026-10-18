@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="vendor/chart.umd.min.js"></script>
 <style>
   :root {
     --tinta: #1d2f3f; --suave: #5b6b78; --fondo: #eef2f4; --hoja: #fff; --linea: #cfd8de;
@@ -66,6 +66,20 @@
   .nota { color: var(--suave); font-size: .9rem; margin: .6rem 0 0; max-width: 90ch; }
   .error { color: var(--alerta); }
   @media (prefers-reduced-motion: reduce) { .cama { transition: none; } }
+[hidden] { display: none !important; }
+
+.solapas {display:flex; flex-wrap:wrap; gap:.5rem;
+  padding:1rem clamp(1rem,4vw,3rem); background:var(--hoja);
+  border-bottom:1px solid var(--linea);}
+.solapas button, #recargarEvaluacion, #recargarEstadisticas {
+  font:inherit; padding:.6rem 1rem; border:2px solid var(--tinta);
+  border-radius:6px; background:var(--hoja); color:var(--tinta); cursor:pointer;}
+.solapas button[aria-selected="true"] {background:var(--tinta); color:#fff;}
+.tab-panel {display:grid; gap:1.5rem; min-width:0;}
+.tab-panel[hidden], header .controles[hidden], #subtitulo[hidden] {
+  display:none !important;}
+.tab-panel h2 {margin:0; border:0; padding:0;}
+
 </style>
 </head>
 <body>
@@ -79,14 +93,28 @@
     <label>Fecha del censo <input type="date" id="fecha"></label>
     <label>Camas <input type="number" id="capacidad" min="1"></label>
     <div class="pildoras" id="casos" aria-label="Casos de la demo">
-      <button data-fecha="2019-01-01">Normal</button>
-      <button data-fecha="2019-03-05">Límite</button>
-      <button data-fecha="2018-01-09">Crítico</button>
+      <button type="button" data-escenario="normal" disabled>Normal</button>
+      <button type="button" data-escenario="limite" disabled>Límite</button>
+      <button type="button" data-escenario="critico" disabled>Crítico</button>
+      <small id="notaEscenarios" class="nota">Cargando escenarios simulados...</small>
     </div>
   </div>
 </header>
+<nav id="solapas-principales" class="solapas" role="tablist"
+     aria-label="Secciones del agente">
+  <button id="tab-proyeccion" type="button" role="tab" data-tab="proyeccion"
+    aria-controls="vista-proyeccion" aria-selected="true" tabindex="0">Proyeccion de camas</button>
+  <button id="tab-estadisticas" type="button" role="tab" data-tab="estadisticas"
+    aria-controls="vista-estadisticas" aria-selected="false" tabindex="-1">Estadisticas de HDHI</button>
+  <button id="tab-evaluacion" type="button" role="tab" data-tab="evaluacion"
+    aria-controls="vista-evaluacion" aria-selected="false" tabindex="-1">Evaluacion del modelo</button>
+</nav>
+
 
 <main>
+<section id="vista-proyeccion" class="tab-panel" role="tabpanel"
+         aria-labelledby="tab-proyeccion">
+
   <div id="mensaje" role="status">Cargando…</div>
 
   <section class="kpis" id="kpis"></section>
@@ -110,7 +138,7 @@
     <div class="panel">
       <h3>Ocupación proyectada y lo que realmente pasó</h3>
       <div class="grafico"><canvas id="gProy"></canvas></div>
-      <p class="nota">Como el censo es una fecha del pasado, la línea gris muestra la ocupación real de esos días: se puede ver en vivo si el agente acertó.</p>
+      <p class="nota">El limite superior se calibra con errores anteriores cuando hay 12 semanas evaluables. La estimacion de excedencia es orientativa y no garantiza resultados. Como el censo es una fecha del pasado, la linea gris compara la ocupacion reconstruida del dataset cuando hay observaciones disponibles.</p>
     </div>
   </section>
 
@@ -119,13 +147,56 @@
     <div class="scroll"><table id="tDias"></table></div>
   </section>
 
-  <h2>¿Qué tan bien predice?</h2>
+  
+</section>
+<section id="vista-estadisticas" class="tab-panel" role="tabpanel"
+         aria-labelledby="tab-estadisticas" hidden>
+  <div class="panel">
+    <h2>Estadisticas de HDHI</h2>
+    <p>Duracion de las internaciones por condicion registrada y edad.</p>
+    <p id="estadoEstadisticas" role="status">Selecciona esta solapa para cargar los indicadores.</p>
+    <button id="recargarEstadisticas" type="button">Volver a cargar</button>
+  </div>
+  <section id="kpisEstadisticas" class="kpis" aria-label="Resumen de HDHI"></section>
+  <section class="panel">
+    <h3>Estancia por patologia o comorbilidad</h3>
+    <div class="scroll"><table id="tablaPatologias"></table></div>
+    <p class="nota">Una internacion puede aparecer en varias condiciones.
+    Los datos desconocidos no se cuentan como ausencia de enfermedad.
+    Las diferencias observadas no demuestran causalidad.</p>
+  </section>
+  <section class="panel">
+    <h3>Estancia por grupo etario</h3>
+    <div class="scroll"><table id="tablaEdades"></table></div>
+  </section>
+  <section class="panel">
+    <h3>Como interpretar estos resultados</h3>
+    <p class="nota">ALOS es la duracion promedio de internacion.
+    La mediana divide las estancias en dos mitades.
+    Estos indicadores describen HDHI completo; el ALOS de Proyeccion
+    utiliza la historia disponible antes del censo seleccionado.</p>
+    <p class="nota">Se consideran episodios consolidados por identificador e ingreso/egreso.
+    Los grupos con edad o sexo contradictorios y las fechas sin resolver se apartaron.
+    Esa seleccion puede afectar las estadisticas.</p>
+  </section>
+</section>
+<section id="vista-evaluacion" class="tab-panel" role="tabpanel"
+         aria-labelledby="tab-evaluacion" hidden>
+  <section class="panel">
+    <h2>Evaluacion del modelo</h2>
+    <p>Compara metodos de ingresos en las tres fuentes por separado.
+    Los graficos de backtesting y ocupacion corresponden a HDHI.</p>
+    <p class="nota">Esta evaluacion usa la capacidad base configurada.
+    Cambiar Camas en Proyeccion no recalcula estas metricas.</p>
+    <button id="recargarEvaluacion" type="button">Volver a cargar</button>
+  </section>
+
 
   <section class="dos">
     <div class="panel">
       <h3>Modelo de ingresos: cinco métodos en los tres datasets</h3>
       <div class="scroll"><table id="tMetodos"></table></div>
-      <p class="nota">Backtesting de 26 semanas: en cada semana se entrena solo con el pasado y se pronostican los 7 días siguientes.
+      <p class="nota">Backtesting de hasta 26 semanas: en cada semana se entrena solo con el pasado y se pronostican los 7 días siguientes.
         WAPE = error total / ingresos totales. Se elige el de menor error diario, solo si le gana a la media por 3 % o más.</p>
     </div>
     <div class="panel">
@@ -148,6 +219,8 @@
         Recall: de las semanas que lo superaron, cuántas anticipó.</p>
     </div>
   </section>
+
+</section>
 </main>
 
 <script>
@@ -156,6 +229,8 @@ const NOMBRE = { media_28d: "Media 28 días", semana_anterior: "Semana anterior"
                  estacional: "Estacional (mes × día)", regresion: "Regresión Ridge" };
 const charts = {};
 let datasets = [], proy = null, real = null;
+let consultaProyeccion = 0;
+const escenariosPorDataset = new Map();
 
 const $ = s => document.querySelector(s);
 const fmt = f => new Date(f + "T00:00").toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "numeric" });
@@ -166,22 +241,56 @@ async function api(url, opciones) {
   if (!r.ok) throw new Error(datos.detail ? JSON.stringify(datos.detail) : `${url}: ${r.status}`);
   return datos;
 }
-function grafico(id, cfg) { if (charts[id]) charts[id].destroy(); charts[id] = new Chart($(id), cfg); }
+function grafico(id, cfg) {
+  if (typeof Chart === "undefined") {
+    const canvas = $(id);
+    let aviso = canvas.parentElement.querySelector(".error-grafico");
+    if (!aviso) { aviso = document.createElement("p"); aviso.className = "error error-grafico"; canvas.parentElement.appendChild(aviso); }
+    aviso.textContent = "No se pudo cargar el grafico. Los valores siguen disponibles en las tablas.";
+    return;
+  }
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart($(id), cfg);
+}
 const opc = extra => ({ maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
   plugins: { legend: { labels: { boxWidth: 14 } } }, ...extra });
 
 // ---------------- Proyección ----------------
 async function proyectar() {
-  const dataset = $("#dataset").value, fecha = $("#fecha").value, cap = +$("#capacidad").value || null;
+  const consulta = ++consultaProyeccion;
+  const dataset = $("#dataset").value, fecha = $("#fecha").value;
+  const textoCapacidad = $("#capacidad").value.trim();
+  const cap = textoCapacidad === "" ? null : Number(textoCapacidad);
+  $("#mensaje").textContent = "Calculando proyeccion...";
+  proy = null; real = null;
+  $("#kpis").replaceChildren(); $("#camas").replaceChildren(); $("#tDias").replaceChildren();
+  $("#dia").value = 0; $("#diaTxt").textContent = "Calculando...";
+  if (charts["#gProy"]) { charts["#gProy"].destroy(); delete charts["#gProy"]; }
+
+  const datosDataset = datasets.find(d => d.clave === dataset);
+  if (datosDataset) {
+    $("#subtitulo").textContent = datosDataset.nombre + ", "
+      + (cap || datosDataset.capacidad_total)
+      + " camas disponibles en este escenario. Proyeccion a 7 dias.";
+  }
   document.querySelectorAll("#casos button").forEach(b =>
-    b.setAttribute("aria-pressed", dataset === "hdhi" && b.dataset.fecha === fecha));
+    b.setAttribute("aria-pressed", escenariosPorDataset.get(dataset)?.casos.some(c => c.tipo === b.dataset.escenario && c.fecha === fecha && c.capacidad === cap) || false));
   try {
-    [proy, real] = await Promise.all([
+    if (cap !== null && (!Number.isSafeInteger(cap) || cap <= 0)) throw new Error("La capacidad debe ser un entero mayor a cero.");
+    const [nuevaProy, nuevoReal] = await Promise.all([
       api("/proyeccion-camas", { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dataset, fecha, capacidad: cap }) }),
       api(`/modelo/ocupacion-real?dataset=${dataset}&desde=${fecha}`).catch(() => null),
     ]);
+    if (consulta !== consultaProyeccion) return;
+    proy = nuevaProy; real = nuevoReal;
   } catch (e) {
+    if (consulta !== consultaProyeccion) return;
+    proy = null; real = null;
+    $("#kpis").innerHTML = ""; $("#camas").innerHTML = "";
+    $("#tDias").innerHTML = ""; $("#dia").value = 0;
+    $("#diaTxt").textContent = "Sin proyeccion";
+    if (charts["#gProy"]) { charts["#gProy"].destroy(); delete charts["#gProy"]; }
     $("#mensaje").className = "alerta";
     $("#mensaje").innerHTML = `<span class="error">No se pudo proyectar: ${e.message}</span>`;
     return;
@@ -189,18 +298,18 @@ async function proyectar() {
   const m = $("#mensaje");
   m.className = proy.alerta_saturacion ? "alerta" : proy.alerta_preventiva ? "preventiva" : "";
   m.innerHTML = `${proy.mensaje}<small>Censo del ${fmtLargo(proy.fecha_censo)} (${proy.origen_censo}).
-    Ingresos estimados con: ${NOMBRE[proy.metodo_ingresos] || proy.metodo_ingresos}.</small>`;
+    Ingresos estimados con: ${NOMBRE[proy.metodo_ingresos] || proy.metodo_ingresos}. Ocupacion: ${proy.metodo_ocupacion || (proy.dataset === "hdhi" ? "Ridge de ocupacion por horizonte" : "estancias historicas")}. Altas inferidas por balance.</small>`;
   const kpi = (v, t) => `<div class="kpi"><b>${v}</b><span>${t}</span></div>`;
   $("#kpis").innerHTML =
     kpi(`${proy.tasa_ocupacion_hoy_pct}%`, `ocupación hoy (${proy.camas_ocupadas_hoy} de ${proy.capacidad})`) +
     kpi(`${proy.tasa_ocupacion_maxima_pct}%`, "tasa de ocupación proyectada máxima") +
-    kpi(`${proy.prob_max_superar_umbral_pct}%`, "probabilidad de superar el 90 %") +
+    kpi(`${proy.prob_max_superar_umbral_pct}%`, "mayor estimacion diaria de excedencia") +
     kpi(`${proy.alos_historico} días`, "ALOS histórico") +
     kpi(fmt(proy.dia_pico), "día pico");
   $("#dia").max = proy.proyeccion.length;
   dibujarCamas(+$("#dia").value);
   dibujarProyeccion();
-  $("#tDias").innerHTML = `<thead><tr><th>Día</th><th>Ingresos</th><th>Altas</th><th>Ocupadas</th><th>Pesimista (P90)</th>
+  $("#tDias").innerHTML = `<thead><tr><th>Día</th><th>Ingresos</th><th>Altas (balance)</th><th>Ocupadas</th><th>Superior nominal (P90)</th>
     <th>Libres</th><th>Ocupación</th><th>Prob. &gt; 90 %</th><th>Real</th><th>Alerta</th></tr></thead><tbody>` +
     proy.proyeccion.map((d, i) => `<tr><td>${fmt(d.fecha)}</td><td>${d.ingresos_previstos}</td><td>${d.altas_previstas}</td>
       <td>${d.camas_ocupadas}</td><td>${d.camas_ocupadas_p90 ?? "–"}</td><td>${d.camas_libres}</td><td>${d.tasa_ocupacion_pct}%</td>
@@ -215,14 +324,20 @@ function dibujarCamas(dia) {
   const p90 = dia === 0 ? ocup : Math.round(d.camas_ocupadas_p90 ?? d.camas_ocupadas);
   $("#diaTxt").textContent = dia === 0 ? "Hoy" : `Día ${dia}, ${fmt(d.fecha)}`;
   const total = Math.max(cap, p90);
-  const cols = Math.ceil(Math.sqrt(total * 1.8));
+  const escala = Math.max(1, Math.ceil(total / 2000));
+  const bloques = Math.ceil(total / escala);
+  const cols = Math.ceil(Math.sqrt(bloques * 1.8));
   let html = "";
-  for (let i = 0; i < total; i++) {
-    const c = i >= cap ? "excede" : i < ocup ? "ocupada" : i < p90 ? "p90" : "";
+  for (let i = 0; i < bloques; i++) {
+    const cama = i * escala;
+    const c = cama >= cap ? "excede" : cama < ocup ? "ocupada" : cama < p90 ? "p90" : "";
     html += `<div class="cama ${c}"></div>`;
   }
   $("#camas").style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
   $("#camas").innerHTML = html;
+  let notaEscala = $("#escalaCamas");
+  if (!notaEscala) { notaEscala = document.createElement("p"); notaEscala.id = "escalaCamas"; notaEscala.className = "nota"; $("#camas").after(notaEscala); }
+  notaEscala.textContent = escala > 1 ? `Cada bloque representa hasta ${escala} camas; los indicadores muestran los valores exactos.` : "Cada bloque representa una cama.";
 }
 
 function dibujarProyeccion() {
@@ -231,20 +346,43 @@ function dibujarProyeccion() {
     { label: "Esperada", data: [proy.tasa_ocupacion_hoy_pct, ...proy.proyeccion.map(d => d.tasa_ocupacion_pct)],
       borderColor: "#1d2f3f", borderWidth: 3, tension: .25,
       pointBackgroundColor: ["#1d2f3f", ...proy.proyeccion.map(d => d.alerta_saturacion ? "#c0392b" : "#1d2f3f")], pointRadius: 5 },
-    { label: "Pesimista (P90)", data: [proy.tasa_ocupacion_hoy_pct, ...proy.proyeccion.map(d =>
-        d.camas_ocupadas_p90 ? +(100 * d.camas_ocupadas_p90 / proy.capacidad).toFixed(1) : null)],
+    { label: "Superior nominal (P90)", data: [proy.tasa_ocupacion_hoy_pct, ...proy.proyeccion.map(d =>
+        d.camas_ocupadas_p90 != null ? +(100 * d.camas_ocupadas_p90 / proy.capacidad).toFixed(1) : null)],
       borderColor: "#6f8fb3", borderDash: [6, 4], borderWidth: 2, pointRadius: 0, tension: .25 },
     { label: "Umbral 90 %", data: etiquetas.map(() => 90), borderColor: "#c0392b", borderWidth: 2, pointRadius: 0 },
   ];
-  if (real) series.splice(2, 0, { label: "Real", data: [proy.tasa_ocupacion_hoy_pct, ...real.tasa_ocupacion_pct],
+  if (real) series.splice(2, 0, { label: "Real", data: [proy.tasa_ocupacion_hoy_pct, ...real.camas_ocupadas.map(n => n == null ? null : +(100 * n / proy.capacidad).toFixed(1))],
     borderColor: "#9aa7b1", borderWidth: 2, pointRadius: 3, tension: .25 });
   grafico("#gProy", { type: "line", data: { labels: etiquetas, datasets: series },
     options: opc({ scales: { y: { suggestedMin: 50, suggestedMax: 105, ticks: { callback: v => v + "%" } } } }) });
 }
 
 // ---------------- Evaluación ----------------
+
+// COMPARACION_CAPACIDAD_Y_ESTADOS_V1
+function estadoTabla(selector, mensaje, error = false) {
+  const tabla = $(selector);
+  tabla.replaceChildren();
+  const aviso = document.createElement("caption");
+  aviso.className = error ? "error" : "nota";
+  aviso.textContent = mensaje;
+  tabla.appendChild(aviso);
+}
+
 async function cargarEvaluacion() {
-  const modelos = await Promise.all(datasets.map(d => api(`/modelo/demanda?dataset=${d.clave}`)));
+  estadoTabla("#tMetodos", "Cargando modelos de ingresos...");
+  estadoTabla("#tReglas", "Cargando evaluacion de HDHI con la capacidad base configurada...");
+  $("#notaBack").textContent = "Cargando backtesting de HDHI...";
+  $("#notaHorizonte").textContent = "Cargando evaluacion de HDHI...";
+  const tareas = [
+(async () => {
+
+  const resultados = await Promise.allSettled(datasets.map(d => api(`/modelo/demanda?dataset=${d.clave}`)));
+const modelos = resultados.filter(r => r.status === "fulfilled").map(r => r.value);
+const fallos = resultados.map((r, i) => r.status === "rejected"
+  ? datasets[i].clave + ": " + r.reason.message : null).filter(Boolean);
+if (!modelos.length) throw new Error(fallos.join(" | "));
+
   let filas = "";
   modelos.forEach(r => Object.keys(NOMBRE).forEach((k, i) => {
     const x = r.backtest.metricas[k];
@@ -256,27 +394,88 @@ async function cargarEvaluacion() {
   $("#tMetodos").innerHTML = `<thead><tr><th>Dataset</th><th style="text-align:left">Método</th><th>MAE</th>
     <th>WAPE diario</th><th>WAPE semanal</th><th>Cobertura IC 80 %</th></tr></thead><tbody>${filas}</tbody>`;
 
-  const b = await api("/modelo/backtest?dataset=hdhi");
+  
+    if (fallos.length) {
+      const aviso = document.createElement("caption");
+      aviso.className = "error";
+      aviso.style.captionSide = "bottom";
+      aviso.textContent = "No se pudieron cargar: " + fallos.join(" | ");
+      $("#tMetodos").appendChild(aviso);
+    }
+    
+    })().catch(e => estadoTabla("#tMetodos", "Error en modelos: " + e.message, true)),
+(async () => {
+const b = await api("/modelo/backtest?dataset=hdhi");
   grafico("#gBack", { type: "line", data: { labels: b.fechas.map(f => f.slice(5)), datasets: [
     { label: "Real", data: b.real, borderColor: "#9aa7b1", borderWidth: 1, pointRadius: 0 },
     { label: NOMBRE[b.metodo_elegido], data: b[b.metodo_elegido], borderColor: "#1d2f3f", borderWidth: 2, pointRadius: 0 },
     { label: "Media 28 días", data: b.media_28d, borderColor: "#d6a21e", borderWidth: 2, borderDash: [4, 3], pointRadius: 0 },
   ]}, options: opc({ scales: { x: { ticks: { maxTicksLimit: 10 } }, y: { title: { display: true, text: "Ingresos por día" } } } }) });
-  $("#notaBack").textContent = `HDHI, ${b.fechas[0]} a ${b.fechas.at(-1)}. El modelo sigue el patrón semanal; los picos de un solo día son azar y ningún método los anticipa.`;
+  $("#notaBack").textContent = `HDHI, ${b.fechas[0]} a ${b.fechas.at(-1)}. El modelo sigue el patrón semanal; los picos diarios no siempre son anticipados por estos metodos.`;
 
-  const ev = await api("/modelo/evaluacion-agente?dataset=hdhi");
-  grafico("#gHorizonte", { type: "bar", data: { labels: ev.error_por_dia.mae_camas.map((_, i) => `Día ${i + 1}`),
-    datasets: [{ label: "Error medio (camas)", data: ev.error_por_dia.mae_camas, backgroundColor: "#1d2f3f" }] },
-    options: opc({ scales: { y: { title: { display: true, text: "Camas" } } } }) });
-  $("#notaHorizonte").textContent = `Se proyectó desde ${ev.fechas_evaluadas} fechas reales de HDHI y se comparó con lo que pasó.
-    A 1 día el error es de ${ev.error_por_dia.mae_camas[0]} camas (${ev.error_por_dia.mae_pct_capacidad[0]} % de la capacidad);
-    a 7 días, ${ev.error_por_dia.mae_camas.at(-1)} (${ev.error_por_dia.mae_pct_capacidad.at(-1)} %).`;
+  
+    })().catch(e => {
+      $("#notaBack").classList.add("error");
+      $("#notaBack").textContent = "Error en backtesting: " + e.message;
+    }),
+(async () => {
+const ev = await api("/modelo/evaluacion-agente?dataset=hdhi");
+  grafico("#gHorizonte", { type: "bar", data: {
+    labels: ev.error_por_dia.mae_camas.map((_, i) => `Dia ${i + 1}`),
+    datasets: [
+      { label: "Agente nuevo", data: ev.error_por_dia.mae_camas, backgroundColor: "#1d2f3f" },
+      { label: "Agente anterior", data: ev.comparacion_referencia.mae_agente_anterior_por_dia, backgroundColor: "#b47d48" },
+      { label: "Mantener censo", data: ev.comparacion_referencia.mae_camas_por_dia, backgroundColor: "#9baebd" }
+    ] }, options: opc({ scales: { y: { title: { display: true, text: "Error en camas" } } } }) });
+  const ref = ev.comparacion_referencia;
+  const cob = ev.cobertura_limite_superior;
+  $("#notaHorizonte").textContent = `Evaluacion desde ${ev.fechas_evaluadas} censos. Error medio global: nuevo ${ref.mae_global_agente}; anterior ${ref.mae_global_agente_anterior}; mantener censo ${ref.mae_global_referencia} camas. Este total incluye desarrollo.`;
+  if (ev.validacion_posterior) {
+    const v = ev.validacion_posterior;
+    $("#notaHorizonte").textContent += ` Validacion posterior (${v.fechas} censos, ${v.primer_censo} a ${v.ultimo_censo}): nuevo ${v.mae_agente}; anterior ${v.mae_agente_anterior}; mantener censo ${v.mae_referencia} camas.`;
+  }
+  if (cob.empirico_pct != null) $("#notaHorizonte").textContent += ` Limite superior nominal 90 %: cobertura ${cob.empirico_pct} %, sobre ${cob.pronosticos_comparables} predicciones comparables. No garantiza cobertura futura.`;
+
   const reglas = { ocupacion_esperada_mayor_90: "Ocupación esperada > 90 % (consigna)",
-                   p90_mayor_90: "Escenario pesimista (P90) > 90 %", probabilidad_mayor_30: "Probabilidad ≥ 30 % (preventiva)" };
+                   p90_mayor_90: "Limite superior nominal (P90) > 90 %", probabilidad_mayor_30: "Estimacion de excedencia ≥ 30 % (preventiva)" };
   $("#tReglas").innerHTML = `<thead><tr><th>Regla</th><th>Alertas</th><th>Aciertos</th><th>Precisión</th><th>Recall</th></tr></thead><tbody>` +
     Object.entries(ev.reglas_de_alerta).map(([k, v]) => `<tr><td>${reglas[k]}</td><td>${v.alertas}</td><td>${v.aciertos}</td>
-      <td>${Math.round(100 * v.precision)}%</td><td>${Math.round(100 * v.recall)}%</td></tr>`).join("") +
+      <td>${v.precision == null ? "No aplica" : Math.round(100 * v.precision) + "%"}</td><td>${v.recall == null ? "No aplica" : Math.round(100 * v.recall) + "%"}</td></tr>`).join("") +
     `</tbody><caption style="caption-side:bottom;text-align:left" class="nota">Semanas que realmente superaron el 90 %: ${ev.semanas_que_realmente_superaron_el_umbral} de ${ev.fechas_evaluadas}.</caption>`;
+
+      const aviso = document.createElement("caption");
+      aviso.className = "nota";
+      aviso.style.captionSide = "bottom";
+      aviso.textContent = "Evaluacion historica de HDHI con capacidad base: "
+        + ev.capacidad + " camas. El campo Camas de arriba solo modifica la proyeccion.";
+      $("#tReglas").appendChild(aviso);
+    })().catch(e => {
+      $("#notaHorizonte").classList.add("error");
+      $("#notaHorizonte").textContent = "Error en evaluacion: " + e.message;
+      estadoTabla("#tReglas", "Error en evaluacion: " + e.message, true);
+    }),
+  ];
+  await Promise.all(tareas);
+}
+
+
+async function cargarEscenarios() {
+  const dataset = $("#dataset").value;
+  $("#notaEscenarios").textContent = "Cargando escenarios simulados...";
+  try {
+    let r = escenariosPorDataset.get(dataset);
+    if (!r) { r = await api(`/escenarios?dataset=${dataset}`); escenariosPorDataset.set(dataset, r); }
+    if ($("#dataset").value !== dataset) return;
+    $("#notaEscenarios").textContent = r.descripcion;
+    document.querySelectorAll("#casos button").forEach(b => {
+      const c = r.casos.find(x => x.tipo === b.dataset.escenario);
+      b.disabled = !c;
+      b.title = c ? `Capacidad simulada: ${c.capacidad} camas. Maximo previsto: ${c.maximo_proyectado_pct} %.` : "Sin escenario disponible";
+    });
+  } catch (e) {
+    if ($("#dataset").value !== dataset) return;
+    $("#notaEscenarios").textContent = "No se pudieron cargar escenarios: " + e.message;
+  }
 }
 
 // ---------------- Inicio ----------------
@@ -288,20 +487,141 @@ async function iniciar() {
     const d = datasets.find(x => x.clave === $("#dataset").value);
     $("#fecha").value = d.fecha_demo;
     $("#capacidad").value = d.capacidad_total;
-    $("#casos").hidden = d.clave !== "hdhi";
+    $("#casos").hidden = false;
+    document.querySelectorAll("#casos button").forEach(b => b.disabled = true);
     $("#subtitulo").textContent = `${d.nombre}, ${d.capacidad_total} camas. Proyección a 7 días y Alerta de Saturación.`;
   };
-  $("#dataset").addEventListener("change", () => { elegirDataset(); proyectar(); });
+  $("#dataset").addEventListener("change", async () => { elegirDataset(); await proyectar(); await cargarEscenarios(); });
   $("#fecha").addEventListener("change", proyectar);
   $("#capacidad").addEventListener("change", proyectar);
   document.querySelectorAll("#casos button").forEach(b => b.addEventListener("click", () => {
-    $("#fecha").value = b.dataset.fecha; proyectar(); }));
+    const caso = escenariosPorDataset.get($("#dataset").value)?.casos.find(c => c.tipo === b.dataset.escenario);
+    if (!caso) return;
+    $("#fecha").value = caso.fecha; $("#capacidad").value = caso.capacidad;
+    proyectar();
+  }));
   $("#dia").addEventListener("input", e => proy && dibujarCamas(+e.target.value));
   elegirDataset();
-  $("#fecha").value = "2019-01-01";
+
   await proyectar();
-  cargarEvaluacion().catch(e => console.error(e));
+  await cargarEscenarios();
 }
+
+// SOLAPAS_AGENTE_V1
+let estadisticasCargadas = false;
+let evaluacionCargada = false;
+let cargandoEstadisticas = false;
+let cargandoEvaluacion = false;
+
+function tablaIndicadores(selector, encabezados, filas) {
+  const tabla = $(selector);
+  tabla.replaceChildren();
+  const cabecera = document.createElement("thead");
+  const tr = document.createElement("tr");
+  encabezados.forEach(titulo => {
+    const th = document.createElement("th");
+    th.scope = "col"; th.textContent = titulo; tr.appendChild(th);
+  });
+  cabecera.appendChild(tr); tabla.appendChild(cabecera);
+  const cuerpo = document.createElement("tbody");
+  filas.forEach(fila => {
+    const row = document.createElement("tr");
+    fila.forEach(valor => {
+      const td = document.createElement("td");
+      td.textContent = valor == null ? "Sin dato" : valor;
+      row.appendChild(td);
+    });
+    cuerpo.appendChild(row);
+  });
+  tabla.appendChild(cuerpo);
+}
+
+async function cargarEstadisticasHDHI() {
+  if (cargandoEstadisticas) return;
+  cargandoEstadisticas = true;
+  const estado = $("#estadoEstadisticas");
+  estado.className = "nota";
+  estado.textContent = "Cargando indicadores de HDHI...";
+  try {
+    const r = await api("/estadisticas/hdhi");
+    $("#kpisEstadisticas").replaceChildren();
+    const resumen = [
+      [r.total_internaciones.toLocaleString("es-AR"), "Episodios analizados"],
+      [r.alos_general_dias + " dias", "ALOS general"],
+      [r.cantidad_sin_grupo_etario ?? 0, "Episodios sin grupo etario"],
+    ];
+    resumen.forEach(([valor, etiqueta]) => {
+      const caja = document.createElement("div"); caja.className = "kpi";
+      const numero = document.createElement("b"); numero.textContent = valor;
+      const label = document.createElement("span"); label.textContent = etiqueta;
+      caja.appendChild(numero); caja.appendChild(label);
+      $("#kpisEstadisticas").appendChild(caja);
+    });
+    tablaIndicadores("#tablaPatologias",
+      ["Condicion", "Internaciones con la condicion", "ALOS (dias)", "Mediana (dias)", "Desconocidos"],
+      r.patologias.map(p => [p.patologia, p.cantidad_internaciones,
+        p.alos_promedio, p.mediana_dias, p.cantidad_sin_dato ?? null]));
+    tablaIndicadores("#tablaEdades",
+      ["Edad", "Internaciones", "ALOS (dias)", "Mediana (dias)"],
+      r.grupos_etarios.map(g => [g.grupo_etario, g.cantidad_internaciones,
+        g.alos_promedio, g.mediana_dias]));
+    estado.textContent = "Indicadores cargados. Fuente: HDHI revisado.";
+    estadisticasCargadas = true;
+  } catch(e) {
+    $("#kpisEstadisticas").replaceChildren();
+    $("#tablaPatologias").replaceChildren();
+    $("#tablaEdades").replaceChildren();
+    estado.className = "error";
+    estado.textContent = "No se pudieron cargar los indicadores: " + e.message;
+    estadisticasCargadas = false;
+  } finally { cargandoEstadisticas = false; }
+}
+
+async function cargarEvaluacionSolapa() {
+  if (cargandoEvaluacion) return;
+  cargandoEvaluacion = true;
+  try {
+    await cargarEvaluacion();
+    evaluacionCargada = true;
+  } finally { cargandoEvaluacion = false; }
+}
+
+function seleccionarSolapa(nombre) {
+  document.querySelectorAll("#solapas-principales [role=tab]").forEach(b => {
+    const activa = b.dataset.tab === nombre;
+    b.setAttribute("aria-selected", String(activa));
+    b.tabIndex = activa ? 0 : -1;
+  });
+  ["proyeccion", "estadisticas", "evaluacion"].forEach(id => {
+    $("#vista-" + id).hidden = id !== nombre;
+  });
+  $("header .controles").hidden = nombre !== "proyeccion";
+  $("#subtitulo").hidden = nombre !== "proyeccion";
+  if (nombre === "estadisticas" && !estadisticasCargadas) cargarEstadisticasHDHI();
+  if (nombre === "evaluacion" && !evaluacionCargada) cargarEvaluacionSolapa();
+  // Chart.js recalcula dimensiones cuando su contenedor deja de estar oculto.
+  requestAnimationFrame(() => Object.values(charts).forEach(c => c.resize()));
+}
+
+const botonesSolapa = [...document.querySelectorAll("#solapas-principales [role=tab]")];
+botonesSolapa.forEach((b, i) => {
+  b.addEventListener("click", () => seleccionarSolapa(b.dataset.tab));
+  b.addEventListener("keydown", e => {
+    const n = botonesSolapa.length;
+    let destino = i;
+    if (e.key === "ArrowRight") destino = (i + 1) % n;
+    else if (e.key === "ArrowLeft") destino = (i + n - 1) % n;
+    else if (e.key === "Home") destino = 0;
+    else if (e.key === "End") destino = n - 1;
+    else return;
+    e.preventDefault();
+    botonesSolapa[destino].focus();
+    seleccionarSolapa(botonesSolapa[destino].dataset.tab);
+  });
+});
+$("#recargarEstadisticas").addEventListener("click", cargarEstadisticasHDHI);
+$("#recargarEvaluacion").addEventListener("click", cargarEvaluacionSolapa);
+
 iniciar();
 </script>
 </body>
