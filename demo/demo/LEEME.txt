@@ -1,0 +1,30 @@
+DEMO DEL AGENTE DE GESTION DE CAMAS (Grupo 1)
+=============================================
+
+Dos formas de ver el sistema sin abrir VS Code:
+
+1) panel_sin_servidor.html  (no necesita nada)
+   Doble clic y se abre en el navegador. Funciona sin internet, sin Python
+   y sin iniciar sesion. Muestra resultados REALES de la API, grabados para:
+     - los tres datasets (HDHI, LengthOfStay y Healthcare), con su fecha de
+       demo y los escenarios Normal / Limite / Critico de cada uno;
+     - las solapas de Estancias (HDHI), UTI y general (los dos ejemplos
+       ficticios) y Evaluacion.
+   Si se cambia la fecha o la capacidad a mano, avisa que ese caso no esta
+   grabado. Sirve como respaldo si en la exposicion falla la computadora.
+
+2) iniciar_demo.bat  (el sistema completo, en vivo)
+   Doble clic: levanta el servidor y abre http://127.0.0.1:8000 en el navegador.
+   - La carpeta "demo" tiene que estar dentro del proyecto (al lado de backend).
+   - Usa el entorno .venv del proyecto. Si faltan librerias, las instala solo.
+   - Se abre la portada: hay que INICIAR SESION. La primera vez en cada
+     computadora hay que REGISTRARSE (usuario de 3 o mas letras, clave de 12
+     o mas caracteres). Las cuentas quedan guardadas solo en esa computadora.
+   - Documentacion de la API: http://127.0.0.1:8000/docs (con la sesion iniciada).
+   - Para cerrar el sistema, cerrar la ventana negra.
+
+Si el navegador se abre antes de que el servidor este listo, esperar unos
+segundos y recargar (F5).
+
+Resultados grabados con la version de la rama Barby del 18/10/2026. Si cambia
+el modelo o los datos, conviene regenerar panel_sin_servidor.html.
