@@ -6,92 +6,69 @@
 <title>Gestión de camas | Grupo 1</title>
 <!-- frontend/index.html — Dashboard del agente. Responsable: Bárbara (IA e interfaz).
      Consume la API del equipo: /datasets, /estadisticas, /proyeccion-camas y /modelo/* -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <script src="vendor/chart.umd.min.js"></script>
 <style>
-  :root {
-    --tinta: #1d2f3f; --suave: #5b6b78; --fondo: #eef2f4; --hoja: #fff; --linea: #cfd8de;
-    --vacia: #dfe6ea; --nueva: #6f8fb3;
-    --ok: #3c8d5a; --aviso: #d6a21e; --riesgo: #dd6b20; --alerta: #c0392b;
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--fondo); color: var(--tinta); line-height: 1.45;
-    font-family: "Atkinson Hyperlegible", system-ui, sans-serif; font-variant-numeric: tabular-nums; }
-  header { padding: 1.5rem clamp(1rem, 4vw, 3rem) 1rem; border-bottom: 3px solid var(--tinta);
-    display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; justify-content: space-between; }
-  h1 { margin: 0; font-size: clamp(1.6rem, 3vw, 2.2rem); }
-  header p { margin: .2rem 0 0; color: var(--suave); }
-  .controles { display: flex; flex-wrap: wrap; gap: .75rem; align-items: end; }
-  .controles label { display: grid; gap: .2rem; font-size: .85rem; color: var(--suave); }
-  select, input[type=date], input[type=number] { font: inherit; padding: .4rem .5rem; border: 2px solid var(--tinta);
-    border-radius: 6px; background: var(--hoja); color: var(--tinta); }
-  input[type=number] { width: 7ch; }
-  .pildoras { display: flex; gap: .4rem; flex-wrap: wrap; }
-  .pildoras button { font: inherit; padding: .4rem .9rem; border: 2px solid var(--tinta); border-radius: 999px;
-    background: transparent; color: var(--tinta); cursor: pointer; }
-  .pildoras button[aria-pressed="true"] { background: var(--tinta); color: #fff; }
-  button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--aviso); outline-offset: 2px; }
-  main { padding: 1.25rem clamp(1rem, 4vw, 3rem) 3rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
-  h2 { margin: 1rem 0 -.5rem; font-size: 1.45rem; border-top: 3px solid var(--tinta); padding-top: 1rem; }
-  .panel { background: var(--hoja); padding: 1.25rem; min-width: 0; }
-  .panel h3 { margin: 0 0 .75rem; font-size: 1.1rem; }
-  .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-  @media (max-width: 900px) { .dos { grid-template-columns: 1fr; } }
-  #mensaje { padding: 1rem 1.25rem; background: var(--hoja); border-left: 8px solid var(--ok); font-weight: 700; }
-  #mensaje.alerta { border-color: var(--alerta); color: var(--alerta); }
-  #mensaje.preventiva { border-color: var(--riesgo); }
-  #mensaje small { display: block; font-weight: 400; color: var(--suave); margin-top: .3rem; }
-  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; }
-  .kpi { background: var(--hoja); padding: 1rem; }
-  .kpi b { display: block; font-size: 1.9rem; line-height: 1.1; }
-  .kpi span { color: var(--suave); font-size: .88rem; }
-  .dia { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: .75rem; }
-  .dia input { flex: 1; min-width: 180px; accent-color: var(--tinta); }
-  #diaTxt { font-weight: 700; min-width: 13ch; }
-  .camas { display: grid; gap: 3px; }
-  .cama { aspect-ratio: 1.5; border-radius: 3px; background: var(--vacia); transition: background .25s; }
-  .cama.ocupada { background: var(--tinta); } .cama.p90 { background: var(--nueva); } .cama.excede { background: var(--alerta); }
-  .leyenda { display: flex; gap: 1rem; flex-wrap: wrap; font-size: .85rem; color: var(--suave); margin-top: .75rem; }
-  .leyenda i { display: inline-block; width: 1.2em; height: .75em; border-radius: 2px; margin-right: .3em; vertical-align: middle; }
-  .grafico { position: relative; height: 300px; }
-  table { border-collapse: collapse; width: 100%; font-size: .92rem; }
-  th, td { padding: .4rem .5rem; text-align: right; border-bottom: 1px solid var(--linea); }
-  th:first-child, td:first-child { text-align: left; }
-  thead th { border-bottom: 2px solid var(--tinta); vertical-align: bottom; }
-  tr.elegido td { font-weight: 700; }
-  td.si { color: var(--alerta); font-weight: 700; }
-  .scroll { overflow-x: auto; }
-  .nota { color: var(--suave); font-size: .9rem; margin: .6rem 0 0; max-width: 90ch; }
-  .error { color: var(--alerta); }
-  @media (prefers-reduced-motion: reduce) { .cama { transition: none; } }
-[hidden] { display: none !important; }
+:root {--tinta:#21334b;--suave:#53647a;--fondo:#f2f6fa;--hoja:#fff;--linea:#dce5ed;
+ --vacia:#e5edf3;--nueva:#a99ae6;--ok:#087f69;--aviso:#b77908;--riesgo:#bd650a;--alerta:#bd3049;
+ --acento:#087f83;--violeta:#6950ad;--sombra:0 6px 24px #263c5910;}
+*{box-sizing:border-box} [hidden]{display:none!important}
+body{margin:0;background:var(--fondo);color:var(--tinta);font:15px/1.6 system-ui,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums}
+header{padding:28px max(24px,calc((100vw - 1360px)/2));background:linear-gradient(115deg,#093d4d,#165366 62%,#3c4774);color:white;display:flex;flex-wrap:wrap;gap:24px;align-items:center;justify-content:space-between}
+.marca{display:flex;align-items:center;gap:15px}.marca-icono{display:grid;place-items:center;width:52px;height:52px;border:1px solid #ffffff38;background:#ffffff14;border-radius:17px;color:#9aeee0;flex-shrink:0}
+.marca-icono svg{width:30px;height:30px} .sobrelinea{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin:0;color:#b8eee7}
+h1{font-size:clamp(24px,3vw,32px);line-height:1.2;letter-spacing:-.035em;margin:3px 0 0}header p{margin:6px 0 0;color:#d4e5ef;font-size:13px;max-width:75ch}
+.alcance{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.alcance span{font-size:11px;padding:3px 10px;border-radius:30px;border:1px solid #ffffff38;color:#e9f4fa}
+.controles{width:100%;display:flex;flex-wrap:wrap;align-items:end;gap:14px;background:#ffffff0b;padding:18px;border:1px solid #ffffff25;border-radius:16px}
+.controles label{display:grid;gap:6px;font-size:12px;font-weight:650;color:#d8e8ee}.controles label:first-child{flex:1;min-width:240px}
+select,input[type=date],input[type=number]{font:inherit;font-size:14px;padding:10px 12px;min-height:44px;border:1px solid #c8d9e0;border-radius:10px;background:white;color:var(--tinta);max-width:100%}
+#capacidad{width:110px}.pildoras{display:flex;gap:7px;flex-wrap:wrap;align-items:center;flex-basis:100%;border-top:1px solid #ffffff28;padding-top:14px}.pildoras:before{content:'Explorá un escenario';font-size:12px;color:#d8e8ee;margin-right:5px}
+button{font:inherit;cursor:pointer;transition:background .15s,box-shadow .15s}button:disabled{opacity:.5;cursor:wait}
+.pildoras button{padding:7px 16px;border:1px solid #ffffff60;border-radius:30px;background:#ffffff0c;color:white;font-size:13px}
+.pildoras button[aria-pressed=true]{background:#e2fbf5;color:#104c48;border-color:#e2fbf5;font-weight:750}
+.pildoras button[data-escenario=normal]:before,.pildoras button[data-escenario=limite]:before,.pildoras button[data-escenario=critico]:before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;background:#70e0bc}
+.pildoras button[data-escenario=limite]:before{background:#ffd377}.pildoras button[data-escenario=critico]:before{background:#ff9eb0}
+#notaEscenarios{flex-basis:100%;color:#d4e5ef;font-size:12px;margin:2px 0 0;max-width:none}
+:focus-visible{outline:3px solid #d4a82d;outline-offset:4px}
+.solapas{display:flex;gap:8px;flex-wrap:wrap;padding:16px max(24px,calc((100vw - 1360px)/2));background:#fff;border-bottom:1px solid var(--linea)}
+.solapas button{display:flex;align-items:center;gap:9px;border:1px solid transparent;border-radius:11px;background:transparent;color:var(--suave);padding:10px 16px;font-weight:650;font-size:14px}
+.solapas button:hover{background:#f0f5f8}.solapas button[aria-selected=true]{background:#e5f4f1;color:#086862;border-color:#c2e3dc}
+.tab-num{width:23px;height:23px;display:inline-grid;place-items:center;border-radius:7px;background:#eaf0f5;font-size:11px;color:#53647a}.solapas button[aria-selected=true] .tab-num{background:#087f83;color:white}
+main{max-width:1408px;margin:auto;padding:28px 24px 48px}.tab-panel{display:grid;gap:22px;min-width:0}
+.titulo-seccion{display:flex;align-items:end;justify-content:space-between;gap:20px}.titulo-seccion h2{margin:0;font-size:24px;letter-spacing:-.025em}.titulo-seccion p{margin:5px 0 0;color:var(--suave);font-size:14px}.etiqueta{display:inline-block;font-size:11px;padding:5px 11px;border-radius:25px;background:#ece7fa;color:#604697;font-weight:700;white-space:nowrap}
+.panel{min-width:0;background:white;padding:24px;border:1px solid var(--linea);border-radius:17px;box-shadow:var(--sombra)}.panel h2{margin:0;font-size:24px;letter-spacing:-.025em}.panel h3{margin:0 0 12px;font-size:16px;font-weight:750;letter-spacing:-.015em}.panel>p{margin:8px 0;color:var(--suave)}
+.dos{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px}
+.guia{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;background:#eaf2fb;border:1px solid #d7e5f4;border-radius:14px;padding:16px 20px}.guia b{display:block;font-size:13px;color:#315881}.guia p{margin:2px 0 0;font-size:12px;color:#53647a}
+#mensaje{padding:20px 24px;border:1px solid #c4e6dd;border-left:5px solid var(--ok);border-radius:14px;background:#f0faf6;color:#145d50;font-weight:700;box-shadow:var(--sombra)}
+#mensaje.alerta{border-color:#efcbd3;border-left-color:var(--alerta);background:#fff3f5;color:#a32640}#mensaje.preventiva{border-color:#edd4ad;border-left-color:var(--riesgo);background:#fff9ed;color:#80510b}
+#mensaje small{display:block;font-weight:400;color:var(--suave);margin-top:8px}.estados{display:grid;grid-template-columns:1fr 1fr;gap:24px}.estado-titulo{display:block;font-size:10px;letter-spacing:.1em;margin-bottom:5px}.estado-valor{font-size:15px;line-height:1.4}
+details{margin-top:12px;font-size:13px;color:var(--suave);font-weight:400}summary{cursor:pointer;font-weight:650;color:var(--acento);width:fit-content}details p{margin:10px 0 0}
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}.kpi{background:#fff;border:1px solid var(--linea);border-top:3px solid #168e91;border-radius:14px;padding:19px 18px;box-shadow:var(--sombra)}.kpi:nth-child(2){border-top-color:#6950ad}.kpi:nth-child(3){border-top-color:#c28a28}.kpi:nth-child(4){border-top-color:#3a80bd}.kpi:nth-child(5){border-top-color:#a366a2}.kpi b{display:block;font-size:clamp(22px,2.1vw,30px);line-height:1.2;letter-spacing:-.03em;margin-bottom:8px}.kpi span{color:var(--suave);font-size:12px;line-height:1.4;display:block}
+.dia{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:12px 0 18px;font-size:13px}.dia input{flex:1;min-width:130px;accent-color:var(--acento);min-height:24px}#diaTxt{font-weight:650;color:var(--acento)}
+.resumen-camas{background:#f4f8fb;padding:15px;border-radius:12px;margin:0 0 18px}.resumen-texto{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:13px}.resumen-texto b{color:#087d7e}.barra-camas{height:12px;background:#dee9ef;border-radius:20px;overflow:hidden;margin:10px 0 7px}.barra-camas span{display:block;height:100%;background:linear-gradient(90deg,#0c9894,#0a777d);border-radius:20px}.barra-camas.alta span{background:var(--alerta)}.resumen-camas small{font-size:11px;color:var(--suave)}
+.camas{display:grid;gap:3px;margin-top:12px}.cama{aspect-ratio:1.5;border-radius:3px;background:var(--vacia)}.cama.ocupada{background:#11888b}.cama.p90{background:var(--nueva)}.cama.excede{background:var(--alerta)}
+.leyenda{display:flex;gap:10px 16px;flex-wrap:wrap;color:var(--suave);font-size:11px;margin-top:15px}.leyenda i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:middle}
+.grafico{position:relative;height:300px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{padding:12px 10px;border-bottom:1px solid #e6edf2;text-align:right;vertical-align:middle}th:first-child,td:first-child{text-align:left}thead th{font-size:11px;background:#f2f6fa;color:#53647a;font-weight:750;border-bottom:1px solid #dce5ed}tbody tr:hover{background:#f5fafb}tr.elegido td{font-weight:750;background:#edf8f3}td.si{color:var(--alerta);font-weight:750}.scroll{overflow-x:auto;border:1px solid #e6edf2;border-radius:10px;margin-top:12px}.nota{font-size:12px;color:var(--suave);line-height:1.65;margin:10px 0 0;max-width:95ch}.error{color:var(--alerta)}#recargarEvaluacion,#recargarEstadisticas{padding:9px 14px;border:1px solid #bdded9;border-radius:9px;background:#eef8f5;color:#09695f;font-size:13px;font-weight:650;margin-top:10px}
+.glosario{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.glosario b{display:block;font-size:13px;color:var(--violeta)}.glosario p{font-size:12px;color:var(--suave);margin:4px 0 0}footer{max-width:1360px;margin:0 auto;padding:0 24px 24px;color:var(--suave);font-size:11px;text-align:center}
+@media(max-width:1000px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.dos{grid-template-columns:1fr}.estados{gap:14px}}
+@media(max-width:600px){header{padding:22px 16px}.marca-icono{width:44px;height:44px}.controles{padding:14px}.controles label:first-child{min-width:100%}.controles label{flex:1}.controles input{width:100%}#capacidad{width:100%}.solapas{padding:12px 16px;gap:5px}.solapas button{font-size:12px;padding:9px 8px;gap:6px}.tab-num{width:20px;height:20px}main{padding:20px 16px 36px}.panel{padding:18px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.kpi{padding:15px}.guia,.glosario,.estados{grid-template-columns:1fr}.guia{gap:10px}.titulo-seccion{align-items:start;flex-direction:column;gap:10px}.grafico{height:270px}.etiqueta{white-space:normal}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 
-.solapas {display:flex; flex-wrap:wrap; gap:.5rem;
-  padding:1rem clamp(1rem,4vw,3rem); background:var(--hoja);
-  border-bottom:1px solid var(--linea);}
-.solapas button, #recargarEvaluacion, #recargarEstadisticas {
-  font:inherit; padding:.6rem 1rem; border:2px solid var(--tinta);
-  border-radius:6px; background:var(--hoja); color:var(--tinta); cursor:pointer;}
-.solapas button[aria-selected="true"] {background:var(--tinta); color:#fff;}
-.tab-panel {display:grid; gap:1.5rem; min-width:0;}
-.tab-panel[hidden], header .controles[hidden], #subtitulo[hidden] {
-  display:none !important;}
-.tab-panel h2 {margin:0; border:0; padding:0;}
+.sector-form{display:grid;gap:18px}.sector-form fieldset{min-width:0;border:1px solid var(--linea);border-radius:13px;padding:18px}.sector-form legend{font-weight:750;color:var(--acento);padding:0 8px}.sector-form label{display:grid;gap:5px;font-size:12px;color:var(--suave)}.sector-form input{width:100%}.campos-sector{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.acciones-sector{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.acciones-sector button{padding:10px 15px;border-radius:10px;border:1px solid #bedbd8;background:#edf8f5;color:#08685e;font-size:13px}.acciones-sector button[type=submit]{background:#087f83;color:white;border-color:#087f83;font-weight:700}.sector-aviso{padding:14px 18px;border-radius:12px;background:#f3eefb;color:#604697;font-size:13px}.sector-estado{padding:9px 12px;background:#e8f6f0;border-radius:9px;color:#146c57;font-size:13px;font-weight:700}.sector-estado.alerta{background:#fff0f3;color:#ac2944}.sector-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0}.sector-kpis b{display:block;font-size:25px;line-height:1.2}.sector-kpis small{color:var(--suave);font-size:11px}.sector-form details .campos-sector{margin-top:14px}#estadoSectores{margin:0;font-size:13px}#supuestosSectores li{margin:7px 0} @media(max-width:650px){.campos-sector{grid-template-columns:1fr}.sector-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
+.sesion-usuario{display:flex;align-items:center;gap:12px;margin-left:auto;font-size:12px;color:#d3e7ec}.sesion-usuario button{border:1px solid #ffffff55;border-radius:9px;color:#fff;background:#ffffff10;padding:8px 12px;font-size:12px}.sesion-usuario button:hover{background:#ffffff25}
 </style>
 </head>
 <body>
 <header>
   <div>
-    <h1>Gestión de camas</h1>
-    <p id="subtitulo">Proyección a 7 días y Alerta de Saturación</p>
+    <div class="marca"><span class="marca-icono" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 24V12m0 8h24v4M4 17h24v7M8 17v-5h7v5m3 0v-7h10v7M21 4v6m-3-3h6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><div class="sobrelinea">Grupo 1 · Agente inteligente</div><h1>Gestión de camas</h1></div></div>
+    <p id="subtitulo">Anticipá la demanda de la próxima semana.</p>
   </div>
+  <div class="sesion-usuario"><span id="nombreSesion">Verificando acceso…</span><button id="cerrarSesion" type="button">Cerrar sesión</button></div>
   <div class="controles">
-    <label>Dataset <select id="dataset"></select></label>
+    <label>Fuente de datos <select id="dataset"></select></label>
     <label>Fecha del censo <input type="date" id="fecha"></label>
-    <label>Camas <input type="number" id="capacidad" min="1"></label>
+    <label>Capacidad simulada <input type="number" id="capacidad" min="1"></label>
     <div class="pildoras" id="casos" aria-label="Casos de la demo">
       <button type="button" data-escenario="normal" disabled>Normal</button>
       <button type="button" data-escenario="limite" disabled>Límite</button>
@@ -103,11 +80,12 @@
 <nav id="solapas-principales" class="solapas" role="tablist"
      aria-label="Secciones del agente">
   <button id="tab-proyeccion" type="button" role="tab" data-tab="proyeccion"
-    aria-controls="vista-proyeccion" aria-selected="true" tabindex="0">Proyeccion de camas</button>
+    aria-controls="vista-proyeccion" aria-selected="true" tabindex="0"><span class="tab-num" aria-hidden="true">01</span> Proyección</button>
   <button id="tab-estadisticas" type="button" role="tab" data-tab="estadisticas"
-    aria-controls="vista-estadisticas" aria-selected="false" tabindex="-1">Estadisticas de HDHI</button>
+    aria-controls="vista-estadisticas" aria-selected="false" tabindex="-1"><span class="tab-num" aria-hidden="true">02</span> Estancias · HDHI</button>
   <button id="tab-evaluacion" type="button" role="tab" data-tab="evaluacion"
-    aria-controls="vista-evaluacion" aria-selected="false" tabindex="-1">Evaluacion del modelo</button>
+    aria-controls="vista-evaluacion" aria-selected="false" tabindex="-1"><span class="tab-num" aria-hidden="true">03</span> Evaluación</button>
+  <button id="tab-sectores" type="button" role="tab" data-tab="sectores" aria-controls="vista-sectores" aria-selected="false" tabindex="-1"><span class="tab-num" aria-hidden="true">04</span> UTI y general</button>
 </nav>
 
 
@@ -115,35 +93,38 @@
 <section id="vista-proyeccion" class="tab-panel" role="tabpanel"
          aria-labelledby="tab-proyeccion">
 
-  <div id="mensaje" role="status">Cargando…</div>
+  <div class="titulo-seccion"><div><h2>¿Alcanzan las camas?</h2><p>Un censo de partida y siete días para anticipar la demanda.</p></div><span class="etiqueta">Alerta de Saturación: más del 90 %</span></div>
+  <div id="mensaje" role="status">Consultando los datos y calculando la semana…</div>
 
   <section class="kpis" id="kpis"></section>
 
+  <div class="guia" aria-label="Cómo leer la proyección"><div><b>1. Revisá el censo</b><p>Es la ocupación de la fecha elegida, reconstruida con los datos históricos.</p></div><div><b>2. Mirá la semana</b><p>La estimación puede variar. El límite P90 permite explorar un escenario de mayor demanda.</p></div><div><b>3. Compará la capacidad</b><p>Los casos cambian la capacidad supuesta; no representan hospitales diferentes.</p></div></div>
   <section class="dos">
     <div class="panel">
-      <h3>Camas del hospital</h3>
+      <h3>Disponibilidad día a día</h3><p class="nota">Mové el selector para explorar la ocupación estimada.</p>
       <div class="dia">
         <label for="dia">Ver</label>
         <input id="dia" type="range" min="0" max="7" value="0">
         <span id="diaTxt">Hoy</span>
       </div>
-      <div class="camas" id="camas"></div>
+      <div id="resumenCamas" class="resumen-camas" aria-live="polite"></div>
+      <details><summary>Ver el mapa de camas</summary><div class="camas" id="camas"></div></details>
       <div class="leyenda">
-        <span><i style="background:var(--tinta)"></i>ocupada (esperado)</span>
-        <span><i style="background:var(--nueva)"></i>se ocuparían en el escenario pesimista (P90)</span>
+        <span><i style="background:#11888b"></i>ocupada (esperado)</span>
+        <span><i style="background:var(--nueva)"></i>adicionales hasta el límite P90</span>
         <span><i style="background:var(--vacia)"></i>libre</span>
-        <span><i style="background:var(--alerta)"></i>sin cama</span>
+        <span><i style="background:var(--alerta)"></i>demanda por encima de la capacidad</span>
       </div>
     </div>
     <div class="panel">
-      <h3>Ocupación proyectada y lo que realmente pasó</h3>
+      <h3>¿Cómo evolucionaría la ocupación?</h3><p class="nota">Compará la línea esperada con el umbral rojo del 90 %.</p>
       <div class="grafico"><canvas id="gProy"></canvas></div>
-      <p class="nota">El limite superior se calibra con errores anteriores cuando hay 12 semanas evaluables. La estimacion de excedencia es orientativa y no garantiza resultados. Como el censo es una fecha del pasado, la linea gris compara la ocupacion reconstruida del dataset cuando hay observaciones disponibles.</p>
+      <details><summary>¿Qué significan las otras líneas?</summary><p>La línea violeta es el límite superior nominal P90, calibrado con errores anteriores cuando hay al menos 12 semanas evaluables. No garantiza un resultado. La línea gris muestra la ocupación reconstruida que se observó después del censo histórico, cuando está disponible; sirve para comparar el pronóstico con lo ocurrido.</p></details>
     </div>
   </section>
 
   <section class="panel">
-    <h3>Detalle por día</h3>
+    <h3>La semana en números</h3><p class="nota">Ocupadas de mañana = ocupadas de hoy + ingresos − altas. Las altas se infieren por balance; los valores proyectados pueden tener decimales.</p>
     <div class="scroll"><table id="tDias"></table></div>
   </section>
 
@@ -152,7 +133,7 @@
 <section id="vista-estadisticas" class="tab-panel" role="tabpanel"
          aria-labelledby="tab-estadisticas" hidden>
   <div class="panel">
-    <h2>Estadisticas de HDHI</h2>
+    <h2>¿Cuánto duran las internaciones?</h2>
     <p>Duracion de las internaciones por condicion registrada y edad.</p>
     <p id="estadoEstadisticas" role="status">Selecciona esta solapa para cargar los indicadores.</p>
     <button id="recargarEstadisticas" type="button">Volver a cargar</button>
@@ -170,7 +151,7 @@
     <div class="scroll"><table id="tablaEdades"></table></div>
   </section>
   <section class="panel">
-    <h3>Como interpretar estos resultados</h3>
+    <h3>Claves para interpretar las estancias</h3>
     <p class="nota">ALOS es la duracion promedio de internacion.
     La mediana divide las estancias en dos mitades.
     Estos indicadores describen HDHI completo; el ALOS de Proyeccion
@@ -183,18 +164,20 @@
 <section id="vista-evaluacion" class="tab-panel" role="tabpanel"
          aria-labelledby="tab-evaluacion" hidden>
   <section class="panel">
-    <h2>Evaluacion del modelo</h2>
+    <h2>¿Qué tan bien predice el modelo?</h2>
     <p>Compara metodos de ingresos en las tres fuentes por separado.
     Los graficos de backtesting y ocupacion corresponden a HDHI.</p>
     <p class="nota">Esta evaluacion usa la capacidad base configurada.
     Cambiar Camas en Proyeccion no recalcula estas metricas.</p>
+    <div class="glosario"><div><b>MAE · error en cantidad</b><p>Cuánto se equivoca en promedio, en ingresos o camas según el gráfico. Menor es mejor.</p></div><div><b>WAPE · error relativo</b><p>Error absoluto total dividido por el total observado. Menor es mejor.</p></div><div><b>Cobertura · incertidumbre</b><p>Qué proporción de observaciones quedó dentro del intervalo. No mide certeza futura.</p></div></div>
     <button id="recargarEvaluacion" type="button">Volver a cargar</button>
   </section>
 
 
   <section class="dos">
     <div class="panel">
-      <h3>Modelo de ingresos: cinco métodos en los tres datasets</h3>
+      <h3>Comparacion retrospectiva de metodos de ingresos</h3>
+      <p class="nota">Esta tabla compara el historial completo. La seleccion de cada proyeccion utiliza solo datos hasta su censo.</p>
       <div class="scroll"><table id="tMetodos"></table></div>
       <p class="nota">Backtesting de hasta 26 semanas: en cada semana se entrena solo con el pasado y se pronostican los 7 días siguientes.
         WAPE = error total / ingresos totales. Se elige el de menor error diario, solo si le gana a la media por 3 % o más.</p>
@@ -221,7 +204,32 @@
   </section>
 
 </section>
+
+<section id="vista-sectores" class="tab-panel" role="tabpanel" aria-labelledby="tab-sectores" hidden>
+  <div class="titulo-seccion"><div><h2>UTI e internación general</h2><p>Dos censos, dos capacidades y alertas independientes para los próximos siete días.</p></div><span class="etiqueta">Simulación académica · referencia HDHI</span></div>
+  <div class="sector-aviso">Simulación por sectores con parámetros ingresados por el usuario. Consultá el alcance y los supuestos al final de los resultados.</div>
+  <form id="formSectores" class="panel sector-form">
+    <div class="campos-sector"><label>Fecha del censo simulado<input id="fechaSectores" type="date" value="2019-03-01" required></label><div><b>Fuente: HDHI</b><p class="nota">HDHI aporta el pronóstico de ingresos totales. El reparto y las estancias por sector deben ingresarse como supuestos. Las otras fuentes conservan su proyección agregada.</p></div></div>
+    <div class="dos">
+      <fieldset><legend>UTI · terapia intensiva</legend><div class="campos-sector"><label>Pacientes del censo<input id="censoUTI" type="number" min="0" step="1" required></label><label>Camas habilitadas (supuesto)<input id="capUTI" type="number" min="1" step="1" required></label><label>Estancia media supuesta (días)<input id="estanciaUTI" type="number" min="1" max="365" step="any" required></label></div></fieldset>
+      <fieldset><legend>Internación general</legend><div class="campos-sector"><label>Pacientes del censo<input id="censoGeneral" type="number" min="0" step="1" required></label><label>Camas habilitadas (supuesto)<input id="capGeneral" type="number" min="1" step="1" required></label><label>Estancia media supuesta (días)<input id="estanciaGeneral" type="number" min="1" max="365" step="any" required></label></div></fieldset>
+    </div>
+    <details open><summary>Supuestos de ingresos y traslados</summary><div class="campos-sector"><label>Ingresos externos que inician en UTI (%)<input id="porcentajeUTI" type="number" min="0" max="100" step="any" required></label><label>Salidas UTI que pasan a general (%)<input id="porcentajeTraslado" type="number" min="0" max="100" step="any" required></label><div><p class="nota">El resto ingresa directo a general o egresa del hospital, respectivamente. Un traslado libera UTI y ocupa general; no cuenta como alta hospitalaria.</p></div></div></details>
+    <p id="referenciaSectores" class="nota" role="status"></p>
+    <div class="acciones-sector"><button type="submit" id="calcularSectores" disabled>Proyectar los 7 días</button><button type="button" id="ejemploSectores" disabled>Cargar y calcular ejemplo ficticio</button><button type="button" id="criticoSectores" disabled>Ejemplo: UTI con menos camas</button><button type="button" id="restaurarReferenciaSectores">Verificar fecha e historia</button></div>
+    <p id="estadoSectores" role="status">Ingresá los censos y las capacidades, o cargá un ejemplo ficticio.</p>
+  </form>
+  <section id="resultadoSectores" class="tab-panel" hidden>
+    <div id="evidenciaSectores" class="sector-aviso"></div>
+    <div class="dos" id="tarjetasSectores"></div>
+    <section class="panel"><h3>Dos sectores, una semana</h3><p class="nota">Las líneas muestran demanda esperada respecto de la capacidad de cada sector. Si supera el 100 %, hay demanda teórica sin cama; las camas de general no reemplazan a las de UTI.</p><div class="grafico"><canvas id="gSectores"></canvas></div></section>
+    <section class="panel"><h3>Ingresos, traslados y altas</h3><p class="nota">Los ingresos externos se cuentan una sola vez. Los traslados aparecen en ambos sectores y se cancelan en el balance hospitalario. Valores esperados: pueden contener decimales.</p><div class="scroll"><table id="tablaSectores"></table></div></section>
+    <section class="panel"><details><summary>Ver parámetros, referencia y límites de este escenario</summary><p id="parametrosUsadosSectores" class="nota"></p><ul id="supuestosSectores"></ul></details></section>
+  </section>
+</section>
+
 </main>
+<footer>Grupo 1 · Gestión de Camas y Demanda Hospitalaria · Datos históricos para una simulación académica. Las fuentes se analizan por separado.</footer>
 
 <script>
 const API = location.protocol === "file:" ? "http://localhost:8000" : "";
@@ -235,8 +243,9 @@ const escenariosPorDataset = new Map();
 const $ = s => document.querySelector(s);
 const fmt = f => new Date(f + "T00:00").toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "numeric" });
 const fmtLargo = f => new Date(f + "T00:00").toLocaleDateString("es-AR");
-async function api(url, opciones) {
-  const r = await fetch(API + url, opciones);
+async function api(url, opciones = {}) {
+  const r = await fetch(API + url, {...opciones, credentials:"same-origin", headers:{...opciones.headers,"X-Requested-With":"AgenteCamas"}});
+  if(r.status===401){ document.querySelector("main").hidden=true;location.replace("/ingresar");throw new Error("La sesion finalizo. Inicia sesion nuevamente."); }
   const datos = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(datos.detail ? JSON.stringify(datos.detail) : `${url}: ${r.status}`);
   return datos;
@@ -263,6 +272,7 @@ async function proyectar() {
   const cap = textoCapacidad === "" ? null : Number(textoCapacidad);
   $("#mensaje").textContent = "Calculando proyeccion...";
   proy = null; real = null;
+  $("#resumenCamas").replaceChildren();
   $("#kpis").replaceChildren(); $("#camas").replaceChildren(); $("#tDias").replaceChildren();
   $("#dia").value = 0; $("#diaTxt").textContent = "Calculando...";
   if (charts["#gProy"]) { charts["#gProy"].destroy(); delete charts["#gProy"]; }
@@ -296,21 +306,24 @@ async function proyectar() {
     return;
   }
   const m = $("#mensaje");
-  m.className = proy.alerta_saturacion ? "alerta" : proy.alerta_preventiva ? "preventiva" : "";
-  m.innerHTML = `${proy.mensaje}<small>Censo del ${fmtLargo(proy.fecha_censo)} (${proy.origen_censo}).
-    Ingresos estimados con: ${NOMBRE[proy.metodo_ingresos] || proy.metodo_ingresos}. Ocupacion: ${proy.metodo_ocupacion || (proy.dataset === "hdhi" ? "Ridge de ocupacion por horizonte" : "estancias historicas")}. Altas inferidas por balance.</small>`;
+  const superaEnCenso = proy.camas_ocupadas_hoy / proy.capacidad > .90;
+  m.className = proy.alerta_saturacion || superaEnCenso ? "alerta" : proy.alerta_preventiva ? "preventiva" : "";
+  const estadoCenso = superaEnCenso ? "CENSO: supera el 90 % de la capacidad simulada." : "CENSO: no supera el 90 % de la capacidad simulada.";
+  const mensajeFuturo = proy.mensaje.replace(/^Sin alerta:/, "Sin saturacion proyectada:");
+  m.innerHTML = `<div class="estados"><div><span class="estado-titulo">CENSO · ${fmtLargo(proy.fecha_censo)}</span><span class="estado-valor">${estadoCenso}</span></div><div><span class="estado-titulo">PROXIMOS ${proy.proyeccion.length} DIAS</span><span class="estado-valor">${mensajeFuturo}</span></div></div><details><summary>Ver cómo se calculó</summary><small>Censo del ${fmtLargo(proy.fecha_censo)} (${proy.origen_censo}).
+    Ingresos estimados con: ${NOMBRE[proy.metodo_ingresos] || proy.metodo_ingresos}, seleccionado con historia hasta ${fmtLargo(proy.fecha_censo)}. Ocupacion: ${proy.metodo_ocupacion || (proy.dataset === "hdhi" ? "Ridge de ocupacion por horizonte" : "estancias historicas")}. Altas inferidas por balance. La estimación de excedencia es orientativa y no es una probabilidad clínica validada.</small></details>`;
   const kpi = (v, t) => `<div class="kpi"><b>${v}</b><span>${t}</span></div>`;
   $("#kpis").innerHTML =
-    kpi(`${proy.tasa_ocupacion_hoy_pct}%`, `ocupación hoy (${proy.camas_ocupadas_hoy} de ${proy.capacidad})`) +
+    kpi(`${proy.tasa_ocupacion_hoy_pct}%`, `ocupacion al censo (${proy.camas_ocupadas_hoy} de ${proy.capacidad})`) +
     kpi(`${proy.tasa_ocupacion_maxima_pct}%`, "tasa de ocupación proyectada máxima") +
-    kpi(`${proy.prob_max_superar_umbral_pct}%`, "mayor estimacion diaria de excedencia") +
-    kpi(`${proy.alos_historico} días`, "ALOS histórico") +
-    kpi(fmt(proy.dia_pico), "día pico");
+    kpi(`${proy.prob_max_superar_umbral_pct}%`, "Estimación máxima de excedencia · orientativa") +
+    kpi(`${proy.alos_historico} días`, "ALOS de egresos anteriores al censo") +
+    kpi(fmt(proy.dia_pico), "Día de mayor ocupación esperada");
   $("#dia").max = proy.proyeccion.length;
   dibujarCamas(+$("#dia").value);
   dibujarProyeccion();
   $("#tDias").innerHTML = `<thead><tr><th>Día</th><th>Ingresos</th><th>Altas (balance)</th><th>Ocupadas</th><th>Superior nominal (P90)</th>
-    <th>Libres</th><th>Ocupación</th><th>Prob. &gt; 90 %</th><th>Real</th><th>Alerta</th></tr></thead><tbody>` +
+    <th>Libres</th><th>Ocupación</th><th>Excedencia estimada</th><th>Real</th><th>Alerta</th></tr></thead><tbody>` +
     proy.proyeccion.map((d, i) => `<tr><td>${fmt(d.fecha)}</td><td>${d.ingresos_previstos}</td><td>${d.altas_previstas}</td>
       <td>${d.camas_ocupadas}</td><td>${d.camas_ocupadas_p90 ?? "–"}</td><td>${d.camas_libres}</td><td>${d.tasa_ocupacion_pct}%</td>
       <td>${d.prob_superar_umbral_pct ?? "–"}%</td><td>${real?.camas_ocupadas[i] ?? "–"}</td>
@@ -322,7 +335,11 @@ function dibujarCamas(dia) {
   const d = dia === 0 ? null : proy.proyeccion[dia - 1];
   const ocup = dia === 0 ? proy.camas_ocupadas_hoy : Math.round(d.camas_ocupadas);
   const p90 = dia === 0 ? ocup : Math.round(d.camas_ocupadas_p90 ?? d.camas_ocupadas);
-  $("#diaTxt").textContent = dia === 0 ? "Hoy" : `Día ${dia}, ${fmt(d.fecha)}`;
+  $("#diaTxt").textContent = dia === 0 ? "Fecha del censo" : `Día ${dia}, ${fmt(d.fecha)}`;
+  const libres = Math.max(0, cap - ocup);
+  const exceso = Math.max(0, ocup - cap);
+  const tasa = 100 * ocup / cap;
+  $("#resumenCamas").innerHTML = `<div class="resumen-texto"><b>${ocup} ocupadas de ${cap}</b><span>${libres} libres${exceso ? ` · ${exceso} por encima de la capacidad` : ""}</span></div><div class="barra-camas ${tasa > 90 ? "alta" : ""}" aria-hidden="true"><span style="width:${Math.min(100, tasa)}%"></span></div><small>${dia === 0 ? "Censo histórico reconstruido" : "Ocupación esperada, redondeada para este mapa"} · ${tasa.toFixed(1)} % de la capacidad supuesta.</small>`;
   const total = Math.max(cap, p90);
   const escala = Math.max(1, Math.ceil(total / 2000));
   const bloques = Math.ceil(total / escala);
@@ -341,18 +358,18 @@ function dibujarCamas(dia) {
 }
 
 function dibujarProyeccion() {
-  const etiquetas = ["Hoy", ...proy.proyeccion.map(d => fmt(d.fecha))];
+  const etiquetas = ["Censo", ...proy.proyeccion.map(d => fmt(d.fecha))];
   const series = [
     { label: "Esperada", data: [proy.tasa_ocupacion_hoy_pct, ...proy.proyeccion.map(d => d.tasa_ocupacion_pct)],
-      borderColor: "#1d2f3f", borderWidth: 3, tension: .25,
-      pointBackgroundColor: ["#1d2f3f", ...proy.proyeccion.map(d => d.alerta_saturacion ? "#c0392b" : "#1d2f3f")], pointRadius: 5 },
+      borderColor: "#11888b", borderWidth: 3, tension: .25,
+      pointBackgroundColor: ["#11888b", ...proy.proyeccion.map(d => d.alerta_saturacion ? "#bd3049" : "#11888b")], pointRadius: 5 },
     { label: "Superior nominal (P90)", data: [proy.tasa_ocupacion_hoy_pct, ...proy.proyeccion.map(d =>
         d.camas_ocupadas_p90 != null ? +(100 * d.camas_ocupadas_p90 / proy.capacidad).toFixed(1) : null)],
-      borderColor: "#6f8fb3", borderDash: [6, 4], borderWidth: 2, pointRadius: 0, tension: .25 },
-    { label: "Umbral 90 %", data: etiquetas.map(() => 90), borderColor: "#c0392b", borderWidth: 2, pointRadius: 0 },
+      borderColor: "#8b70ce", borderDash: [6, 4], borderWidth: 2, pointRadius: 0, tension: .25 },
+    { label: "Umbral 90 %", data: etiquetas.map(() => 90), borderColor: "#bd3049", borderWidth: 2, pointRadius: 0 },
   ];
   if (real) series.splice(2, 0, { label: "Real", data: [proy.tasa_ocupacion_hoy_pct, ...real.camas_ocupadas.map(n => n == null ? null : +(100 * n / proy.capacidad).toFixed(1))],
-    borderColor: "#9aa7b1", borderWidth: 2, pointRadius: 3, tension: .25 });
+    borderColor: "#7b8ca3", borderWidth: 2, pointRadius: 3, tension: .25 });
   grafico("#gProy", { type: "line", data: { labels: etiquetas, datasets: series },
     options: opc({ scales: { y: { suggestedMin: 50, suggestedMax: 105, ticks: { callback: v => v + "%" } } } }) });
 }
@@ -407,8 +424,8 @@ if (!modelos.length) throw new Error(fallos.join(" | "));
 (async () => {
 const b = await api("/modelo/backtest?dataset=hdhi");
   grafico("#gBack", { type: "line", data: { labels: b.fechas.map(f => f.slice(5)), datasets: [
-    { label: "Real", data: b.real, borderColor: "#9aa7b1", borderWidth: 1, pointRadius: 0 },
-    { label: NOMBRE[b.metodo_elegido], data: b[b.metodo_elegido], borderColor: "#1d2f3f", borderWidth: 2, pointRadius: 0 },
+    { label: "Real", data: b.real, borderColor: "#7b8ca3", borderWidth: 1, pointRadius: 0 },
+    { label: NOMBRE[b.metodo_elegido], data: b[b.metodo_elegido], borderColor: "#11888b", borderWidth: 2, pointRadius: 0 },
     { label: "Media 28 días", data: b.media_28d, borderColor: "#d6a21e", borderWidth: 2, borderDash: [4, 3], pointRadius: 0 },
   ]}, options: opc({ scales: { x: { ticks: { maxTicksLimit: 10 } }, y: { title: { display: true, text: "Ingresos por día" } } } }) });
   $("#notaBack").textContent = `HDHI, ${b.fechas[0]} a ${b.fechas.at(-1)}. El modelo sigue el patrón semanal; los picos diarios no siempre son anticipados por estos metodos.`;
@@ -423,7 +440,7 @@ const ev = await api("/modelo/evaluacion-agente?dataset=hdhi");
   grafico("#gHorizonte", { type: "bar", data: {
     labels: ev.error_por_dia.mae_camas.map((_, i) => `Dia ${i + 1}`),
     datasets: [
-      { label: "Agente nuevo", data: ev.error_por_dia.mae_camas, backgroundColor: "#1d2f3f" },
+      { label: "Agente nuevo", data: ev.error_por_dia.mae_camas, backgroundColor: "#11888b" },
       { label: "Agente anterior", data: ev.comparacion_referencia.mae_agente_anterior_por_dia, backgroundColor: "#b47d48" },
       { label: "Mantener censo", data: ev.comparacion_referencia.mae_camas_por_dia, backgroundColor: "#9baebd" }
     ] }, options: opc({ scales: { y: { title: { display: true, text: "Error en camas" } } } }) });
@@ -592,11 +609,12 @@ function seleccionarSolapa(nombre) {
     b.setAttribute("aria-selected", String(activa));
     b.tabIndex = activa ? 0 : -1;
   });
-  ["proyeccion", "estadisticas", "evaluacion"].forEach(id => {
+  ["proyeccion", "estadisticas", "evaluacion", "sectores"].forEach(id => {
     $("#vista-" + id).hidden = id !== nombre;
   });
   $("header .controles").hidden = nombre !== "proyeccion";
   $("#subtitulo").hidden = nombre !== "proyeccion";
+  if (nombre === "sectores" && !referenciaSectoresCargada) cargarReferenciasSectores();
   if (nombre === "estadisticas" && !estadisticasCargadas) cargarEstadisticasHDHI();
   if (nombre === "evaluacion" && !evaluacionCargada) cargarEvaluacionSolapa();
   // Chart.js recalcula dimensiones cuando su contenedor deja de estar oculto.
@@ -622,7 +640,110 @@ botonesSolapa.forEach((b, i) => {
 $("#recargarEstadisticas").addEventListener("click", cargarEstadisticasHDHI);
 $("#recargarEvaluacion").addEventListener("click", cargarEvaluacionSolapa);
 
-iniciar();
+
+let referenciaSectoresDatos = null;
+let origenParametrosSectores = "supuestos_usuario";
+let referenciaSectoresCargada = false, consultaSectores = 0, consultaReferencia = 0;
+const camposSectores = ["censoUTI","capUTI","estanciaUTI","censoGeneral","capGeneral","estanciaGeneral","porcentajeUTI","porcentajeTraslado"];
+function limpiarSectores() {
+  consultaSectores++;
+  $("#resultadoSectores").hidden = true;
+  $("#tarjetasSectores").replaceChildren(); $("#tablaSectores").replaceChildren();
+  if(charts["#gSectores"]) {charts["#gSectores"].destroy();delete charts["#gSectores"];}
+  $("#estadoSectores").textContent = "Escenario modificado. Calculá nuevamente para ver resultados actualizados.";
+  $("#estadoSectores").className = "";
+}
+async function cargarReferenciasSectores() {
+  const token = ++consultaReferencia;
+  referenciaSectoresCargada = false;
+  limpiarSectores();
+  ["calcularSectores","ejemploSectores","criticoSectores"].forEach(id => $("#"+id).disabled=true);
+  $("#referenciaSectores").textContent="Verificando rango de fechas e historia anterior al censo…";
+  try {
+    const r = await api("/sectores/parametros?fecha="+encodeURIComponent($("#fechaSectores").value));
+    if(token!==consultaReferencia)return;
+    $("#referenciaSectores").textContent=`Historia disponible. Auditoría: ${r.episodios_anteriores.toLocaleString("es-AR")} episodios egresados antes del censo, hasta ${fmtLargo(r.ultimo_egreso_utilizado)}. La duración UTI no confirma noches ni recorridos entre sectores. Por eso no se completan automáticamente los parámetros: ingresalos o cargá el ejemplo ficticio.`;
+    referenciaSectoresDatos=r;
+    referenciaSectoresCargada=true;
+    ["calcularSectores","ejemploSectores","criticoSectores"].forEach(id => $("#"+id).disabled=false);
+  } catch(e) {
+    if(token!==consultaReferencia)return;
+    $("#referenciaSectores").textContent="No se pudo obtener referencia: "+e.message;
+  }
+}
+async function proyectarSectores(event) {
+  if(event)event.preventDefault();
+  if(!$("#formSectores").reportValidity() || !referenciaSectoresCargada)return;
+  limpiarSectores();const token=consultaSectores;
+  $("#estadoSectores").textContent="Calculando ingresos con historia hasta el censo y simulando los dos sectores…";
+  const n = id => Number($("#"+id).value);
+  const cuerpo={dataset:"hdhi",fecha:$("#fechaSectores").value,dias:7,sectores:{
+    uti:{ocupadas:n("censoUTI"),capacidad:n("capUTI")}, general:{ocupadas:n("censoGeneral"),capacidad:n("capGeneral")},
+    estancia_media_uti:n("estanciaUTI"),estancia_media_general:n("estanciaGeneral"),
+    proporcion_ingresos_uti:n("porcentajeUTI")/100,fraccion_salidas_uti_a_general:n("porcentajeTraslado")/100,origen_parametros:origenParametrosSectores}};
+  try {
+    const r=await api("/proyeccion-camas",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(cuerpo)});
+    if(token!==consultaSectores)return;
+    const num=x=>Number(x).toLocaleString("es-AR",{maximumFractionDigits:1});
+    for(const [clave,nombre] of [["uti","UTI · terapia intensiva"],["general","Internación general"]]) {
+      const c=r.censo[clave],t=r.resumen[clave];
+      const caja=document.createElement("div");caja.className="panel";
+      caja.innerHTML=`<h3>${nombre}</h3><div class="sector-estado ${t.alerta_proyeccion?"alerta":""}">${t.alerta_proyeccion?"Alerta de Saturación en la proyección":"Sin saturación proyectada"}</div><div class="sector-kpis"><div><b>${num(c.camas_ocupadas)} / ${c.capacidad}</b><small>Censo ingresado / capacidad</small></div><div><b>${num(c.tasa_ocupacion_pct)} %</b><small>Ocupación al censo</small></div><div><b>${num(t.ocupacion_maxima_pct)} %</b><small>Máxima ocupación esperada</small></div></div><p class="nota">Censo: ${t.alerta_censo?"supera":"no supera"} el 90 %. Pico proyectado: ${fmtLargo(t.dia_pico)}. ${t.alerta_proyeccion?"Revisá la demanda y la capacidad de este sector.":"El resultado depende de los supuestos ingresados."}</p>`;
+      $("#tarjetasSectores").appendChild(caja);
+    }
+    grafico("#gSectores",{type:"line",data:{labels:["Censo",...r.proyeccion.map(d=>fmt(d.fecha))],datasets:[
+      {label:"UTI",data:[r.censo.uti.tasa_ocupacion_pct,...r.proyeccion.map(d=>d.uti.tasa_ocupacion_pct)],borderColor:"#6950ad",borderWidth:3,tension:.2},
+      {label:"General",data:[r.censo.general.tasa_ocupacion_pct,...r.proyeccion.map(d=>d.general.tasa_ocupacion_pct)],borderColor:"#11888b",borderWidth:3,tension:.2},
+      {label:"Umbral 90 %",data:Array(8).fill(90),borderColor:"#bd3049",borderDash:[5,4],pointRadius:0}]},options:opc({scales:{y:{suggestedMin:0,suggestedMax:100,ticks:{callback:v=>v+"%"}}}})});
+    tablaIndicadores("#tablaSectores",["Día","Ingresos externos UTI","Ingresos externos general","Traslados UTI → general","Altas hospital","UTI ocupadas","General ocupadas","Libres UTI","Libres general","Alerta por sector"],r.proyeccion.map(d=>[fmt(d.fecha),num(d.uti.ingresos_externos),num(d.general.ingresos_externos),num(d.traslados_uti_a_general),num(d.altas_hospital),num(d.uti.camas_ocupadas),num(d.general.camas_ocupadas),num(d.uti.camas_libres),num(d.general.camas_libres),[d.uti.alerta_saturacion?"UTI":"",d.general.alerta_saturacion?"General":""].filter(Boolean).join(" + ")||"Sin alerta"]));
+    $("#supuestosSectores").replaceChildren();r.advertencias.forEach(t=>{const li=document.createElement("li");li.textContent=t;$("#supuestosSectores").appendChild(li);});
+    $("#parametrosUsadosSectores").textContent=`Método de ingresos: ${NOMBRE[r.metodo_ingresos]||r.metodo_ingresos}. Censo: ${fmtLargo(r.fecha_censo)}. Estancias supuestas: UTI ${num(r.parametros.estancia_media_uti)} días; general ${num(r.parametros.estancia_media_general)} días. Ingresos que inician UTI: ${num(100*r.parametros.proporcion_ingresos_uti)} %. Salidas UTI hacia general: ${num(100*r.parametros.fraccion_salidas_uti_a_general)} %.`;
+    $("#evidenciaSectores").textContent=(r.origen_parametros==="ejemplo_ficticio"?"EJEMPLO FICTICIO: censo, capacidades y parámetros elegidos para demostrar la lógica.":"ESCENARIO CON SUPUESTOS INGRESADOS POR VOS: censo, capacidades y parámetros sin validación sectorial.")+" Los ingresos totales se estiman con HDHI hasta el censo. Balance de pacientes verificado. No es un pronóstico validado de UTI.";
+    $("#resultadoSectores").hidden=false;
+    $("#estadoSectores").textContent=r.origen_parametros==="ejemplo_ficticio"?"Ejemplo ficticio calculado. Revisá las alertas y el efecto de los supuestos.":"Escenario calculado con tus entradas. Resultados condicionados a los supuestos.";
+    requestAnimationFrame(()=>charts["#gSectores"]?.resize());
+  } catch(e) {
+    if(token!==consultaSectores)return;
+    $("#estadoSectores").className="error";$("#estadoSectores").textContent="No se pudo simular: "+e.message;
+  }
+}
+$("#formSectores").addEventListener("submit",proyectarSectores);
+camposSectores.forEach(id=>$("#"+id).addEventListener("input",()=>{origenParametrosSectores="supuestos_usuario";limpiarSectores();}));
+$("#fechaSectores").addEventListener("change",cargarReferenciasSectores);
+$("#fechaSectores").addEventListener("input",()=>{consultaReferencia++;referenciaSectoresCargada=false;limpiarSectores();["calcularSectores","ejemploSectores","criticoSectores"].forEach(id=>$("#"+id).disabled=true);});
+$("#restaurarReferenciaSectores").addEventListener("click",cargarReferenciasSectores);
+function ejemploSectores(critico=false) {
+  if(!referenciaSectoresCargada||!referenciaSectoresDatos)return;
+  origenParametrosSectores="ejemplo_ficticio";
+  $("#estanciaUTI").value=2;$("#estanciaGeneral").value=5;
+  $("#porcentajeUTI").value=20;$("#porcentajeTraslado").value=80;
+  $("#censoUTI").value=7;$("#capUTI").value=critico?8:20;
+  $("#censoGeneral").value=90;$("#capGeneral").value=170;
+  proyectarSectores();
+}
+$("#ejemploSectores").addEventListener("click",()=>ejemploSectores(false));
+$("#criticoSectores").addEventListener("click",()=>ejemploSectores(true));
+
+async function verificarAcceso() {
+  try {
+    const r=await fetch("/auth/sesion",{credentials:"same-origin"});
+    if(!r.ok)throw new Error("No se pudo verificar el acceso.");
+    const sesion=await r.json();
+    if(!sesion.autenticado){document.querySelector("main").hidden=true;location.replace("/ingresar");return false;}
+    document.querySelector("main").hidden=false;
+    $("#nombreSesion").textContent="Sesión de "+sesion.usuario;
+    return true;
+  }catch(error){document.querySelector("main").hidden=true;$("#nombreSesion").textContent="No se pudo verificar tu acceso. Recargá la página.";return false;}
+}
+$("#cerrarSesion").addEventListener("click",async()=>{
+  const b=$("#cerrarSesion");b.disabled=true;
+  try{const r=await fetch("/auth/salir",{method:"POST",credentials:"same-origin",headers:{"X-Requested-With":"AgenteCamas"}});if(!r.ok)throw new Error();document.querySelector("main").hidden=true;location.replace("/ingresar");}
+  catch(error){b.textContent="Reintentar cerrar sesión";b.disabled=false;}
+});
+window.addEventListener("pageshow",event=>{if(event.persisted)location.reload();});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")verificarAcceso();});
+setInterval(()=>{if(document.visibilityState==="visible")verificarAcceso();},60000);
+verificarAcceso().then(permitido=>{if(permitido)iniciar();});
 </script>
 </body>
 </html>

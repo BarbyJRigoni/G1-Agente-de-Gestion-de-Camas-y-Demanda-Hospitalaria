@@ -12,7 +12,7 @@ Actualización del 17/10/2026. Rama de trabajo: prueba-sabrina.
 - La API conserva la descripción del modelo y su calibración en la respuesta. Salud comprueba cada archivo de datos requerido; los archivos ausentes producen mensajes claros.
 - La fecha del pico se determina antes de redondear los porcentajes. Alcanzar exactamente el umbral no emite alerta; superarlo sí.
 - Los tres datasets tienen escenarios Normal/Límite/Crítico que varían explícitamente la capacidad supuesta con igual fecha y demanda. Son simulaciones de recursos, no tres eventos históricos de saturación. No modifican config.py ni los CSV.
-- Las tres solapas se conservan. Las consultas desactualizadas no pisan la selección más reciente, los datos anteriores se limpian mientras se calcula y una capacidad inválida muestra el error.
+- Las solapas de proyección, estadísticas y evaluación se conservan; se añade una solapa de simulación UTI/general con su alcance y supuestos documentados en sectores_uti_general.md. Las consultas desactualizadas no pisan la selección más reciente, los datos anteriores se limpian mientras se calcula y una capacidad inválida muestra el error.
 - Chart.js 4.4.1 se sirve localmente, con su licencia. No requiere una descarga externa al abrir el programa.
 
 ## Evidencia de validación

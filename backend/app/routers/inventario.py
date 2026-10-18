@@ -13,11 +13,12 @@ from datetime import date
 from typing import Annotated, Literal, Optional
 
 from fastapi import APIRouter, Body, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from agents import inventario_agent as agente
 from core import config
 from services import alertas
+from services.sectores import EscenarioSectores, proyectar_sectores, parametros_historicos
 
 router = APIRouter()
 
@@ -31,6 +32,7 @@ NombreDataset = Literal["hdhi", "lengthofstay", "healthcare"]
 
 class CensoActual(BaseModel):
     """Datos que recibe /proyeccion-camas."""
+    model_config = ConfigDict(extra="forbid")
     dataset: NombreDataset = Field(config.DATASET_POR_DEFECTO, description="Dataset historico a usar")
     fecha: Optional[date] = Field(None, description="Fecha del censo. Si se omite, se usa la fecha de prueba del dataset")
     capacidad: Optional[int] = Field(None, gt=0, description="Camas del hospital. Si se omite, se usa la de config.py")
@@ -39,6 +41,17 @@ class CensoActual(BaseModel):
         description="Censo actual: noches que lleva internado cada paciente (1 = ingreso hoy). "
                     "Si se omite, se reconstruye desde el historial",
     )
+    sectores: Optional[EscenarioSectores] = Field(None, description="Simulacion UTI/general HDHI: censo y capacidad de cada sector. No reconstruye censos historicos UTI.")
+
+    @model_validator(mode="after")
+    def validar_sectores(self):
+        if self.sectores is not None:
+            if self.dataset != "hdhi":
+                raise ValueError("La simulacion por sectores usa solo HDHI, que registra duracion UTI.")
+            if self.capacidad is not None or self.dias_internados is not None:
+                raise ValueError("Con sectores, envie censo y capacidad dentro de cada sector, sin capacidad ni dias_internados agregados.")
+        return self
+
     dias: int = Field(config.DIAS_PROYECCION, ge=1, le=14, description="Dias a proyectar")
 
 
@@ -58,6 +71,8 @@ class ProyeccionRespuesta(BaseModel):
     dataset: str
     metodo_ingresos: Optional[str] = Field(None, description="Metodo del modelo de demanda usado")
     metodo_ocupacion: Optional[str] = None
+    fecha_corte_modelo: Optional[date] = None
+    alerta_ocupacion_censo: bool = False
     calibracion_incertidumbre: Optional[dict] = None
     advertencias: list[str] = Field(default_factory=list)
     prob_max_superar_umbral_pct: Optional[float] = None
@@ -73,6 +88,64 @@ class ProyeccionRespuesta(BaseModel):
     tasa_ocupacion_maxima_pct: float
     dia_pico: date
     proyeccion: list[DiaProyectado]
+
+
+class EstadoSectorRespuesta(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False)
+    camas_ocupadas: float = Field(ge=0)
+    capacidad: int = Field(gt=0)
+    camas_libres: float = Field(ge=0)
+    demanda_sin_cama: float = Field(ge=0)
+    tasa_ocupacion_pct: float = Field(ge=0)
+    alerta_saturacion: bool
+
+
+class CensoSectoresRespuesta(BaseModel):
+    uti: EstadoSectorRespuesta
+    general: EstadoSectorRespuesta
+
+
+class FlujoUTIRespuesta(EstadoSectorRespuesta):
+    ingresos_externos: float = Field(ge=0)
+    salidas_sector: float = Field(ge=0)
+    altas_hospital: float = Field(ge=0)
+
+
+class FlujoGeneralRespuesta(EstadoSectorRespuesta):
+    ingresos_externos: float = Field(ge=0)
+    traslados_recibidos: float = Field(ge=0)
+    altas_hospital: float = Field(ge=0)
+
+
+class DiaSectoresRespuesta(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False)
+    fecha: date
+    ingresos_hospital: float = Field(ge=0)
+    altas_hospital: float = Field(ge=0)
+    traslados_uti_a_general: float = Field(ge=0)
+    uti: FlujoUTIRespuesta
+    general: FlujoGeneralRespuesta
+
+
+class ProyeccionSectoresRespuesta(BaseModel):
+    modo: Literal["simulacion_sectores"]
+    dataset: Literal["hdhi"]
+    fecha_censo: date
+    origen_censo: str
+    dias: int
+    metodo_ingresos: str
+    metodo_sectores: str
+    parametros: dict
+    referencia_historica: dict
+    origen_parametros: Literal["supuestos_usuario", "ejemplo_ficticio"]
+    nivel_evidencia: Literal["simulacion_sectorial_no_validada"]
+    control_balance: dict
+    alerta_saturacion: bool
+    alerta_ocupacion_censo: bool
+    censo: CensoSectoresRespuesta
+    resumen: dict
+    proyeccion: list[DiaSectoresRespuesta]
+    advertencias: list[str]
 
 
 class DatasetInfo(BaseModel):
@@ -105,6 +178,13 @@ class Censo(BaseModel):
 
 # Ejemplos que aparecen en /docs para la demo (fechas reales de HDHI)
 EJEMPLOS_CENSO = {
+    "uti_y_general": {"summary": "Simulacion UTI/general: censo, capacidades y parametros ficticios explicitos",
+                      "value": {"dataset": "hdhi", "fecha": "2019-03-01", "dias": 7,
+                                "sectores": {"uti": {"ocupadas": 7, "capacidad": 20},
+                                             "general": {"ocupadas": 90, "capacidad": 170},
+                                             "proporcion_ingresos_uti": 0.2, "estancia_media_uti": 2,
+                                             "estancia_media_general": 5, "fraccion_salidas_uti_a_general": 0.8,
+                                             "origen_parametros": "ejemplo_ficticio"}}},
     "capacidad_base": {"summary": "HDHI: censo historico con capacidad supuesta de 190",
                        "value": {"dataset": "hdhi", "fecha": "2019-01-01", "capacidad": 190}},
     "capacidad_reducida": {"summary": "HDHI: misma fecha, escenario de capacidad reducida (120)",
@@ -171,7 +251,7 @@ def censo(dataset: NombreDataset = Query(config.DATASET_POR_DEFECTO),
     return {"dataset": dataset, **evaluado}
 
 
-@router.post("/proyeccion-camas", response_model=ProyeccionRespuesta, tags=["Agente"],
+@router.post("/proyeccion-camas", response_model=ProyeccionRespuesta | ProyeccionSectoresRespuesta, tags=["Agente"],
              summary="Proyeccion semanal de camas y Alerta de Saturacion")
 def proyeccion_camas(censo_actual: CensoActual = Body(openapi_examples=EJEMPLOS_CENSO)):
     """
@@ -180,6 +260,8 @@ def proyeccion_camas(censo_actual: CensoActual = Body(openapi_examples=EJEMPLOS_
     y si corresponde la **Alerta de Saturacion** (ocupacion > 90 %).
     """
     try:
+        if censo_actual.sectores is not None:
+            return proyectar_sectores(censo_actual.fecha, censo_actual.sectores, censo_actual.dias)
         return agente.proyectar_camas(
             dataset=censo_actual.dataset,
             fecha=censo_actual.fecha,
@@ -223,3 +305,11 @@ def escenarios(dataset: NombreDataset = Query(config.DATASET_POR_DEFECTO)):
             'casos': [{'tipo': tipo, 'fecha': r['fecha_censo'], 'capacidad': capacidad,
                        'maximo_proyectado_pct': round(100 * pico / capacidad, 1)}
                       for tipo, capacidad in capacidades.items()]}
+
+
+@router.get("/sectores/parametros", tags=["Datos"], summary="Auditoria historica anterior al censo; no infiere parametros UTI/general")
+def referencias_sectores(fecha: Optional[date] = Query(None)):
+    try:
+        return parametros_historicos(str(fecha or config.DATASETS["hdhi"]["fecha_demo"]))
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))

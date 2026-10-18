@@ -23,18 +23,20 @@ NombreDataset = Literal["hdhi", "lengthofstay", "healthcare"]
 
 
 @router.get("/demanda", summary="Modelo de demanda: metodo elegido y metricas")
-def demanda(dataset: NombreDataset = Query(config.DATASET_POR_DEFECTO)):
+def demanda(dataset: NombreDataset = Query(config.DATASET_POR_DEFECTO),
+            fecha: Optional[date] = Query(None, description="Corte temporal; sin fecha, evaluacion del historial completo")):
     """Compara cinco metodos de prediccion de ingresos con 26 semanas de backtesting
     (MAE, RMSE, WAPE diario y semanal, R², sesgo y cobertura del intervalo del 80 %)
     y devuelve el elegido. Incluye los coeficientes de la regresion."""
-    m = prediccion.modelo_demanda(dataset)
-    return {**m.resumen(), "coeficientes_regresion": m.coeficientes()}
+    m = modelo_para_consulta(dataset, fecha)
+    return {**m.resumen(), **alcance(m, fecha), "coeficientes_regresion": m.coeficientes()}
 
 
 @router.get("/backtest", summary="Ingresos reales vs. pronosticados")
-def backtest(dataset: NombreDataset = Query(config.DATASET_POR_DEFECTO)):
-    m = prediccion.modelo_demanda(dataset)
-    return {"dataset": dataset, "metodo_elegido": m.metodo_elegido, **m.evaluacion["serie"]}
+def backtest(dataset: NombreDataset = Query(config.DATASET_POR_DEFECTO),
+             fecha: Optional[date] = Query(None, description="Corte temporal; sin fecha, historial completo")):
+    m = modelo_para_consulta(dataset, fecha)
+    return {"dataset": dataset, "metodo_elegido": m.metodo_elegido, **alcance(m, fecha), **m.evaluacion["serie"]}
 
 
 @router.get("/evaluacion-agente", summary="Que tan bien proyecta el agente (contra la realidad)")
@@ -58,3 +60,22 @@ def ocupacion_real(dataset: NombreDataset = Query(config.DATASET_POR_DEFECTO),
     return {"dataset": dataset, "fechas": [d.date().isoformat() for d in tramo.index],
             "camas_ocupadas": tramo.astype(int).tolist(),
             "tasa_ocupacion_pct": (100 * tramo / capacidad).round(1).tolist()}
+
+
+def modelo_para_consulta(dataset, fecha):
+    if fecha is None:
+        return prediccion.modelo_demanda(dataset)
+    serie = prediccion.serie_ingresos(dataset)
+    if not serie.index.min().date() <= fecha <= serie.index.max().date():
+        raise HTTPException(400, 'Fecha de corte fuera del rango de ingresos del dataset.')
+    try:
+        return prediccion.modelo_demanda_hasta(dataset, fecha.isoformat())
+    except ValueError as error:
+        raise HTTPException(400, str(error))
+
+
+def alcance(modelo, fecha):
+    return {'alcance_evaluacion': 'hasta_el_censo' if fecha else 'historial_completo',
+            'fecha_corte': modelo.y.index.max().date().isoformat(),
+            'nota_seleccion': 'La proyeccion selecciona el metodo con historia hasta su censo; '
+                              'la comparacion general puede incluir fechas posteriores a una demo.'}

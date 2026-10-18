@@ -9,10 +9,12 @@ Ejecutar desde la carpeta backend/app:
 Documentacion interactiva:
     http://localhost:8000/docs
 """
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
+from urllib.parse import urlsplit
+from services import acceso
+from routers.acceso import router as router_acceso
 
 from core import config
 from routers.inventario import router as router_camas
@@ -29,13 +31,33 @@ app = FastAPI(
     ),
 )
 
-# CORS: permite que el frontend (otra pagina u otro puerto) consuma la API
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# El frontend y la API se sirven desde el mismo origen; no se habilita CORS abierto.
+@app.middleware("http")
+async def proteger_acceso(request: Request, siguiente):
+    request.state.usuario = acceso.usuario_de_sesion(request.cookies.get(acceso.COOKIE))
+    ruta = request.url.path
+    publica = ruta in {"/", "/ingresar", "/auth/sesion", "/auth/ingresar", "/auth/salir", "/salud", "/portada/hospital", "/favicon.ico"} or ruta.startswith("/vendor/")
+    if not publica and not request.state.usuario:
+        respuesta = (RedirectResponse("/ingresar", status_code=303) if ruta in {"/panel", "/docs", "/redoc", "/docs/oauth2-redirect"}
+                     else JSONResponse(status_code=401, content={"detail":"Inicia sesion para acceder al agente."}))
+    elif request.method not in {"GET", "HEAD", "OPTIONS"}:
+        origen = request.headers.get("origin")
+        base = urlsplit(str(request.base_url))
+        esperado = f"{base.scheme}://{base.netloc}".lower()
+        valido = origen.rstrip("/").lower() == esperado if origen else request.headers.get("x-requested-with") == "AgenteCamas"
+        if not valido or request.headers.get("sec-fetch-site") == "cross-site":
+            respuesta = JSONResponse(status_code=403, content={"detail":"Solicitud de origen no permitido."})
+        else:
+            respuesta = await siguiente(request)
+    else:
+        respuesta = await siguiente(request)
+    respuesta.headers["Cache-Control"] = "no-store"
+    respuesta.headers["X-Content-Type-Options"] = "nosniff"
+    respuesta.headers["X-Frame-Options"] = "DENY"
+    respuesta.headers["Referrer-Policy"] = "same-origin"
+    return respuesta
+
+app.include_router(router_acceso)
 
 # Endpoints del agente (paso 4)
 app.include_router(router_camas)
@@ -64,8 +86,34 @@ def archivo_faltante(request, error):
 
 
 @app.get("/", include_in_schema=False)
-def inicio():
-    """Muestra el dashboard si existe; si no, indica donde esta la documentacion."""
-    if config.RUTA_FRONTEND.exists() and config.RUTA_FRONTEND.stat().st_size > 0:
-        return FileResponse(config.RUTA_FRONTEND)
-    return {"mensaje": "API funcionando. Documentacion en /docs"}
+def inicio(request: Request):
+    if request.state.usuario:
+        return RedirectResponse("/panel", status_code=303)
+    return FileResponse(config.RUTA_FRONTEND.parent / "portada.html")
+
+
+@app.get("/ingresar", include_in_schema=False)
+def portada(request: Request):
+    if request.state.usuario:
+        return RedirectResponse("/panel", status_code=303)
+    return FileResponse(config.RUTA_FRONTEND.parent / "portada.html")
+
+
+@app.get("/panel", include_in_schema=False)
+def panel():
+    return FileResponse(config.RUTA_FRONTEND)
+
+
+@app.get("/portada/hospital", include_in_schema=False)
+def imagen_hospital():
+    carpeta = config.RUTA_FRONTEND.parent / "assets"
+    for extension in ("jpg", "jpeg", "png", "webp"):
+        ruta = carpeta / f"hospital.{extension}"
+        if ruta.is_file():
+            return FileResponse(ruta)
+    return FileResponse(carpeta / "hospital-base.svg", media_type="image/svg+xml")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return Response(status_code=204)

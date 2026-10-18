@@ -29,7 +29,6 @@ from services.prediccion import Z_80, modelo_demanda_hasta, predecir_ingresos
 
 PROB_ALERTA_PREVENTIVA = 0.30   # elegido evaluando precision / recall (ver docs/modelo_prediccion.md)
 
-SEMANAS_HISTORIA = 8     # semanas usadas para la tasa de ingresos
 
 
 # ------------------------------------------------------------
@@ -97,17 +96,6 @@ def calcular_prob_seguir(duraciones, dias_max):
 
 # Ingresos esperados por dia de la semana (0 = lunes ... 6 = domingo),
 # promediando las ultimas semanas anteriores a la fecha del censo.
-def calcular_tasa_ingresos(internaciones, fecha):
-    fecha = pd.Timestamp(fecha)
-    desde = fecha - pd.Timedelta(weeks=SEMANAS_HISTORIA)
-
-    ultimos = internaciones[
-        (internaciones["ingreso"] > desde) & (internaciones["ingreso"] <= fecha)
-    ]
-    por_dia = ultimos["ingreso"].value_counts().reindex(
-        pd.date_range(desde + pd.Timedelta(days=1), fecha), fill_value=0
-    )
-    return por_dia.groupby(por_dia.index.dayofweek).mean()
 
 
 # ------------------------------------------------------------
@@ -251,7 +239,10 @@ def proyectar_camas(dataset, fecha=None, dias_internados=None, capacidad=None,
                     dias=config.DIAS_PROYECCION):
     from services.modelo_ocupacion import aplicar_modelo
     resultado = _proyectar_camas_base(dataset, fecha, dias_internados, capacidad, dias)
-    return aplicar_modelo(resultado, dias_internados)
+    resultado = aplicar_modelo(resultado, dias_internados)
+    resultado['fecha_corte_modelo'] = resultado['fecha_censo']
+    resultado['alerta_ocupacion_censo'] = resultado['camas_ocupadas_hoy'] / resultado['capacidad'] > config.UMBRAL_SATURACION
+    return resultado
 
 
 
