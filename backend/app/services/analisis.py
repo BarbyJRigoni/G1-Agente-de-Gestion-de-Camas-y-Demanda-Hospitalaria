@@ -8,6 +8,33 @@ CARPETA_PROCESADOS = Path(__file__).resolve().parents[2] / "data" / "procesados"
 
 # Carga el dataset limpio indicado, sin modificar el archivo original.
 def cargar_datos(nombre):
+    # HDHI_EPISODIOS_REVISION_V1: fuente comun para censo, ingresos y ALOS.
+    if nombre == "hdhi":
+        ruta = (CARPETA_PROCESADOS / "revision_hdhi" / "episodios"
+                / "hdhi_episodios_candidatos.csv")
+        if not ruta.is_file():
+            raise ValueError(
+                "Falta la tabla de episodios de HDHI. Ejecute "
+                "python backend/app/data/preparar_episodios_hdhi.py")
+        df = pd.read_csv(ruta, low_memory=False)
+        necesarias = ["id_episodio", "mrd_no", "fecha_ingreso",
+                      "fecha_egreso", "duration_of_stay"]
+        if any(c not in df for c in necesarias):
+            raise ValueError("La tabla de episodios de HDHI esta incompleta.")
+        if df.empty or df["id_episodio"].isna().any():
+            raise ValueError("HDHI no contiene episodios identificados.")
+        if df["id_episodio"].duplicated().any() or df.duplicated(
+                ["mrd_no", "fecha_ingreso", "fecha_egreso"]).any():
+            raise ValueError("HDHI contiene episodios repetidos.")
+        ingreso = pd.to_datetime(df["fecha_ingreso"], format="%Y-%m-%d", errors="coerce")
+        egreso = pd.to_datetime(df["fecha_egreso"], format="%Y-%m-%d", errors="coerce")
+        duracion = pd.to_numeric(df["duration_of_stay"], errors="coerce")
+        if (ingreso.isna().any() or egreso.isna().any()
+                or duracion.isna().any() or (duracion <= 0).any()
+                or (egreso < ingreso).any()
+                or ((egreso - ingreso).dt.days + 1 != duracion).any()):
+            raise ValueError("HDHI contiene fechas o duraciones incoherentes.")
+        return df
     return pd.read_csv(CARPETA_PROCESADOS / f"{nombre}_limpio.csv")
 
 
