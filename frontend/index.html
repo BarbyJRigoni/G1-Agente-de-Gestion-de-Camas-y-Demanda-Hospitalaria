@@ -59,6 +59,7 @@ details{margin-top:12px;font-size:13px;color:var(--suave);font-weight:400}summar
 </style>
 </head>
 <body>
+  
 <header>
   <div>
     <div class="marca"><span class="marca-icono" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 24V12m0 8h24v4M4 17h24v7M8 17v-5h7v5m3 0v-7h10v7M21 4v6m-3-3h6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><div class="sobrelinea">Grupo 1 · Agente inteligente</div><h1>Gestión de camas</h1></div></div>
@@ -83,9 +84,18 @@ details{margin-top:12px;font-size:13px;color:var(--suave);font-weight:400}summar
     aria-controls="vista-proyeccion" aria-selected="true" tabindex="0"><span class="tab-num" aria-hidden="true">01</span> Proyección</button>
   <button id="tab-estadisticas" type="button" role="tab" data-tab="estadisticas"
     aria-controls="vista-estadisticas" aria-selected="false" tabindex="-1"><span class="tab-num" aria-hidden="true">02</span> Estancias · HDHI</button>
+  <button id="tab-sectores" type="button" role="tab" data-tab="sectores"
+    aria-controls="vista-sectores" aria-selected="false" tabindex="-1"><span class="tab-num" aria-hidden="true">03</span> UTI y general</button>
   <button id="tab-evaluacion" type="button" role="tab" data-tab="evaluacion"
-    aria-controls="vista-evaluacion" aria-selected="false" tabindex="-1"><span class="tab-num" aria-hidden="true">03</span> Evaluación</button>
-  <button id="tab-sectores" type="button" role="tab" data-tab="sectores" aria-controls="vista-sectores" aria-selected="false" tabindex="-1"><span class="tab-num" aria-hidden="true">04</span> UTI y general</button>
+    aria-controls="vista-evaluacion" aria-selected="false" tabindex="-1"><span class="tab-num" aria-hidden="true">04</span> Evaluación</button>
+  <button id="tab-administracion" type="button" role="tab"
+    data-tab="administracion"
+    aria-controls="vista-administracion"
+    aria-selected="false"
+    tabindex="-1"
+    hidden>
+    <span class="tab-num" aria-hidden="true">05</span> Administración
+  </button>
 </nav>
 
 
@@ -227,6 +237,24 @@ details{margin-top:12px;font-size:13px;color:var(--suave);font-weight:400}summar
     <section class="panel"><details><summary>Ver parámetros, referencia y límites de este escenario</summary><p id="parametrosUsadosSectores" class="nota"></p><ul id="supuestosSectores"></ul></details></section>
   </section>
 </section>
+
+
+<section id="vista-administracion" class="tab-panel"
+         role="tabpanel" aria-labelledby="tab-administracion" hidden>
+  <section class="panel">
+    <h2>Administración de usuarios</h2>
+    <p>Consulta de usuarios registrados y sus permisos.</p>
+
+    <button id="recargarUsuarios" type="button">
+      Actualizar usuarios
+    </button>
+
+    <p id="mensajeAdministracion" role="status"></p>
+
+    <div id="listaUsuarios"></div>
+  </section>
+</section>
+
 
 </main>
 <footer>Grupo 1 · Gestión de Camas y Demanda Hospitalaria · Datos históricos para una simulación académica. Las fuentes se analizan por separado.</footer>
@@ -745,5 +773,113 @@ document.addEventListener("visibilitychange",()=>{if(document.visibilityState===
 setInterval(()=>{if(document.visibilityState==="visible")verificarAcceso();},60000);
 verificarAcceso().then(permitido=>{if(permitido)iniciar();});
 </script>
+
+<script>
+/* PANEL DE ADMINISTRACIÓN - GRUPO 1 */
+
+async function actualizarPanelAdministracion() {
+  const boton = document.getElementById("tab-administracion");
+  const mensaje = document.getElementById("mensajeAdministracion");
+  const lista = document.getElementById("listaUsuarios");
+
+  if (!boton || !mensaje || !lista) return;
+
+  try {
+    const respuesta = await fetch("/auth/admin/usuarios", {
+      credentials: "same-origin",
+      headers: { "X-Requested-With": "AgenteCamas" }
+    });
+
+    if (!respuesta.ok) {
+      boton.hidden = true;
+      return;
+    }
+
+    boton.hidden = false;
+
+    const datos = await respuesta.json();
+    lista.replaceChildren();
+
+    const tabla = document.createElement("table");
+    const cabecera = document.createElement("thead");
+    const encabezados = document.createElement("tr");
+
+    ["Usuario", "Correo", "Rol"].forEach(texto => {
+      const th = document.createElement("th");
+      th.textContent = texto;
+      encabezados.appendChild(th);
+    });
+
+    cabecera.appendChild(encabezados);
+    tabla.appendChild(cabecera);
+
+    const cuerpo = document.createElement("tbody");
+
+    datos.usuarios.forEach(usuario => {
+      const fila = document.createElement("tr");
+
+      [
+        usuario.usuario,
+        usuario.correo || "Sin correo",
+        usuario.rol
+      ].forEach(valor => {
+        const td = document.createElement("td");
+        td.textContent = valor;
+        fila.appendChild(td);
+      });
+
+      cuerpo.appendChild(fila);
+    });
+
+    tabla.appendChild(cuerpo);
+    lista.appendChild(tabla);
+
+    mensaje.textContent =
+      `${datos.usuarios.length} usuario(s) registrado(s).`;
+
+  } catch (error) {
+    boton.hidden = true;
+    mensaje.textContent = "No se pudo cargar Administración.";
+  }
+}
+
+document.getElementById("recargarUsuarios")
+  ?.addEventListener("click", actualizarPanelAdministracion);
+
+document.getElementById("tab-administracion")
+  ?.addEventListener("click", () => {
+    const vistas = [
+      "proyeccion",
+      "estadisticas",
+      "evaluacion",
+      "sectores",
+      "administracion"
+    ];
+
+    vistas.forEach(nombre => {
+      const vista = document.getElementById("vista-" + nombre);
+      if (vista) vista.hidden = nombre !== "administracion";
+    });
+
+    document.querySelectorAll(
+      "#solapas-principales [role=tab]"
+    ).forEach(boton => {
+      const activa = boton.dataset.tab === "administracion";
+      boton.setAttribute("aria-selected", String(activa));
+      boton.tabIndex = activa ? 0 : -1;
+    });
+
+    const controles = document.querySelector("header .controles");
+    const subtitulo = document.getElementById("subtitulo");
+
+    if (controles) controles.hidden = true;
+    if (subtitulo) subtitulo.hidden = true;
+
+    actualizarPanelAdministracion();
+  });
+
+actualizarPanelAdministracion();
+</script>
+
 </body>
 </html>

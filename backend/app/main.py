@@ -38,17 +38,21 @@ async def proteger_acceso(request: Request, siguiente):
     ruta = request.url.path
     
     publica = ruta in {
-    "/",
-    "/ingresar",
-    "/auth/sesion",
-    "/auth/ingresar",
-    "/auth/registrar",
-    "/auth/salir",
-    "/salud",
-    "/portada/hospital",
-    "/portada/logo-politecnico",
-    "/favicon.ico"
-} or ruta.startswith("/vendor/")
+        "/",
+        "/ingresar",
+        "/auth/sesion",
+        "/auth/ingresar",
+        "/auth/registrar",
+        "/auth/salir",
+        "/salud",
+        "/portada/hospital",
+        "/portada/logo-politecnico",
+        "/portada/css/portada.css",
+        "/portada/js/acceso.js",
+        "/portada/js/registro.js",
+        "/favicon.ico",
+    } or ruta.startswith("/vendor/")
+
 
     if not publica and not request.state.usuario:
         respuesta = (RedirectResponse("/ingresar", status_code=303) if ruta in {"/panel", "/docs", "/redoc", "/docs/oauth2-redirect"}
@@ -77,6 +81,28 @@ app.include_router(router_camas)
 app.include_router(router_prediccion)
 app.mount("/vendor", StaticFiles(directory=config.RUTA_FRONTEND.parent / "vendor", check_dir=False), name="vendor")
 
+@app.get("/portada/css/portada.css", include_in_schema=False)
+def css_portada():
+    return FileResponse(
+        config.RUTA_FRONTEND.parent / "css" / "portada.css",
+        media_type="text/css"
+    )
+
+
+@app.get("/portada/js/acceso.js", include_in_schema=False)
+def js_acceso():
+    return FileResponse(
+        config.RUTA_FRONTEND.parent / "js" / "acceso.js",
+        media_type="text/javascript"
+    )
+
+
+@app.get("/portada/js/registro.js", include_in_schema=False)
+def js_registro():
+    return FileResponse(
+        config.RUTA_FRONTEND.parent / "js" / "registro.js",
+        media_type="text/javascript"
+    )
 
 @app.get("/salud", tags=["Sistema"], summary="Estado de la API")
 def salud():

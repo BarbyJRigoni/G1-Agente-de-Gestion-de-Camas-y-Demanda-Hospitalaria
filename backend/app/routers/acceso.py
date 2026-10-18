@@ -5,6 +5,22 @@ from services import acceso
 
 router = APIRouter(prefix="/auth", tags=["Acceso"])
 
+def requerir_administrador(request: Request):
+    usuario = request.state.usuario
+
+    if not usuario:
+        raise HTTPException(
+            status_code=401,
+            detail="Debes iniciar sesion."
+        )
+
+    if not acceso.es_administrador(usuario):
+        raise HTTPException(
+            status_code=403,
+            detail="No tienes permisos de administrador."
+        )
+
+    return usuario
 
 class Credenciales(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -14,6 +30,7 @@ class Credenciales(BaseModel):
 class Registro(BaseModel):
     model_config = ConfigDict(extra="forbid")
     usuario: str = Field(min_length=3, max_length=40)
+    correo: str = Field(min_length=5, max_length=254)
     clave: str = Field(min_length=12, max_length=128)
 
 @router.get("/sesion")
@@ -74,7 +91,8 @@ def registrar(datos: Registro, request: Request):
         acceso.crear_usuario(
             usuario=datos.usuario,
             clave=datos.clave,
-            reemplazar=False
+            reemplazar=False,
+            correo=datos.correo
         )
     except ValueError as error:
         raise HTTPException(
@@ -85,4 +103,29 @@ def registrar(datos: Registro, request: Request):
     return {
         "mensaje": "Usuario registrado correctamente. Ya podes iniciar sesion.",
         "usuario": acceso.normalizar_usuario(datos.usuario)
+    }
+    
+
+@router.get("/admin/usuarios")
+def listar_usuarios(request: Request):
+    # Verificar permisos de administrador.
+    requerir_administrador(request)
+
+    # Consultar usuarios registrados.
+    with acceso.conexion() as db:
+        filas = db.execute("""
+            SELECT usuario, correo, rol
+            FROM usuarios
+            ORDER BY usuario
+        """).fetchall()
+
+    return {
+        "usuarios": [
+            {
+                "usuario": fila[0],
+                "correo": fila[1],
+                "rol": fila[2]
+            }
+            for fila in filas
+        ]
     }

@@ -28,44 +28,90 @@ def ruta_base():
     carpeta = Path(os.environ.get("LOCALAPPDATA", str(Path.home() / ".local" / "share")))
     return carpeta / "AgenteCamas" / identificador / "acceso.sqlite3"
 
-
 @contextmanager
 def conexion():
     ruta = ruta_base()
     ruta.parent.mkdir(parents=True, exist_ok=True)
+
     try:
         ruta.parent.chmod(0o700)
     except OSError:
         pass
+
     db = sqlite3.connect(ruta, timeout=10)
+
     try:
         db.execute("PRAGMA foreign_keys=ON")
+
+        # Crear las tablas si todavía no existen.
         db.executescript("""
           CREATE TABLE IF NOT EXISTS usuarios (
-            usuario TEXT PRIMARY KEY, sal TEXT NOT NULL, derivada TEXT NOT NULL,
-            iteraciones INTEGER NOT NULL);
+            usuario TEXT PRIMARY KEY,
+            sal TEXT NOT NULL,
+            derivada TEXT NOT NULL,
+            iteraciones INTEGER NOT NULL
+          );
+
           CREATE TABLE IF NOT EXISTS sesiones (
-            token_hash TEXT PRIMARY KEY, usuario TEXT NOT NULL REFERENCES usuarios(usuario) ON DELETE CASCADE,
-            vence REAL NOT NULL);
-          CREATE TABLE IF NOT EXISTS intentos (ip TEXT NOT NULL, usuario TEXT NOT NULL, instante REAL NOT NULL);
-          CREATE INDEX IF NOT EXISTS intentos_tiempo ON intentos(instante);
+            token_hash TEXT PRIMARY KEY,
+            usuario TEXT NOT NULL
+                REFERENCES usuarios(usuario) ON DELETE CASCADE,
+            vence REAL NOT NULL
+          );
+
+          CREATE TABLE IF NOT EXISTS intentos (
+            ip TEXT NOT NULL,
+            usuario TEXT NOT NULL,
+            instante REAL NOT NULL
+          );
+
+          CREATE INDEX IF NOT EXISTS intentos_tiempo
+          ON intentos(instante);
         """)
+
+        # Migración: agregar correo sin eliminar cuentas existentes.
+        columnas = {
+            fila[1]
+            for fila in db.execute("PRAGMA table_info(usuarios)")
+        }
+
+        if "correo" not in columnas:
+            db.execute(
+                "ALTER TABLE usuarios ADD COLUMN correo TEXT"
+            )
+            # Agregar roles sin eliminar usuarios existentes.
+        if "rol" not in columnas:
+            db.execute(
+                "ALTER TABLE usuarios ADD COLUMN rol TEXT NOT NULL DEFAULT 'usuario'"
+            )
+
+        # Evitar que dos cuentas tengan el mismo correo.
+        db.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS usuarios_correo_unico
+            ON usuarios(correo)
+        """)
+
         try:
             ruta.chmod(0o600)
         except OSError:
             pass
+
         yield db
         db.commit()
+
     finally:
         db.close()
-
 
 def normalizar_usuario(usuario):
     return usuario.strip().lower()
 
 
-def crear_usuario(usuario, clave, reemplazar=False):
+def crear_usuario(usuario, clave, reemplazar=False, correo=None):
     usuario = normalizar_usuario(usuario)
+    if correo is not None:
+        correo = correo.strip().lower()
+        if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", correo) or len(correo) > 254:
+            raise ValueError("Ingresa un correo electronico valido.")
     if not re.fullmatch(r"[a-z0-9._-]{3,40}", usuario):
         raise ValueError("Usuario: entre 3 y 40 letras sin tildes, numeros, puntos, guiones o guion bajo.")
     if not 12 <= len(clave) <= 128:
@@ -82,12 +128,47 @@ def crear_usuario(usuario, clave, reemplazar=False):
             db.execute("UPDATE usuarios SET sal=?, derivada=?, iteraciones=? WHERE usuario=?",
                        (sal.hex(), derivada, ITERACIONES, usuario))
         else:
-            db.execute("INSERT INTO usuarios VALUES (?,?,?,?)", (usuario, sal.hex(), derivada, ITERACIONES))
+            db.execute(
+                "INSERT INTO usuarios (usuario, sal, derivada, iteraciones, correo) VALUES (?,?,?,?,?)",
+                (usuario, sal.hex(), derivada, ITERACIONES, correo)
+            )
 
 
 def hay_usuarios():
     with conexion() as db:
         return db.execute("SELECT 1 FROM usuarios LIMIT 1").fetchone() is not None
+
+def es_administrador(usuario):
+    if not usuario:
+        return False
+
+    usuario = normalizar_usuario(usuario)
+
+    with conexion() as db:
+        fila = db.execute(
+            "SELECT rol FROM usuarios WHERE usuario=?",
+            (usuario,)
+        ).fetchone()
+
+    return bool(fila and fila[0] == "administrador")
+
+
+def asignar_administrador_local(usuario):
+    usuario = normalizar_usuario(usuario)
+
+    with conexion() as db:
+        existe = db.execute(
+            "SELECT 1 FROM usuarios WHERE usuario=?",
+            (usuario,)
+        ).fetchone()
+
+        if not existe:
+            raise ValueError("El usuario no existe.")
+
+        db.execute(
+            "UPDATE usuarios SET rol='administrador' WHERE usuario=?",
+            (usuario,)
+        )
 
 
 class DemasiadosIntentos(ValueError):
