@@ -9,11 +9,6 @@ main{max-width:1440px;min-height:calc(100vh - 180px);margin:auto;padding:36px 5v
     text-align: center;
 }
 
-.ayuda p {
-    text-align: center;
-}
-
-
 /* Registro de nuevos usuarios */
 .registro-boton {
     display: block;
@@ -82,13 +77,13 @@ main{max-width:1440px;min-height:calc(100vh - 180px);margin:auto;padding:36px 5v
     display: block;
 }
 
-/* Ícono del agente dentro del formulario */
+/* Ícono del agente centrado dentro del formulario */
 .logo-agente {
     display: grid;
     place-items: center;
     width: 54px;
     height: 54px;
-    margin: 14px 0 8px;
+    margin: 14px auto 12px;
     background: #e7f6f3;
     color: #087e82;
     border-radius: 15px;
@@ -97,11 +92,6 @@ main{max-width:1440px;min-height:calc(100vh - 180px);margin:auto;padding:36px 5v
 .logo-agente svg {
     width: 32px;
     height: 32px;
-}
-
-/* Centrar el ícono y el título de bienvenida */
-.logo-agente {
-    margin: 14px auto 12px;
 }
 
 #tituloAcceso {
