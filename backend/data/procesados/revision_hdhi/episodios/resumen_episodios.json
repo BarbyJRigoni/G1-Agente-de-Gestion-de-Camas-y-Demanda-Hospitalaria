@@ -1,0 +1,18 @@
+{
+  "filas_revision": 14875,
+  "filas_con_fechas_duracion_e_id_coherentes": 14812,
+  "grupos_apartados_por_identidad": 10,
+  "filas_apartadas_por_identidad": 20,
+  "episodios_candidatos": 14331,
+  "episodios_con_campos_en_conflicto": 450,
+  "alos_registrado_cohorte_candidata": 6.352313,
+  "supuesto": "MRD + ingreso + egreso identifican un episodio; requiere documentacion.",
+  "criterio": "Campos contradictorios quedan ausentes; no se fusionan diagnosticos con OR.",
+  "limitaciones": [
+    "No prueba la identidad real de pacientes ni resuelve internaciones superpuestas.",
+    "Las fechas fueron reconstruidas retrospectivamente con duracion y mes de ingreso.",
+    "Los faltantes de diagnostico no equivalen a ausencia de enfermedad.",
+    "La exclusion por identidad puede sesgar las estadisticas.",
+    "Salida candidata: no cambia cargar_datos(), el modelo ni la API."
+  ]
+}

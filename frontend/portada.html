@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bienvenido | Gestión de camas</title>
+
+<link rel="stylesheet" href="/portada/css/portada.css">
+
+</head><body>
+<header>
+    <div class="marca">
+        <img
+            class="logo-politecnico"
+            src="/portada/logo-politecnico"
+            alt="Logo del Centro Politécnico Superior Malvinas Argentinas"
+        >
+        <div>
+            <b>Centro Politécnico Superior</b>
+            <small>MALVINAS ARGENTINAS</small>
+        </div>
+    </div>
+
+    <span class="grupo">
+        Grupo 1 · Desarrollo de Sistemas de I.A.
+    </span>
+</header>
+<main><section class="hero"><h1>Más información.<br><em>Mejores decisiones.</em></h1><p class="intro">Anticipá la demanda hospitalaria y optimizá la disponibilidad de camas. </p><p class="nota-demo"></p></section>
+
+<section class="acceso" aria-labelledby="tituloAcceso">
+    <span class="paso">Acceso al agente</span>
+
+    <div class="logo-agente" aria-hidden="true">
+        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2">
+            <path
+                d="M4 24V12m0 8h24v4M4 17h24v7M8 17v-5h7v5m3 0v-7h10v7M21 4v6m-3-3h6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+            />
+        </svg>
+    </div>
+
+    <h2 id="tituloAcceso">Bienvenido al sistema</h2><p>Ingresá con tu cuenta</p><form id="formAcceso"><label for="usuario">Usuario</label><input id="usuario" name="username" autocomplete="username" maxlength="40" required autofocus placeholder="Tu nombre de usuario"><label for="clave">Contraseña</label><div class="clave"><input id="clave" name="password" type="password" autocomplete="current-password" maxlength="128" required placeholder="Tu contraseña"><button id="mostrarClave" class="mostrar" type="button" aria-controls="clave" aria-pressed="false">Mostrar</button></div><button id="entrar" class="entrar" type="submit">Ingresar</button><p id="mensajeAcceso" role="status" aria-live="polite"></p></form>
+<button id="abrirRegistro" class="registro-boton" type="button">
+    Registrarse
+</button>
+
+<form id="formRegistro" hidden>
+    <h3>Crear una cuenta</h3>
+
+    <label for="nuevoUsuario">Nombre de usuario</label>
+    <input
+        id="nuevoUsuario"
+        type="text"
+        minlength="3"
+        maxlength="40"
+        pattern="[a-zA-Z0-9._-]{3,40}"
+        autocomplete="username"
+        required
+        placeholder="Elegí tu usuario"
+
+    <label for="nuevoCorreo">Correo electrónico</label>
+    <input
+    id="nuevoCorreo"
+    name="email"
+    type="email"
+    maxlength="254"
+    autocomplete="email"
+    required
+    placeholder="ejemplo@correo.com"
+    >
+    
+
+    <label for="nuevaClave">Contraseña</label>
+    <input
+        id="nuevaClave"
+        type="password"
+        minlength="12"
+        maxlength="128"
+        autocomplete="new-password"
+        required
+        placeholder="Mínimo 12 caracteres"
+    >
+
+    <label for="confirmarClave">Confirmar contraseña</label>
+    <input
+        id="confirmarClave"
+        type="password"
+        minlength="12"
+        maxlength="128"
+        autocomplete="new-password"
+        required
+        placeholder="Repetí tu contraseña"
+    >
+
+    <button id="guardarRegistro" class="entrar" type="submit">
+        Crear cuenta
+    </button>
+
+    <p id="mensajeRegistro" role="status" aria-live="polite"></p>
+</form>
+</section></main>
+<footer class="footer-portada">
+    © 2026 Centro Politécnico Superior Malvinas Argentinas · Grupo 1 · Desarrollo de Sistemas de I.A. · Gestión de Camas y Demanda Hospitalaria
+</footer>
+
+<script src="/portada/js/acceso.js" defer></script>
+<script src="/portada/js/registro.js" defer></script>
+
+</body>
+</html>

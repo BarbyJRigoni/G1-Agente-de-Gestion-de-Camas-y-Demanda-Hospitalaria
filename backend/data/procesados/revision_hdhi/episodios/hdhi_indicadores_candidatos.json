@@ -1,0 +1,178 @@
+{
+  "dataset": "hdhi",
+  "estado": "cohorte_candidata_sin_integrar",
+  "total_internaciones": 14331,
+  "alos_general_dias": 6.35,
+  "columna_duracion": "duration_of_stay",
+  "patologias": [
+    {
+      "columna": "dm",
+      "patologia": "Diabetes mellitus",
+      "cantidad_internaciones": 4718,
+      "alos_promedio": 6.89,
+      "mediana_dias": 6.0,
+      "desviacion_estandar": 5.36,
+      "percentil_90_dias": 13.0,
+      "indice_estancia": 1.085,
+      "cantidad_con_dato_conocido": 14296,
+      "cantidad_sin_dato": 35,
+      "cantidad_ausencia_confirmada": 9578
+    },
+    {
+      "columna": "htn",
+      "patologia": "Hipertension",
+      "cantidad_internaciones": 6939,
+      "alos_promedio": 6.45,
+      "mediana_dias": 5.0,
+      "desviacion_estandar": 4.91,
+      "percentil_90_dias": 12.0,
+      "indice_estancia": 1.016,
+      "cantidad_con_dato_conocido": 14319,
+      "cantidad_sin_dato": 12,
+      "cantidad_ausencia_confirmada": 7380
+    },
+    {
+      "columna": "cad",
+      "patologia": "Enfermedad coronaria",
+      "cantidad_internaciones": 9520,
+      "alos_promedio": 6.41,
+      "mediana_dias": 5.0,
+      "desviacion_estandar": 4.82,
+      "percentil_90_dias": 12.0,
+      "indice_estancia": 1.009,
+      "cantidad_con_dato_conocido": 14284,
+      "cantidad_sin_dato": 47,
+      "cantidad_ausencia_confirmada": 4764
+    },
+    {
+      "columna": "ckd",
+      "patologia": "Enfermedad renal cronica",
+      "cantidad_internaciones": 1422,
+      "alos_promedio": 8.28,
+      "mediana_dias": 7.0,
+      "desviacion_estandar": 6.42,
+      "percentil_90_dias": 16.0,
+      "indice_estancia": 1.303,
+      "cantidad_con_dato_conocido": 14318,
+      "cantidad_sin_dato": 13,
+      "cantidad_ausencia_confirmada": 12896
+    },
+    {
+      "columna": "heart_failure",
+      "patologia": "Insuficiencia cardiaca",
+      "cantidad_internaciones": 4085,
+      "alos_promedio": 7.62,
+      "mediana_dias": 6.0,
+      "desviacion_estandar": 5.82,
+      "percentil_90_dias": 14.0,
+      "indice_estancia": 1.199,
+      "cantidad_con_dato_conocido": 14247,
+      "cantidad_sin_dato": 84,
+      "cantidad_ausencia_confirmada": 10162
+    },
+    {
+      "columna": "aki",
+      "patologia": "Lesion renal aguda",
+      "cantidad_internaciones": 3224,
+      "alos_promedio": 7.99,
+      "mediana_dias": 7.0,
+      "desviacion_estandar": 6.34,
+      "percentil_90_dias": 15.0,
+      "indice_estancia": 1.257,
+      "cantidad_con_dato_conocido": 14311,
+      "cantidad_sin_dato": 20,
+      "cantidad_ausencia_confirmada": 11087
+    },
+    {
+      "columna": "acs",
+      "patologia": "Sindrome coronario agudo",
+      "cantidad_internaciones": 5256,
+      "alos_promedio": 6.48,
+      "mediana_dias": 6.0,
+      "desviacion_estandar": 4.87,
+      "percentil_90_dias": 11.0,
+      "indice_estancia": 1.02,
+      "cantidad_con_dato_conocido": 14285,
+      "cantidad_sin_dato": 46,
+      "cantidad_ausencia_confirmada": 9029
+    },
+    {
+      "columna": "anaemia",
+      "patologia": "Anemia",
+      "cantidad_internaciones": 2521,
+      "alos_promedio": 8.23,
+      "mediana_dias": 7.0,
+      "desviacion_estandar": 6.49,
+      "percentil_90_dias": 15.0,
+      "indice_estancia": 1.296,
+      "cantidad_con_dato_conocido": 14326,
+      "cantidad_sin_dato": 5,
+      "cantidad_ausencia_confirmada": 11805
+    }
+  ],
+  "grupos_etarios": [
+    {
+      "grupo_etario": "0-17",
+      "cantidad_internaciones": 52,
+      "alos_promedio": 5.65,
+      "mediana_dias": 5.0,
+      "desviacion_estandar": 3.41,
+      "percentil_90_dias": 9.0,
+      "indice_estancia": 0.89
+    },
+    {
+      "grupo_etario": "18-29",
+      "cantidad_internaciones": 251,
+      "alos_promedio": 6.46,
+      "mediana_dias": 5.0,
+      "desviacion_estandar": 6.34,
+      "percentil_90_dias": 12.0,
+      "indice_estancia": 1.017
+    },
+    {
+      "grupo_etario": "30-44",
+      "cantidad_internaciones": 1130,
+      "alos_promedio": 5.45,
+      "mediana_dias": 4.0,
+      "desviacion_estandar": 4.21,
+      "percentil_90_dias": 10.0,
+      "indice_estancia": 0.857
+    },
+    {
+      "grupo_etario": "45-59",
+      "cantidad_internaciones": 4279,
+      "alos_promedio": 5.85,
+      "mediana_dias": 5.0,
+      "desviacion_estandar": 4.44,
+      "percentil_90_dias": 11.0,
+      "indice_estancia": 0.92
+    },
+    {
+      "grupo_etario": "60-74",
+      "cantidad_internaciones": 6240,
+      "alos_promedio": 6.47,
+      "mediana_dias": 5.0,
+      "desviacion_estandar": 5.01,
+      "percentil_90_dias": 12.0,
+      "indice_estancia": 1.019
+    },
+    {
+      "grupo_etario": "75 o mas",
+      "cantidad_internaciones": 2379,
+      "alos_promedio": 7.39,
+      "mediana_dias": 6.0,
+      "desviacion_estandar": 5.86,
+      "percentil_90_dias": 13.0,
+      "indice_estancia": 1.163
+    }
+  ],
+  "cantidad_sin_grupo_etario": 0,
+  "aclaraciones": [
+    "Una fila representa un episodio candidato segun MRD, ingreso y egreso.",
+    "Campos contradictorios quedan como faltantes, nunca se convierten a cero.",
+    "Cada patologia informa presentes, ausencias confirmadas y desconocidos.",
+    "Los grupos de patologias se superponen y no se suman como pacientes unicos.",
+    "Indice de estancia = ALOS del grupo / ALOS general de esta cohorte.",
+    "Este archivo no reemplaza la respuesta actual de la API."
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "filas_originales": 15757,
+  "repeticiones_identicas_excluyendo_sno_retiradas": 882,
+  "filas_revision": 14875,
+  "estado_fechas": {
+    "validada": 14812,
+    "sin_coincidencia": 63
+  },
+  "uci_inconsistente": 70,
+  "filas_en_episodios_repetidos_a_revisar": 931,
+  "edad_invalida": 0,
+  "duracion_invalida": 0,
+  "alos_registrado_revision": 6.38158,
+  "nulos_clinicos": {
+    "hb": 253,
+    "tlc": 285,
+    "platelets": 290,
+    "glucose": 930,
+    "urea": 243,
+    "creatinine": 249,
+    "bnp": 8711,
+    "ef": 1525
+  },
+  "nulos_binarios": {
+    "chest_infection": 1
+  },
+  "criterios": [
+    "Duracion HDHI = egreso - ingreso + 1 dia.",
+    "Fechas contrastadas con mes y anio de ingreso.",
+    "Se conserva una copia de registros identicos excepto SNO.",
+    "Episodios repetidos con diferencias se marcan, no se fusionan.",
+    "UCI inconsistente se marca sin cambiar su valor.",
+    "apto_temporal no resuelve la identidad de episodios repetidos.",
+    "No se reemplaza hdhi_limpio.csv ni se modifica el agente."
+  ]
+}
