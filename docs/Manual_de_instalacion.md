@@ -1,7 +1,7 @@
 <h1 align="center">🛠️ Manual de instalación</h1>
 
 <p align="center">
-  <img src="frontend/assets/hospital-base.svg" alt="Ilustración de la entrada del hospital" width="100%">
+  <img src="../frontend/assets/hospital-base.svg" alt="Ilustración de la entrada del hospital" width="100%">
 </p>
 
 <p align="center">
