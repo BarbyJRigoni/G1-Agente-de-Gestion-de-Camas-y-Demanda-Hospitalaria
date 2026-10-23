@@ -90,6 +90,8 @@ details{margin-top:12px;font-size:13px;color:var(--suave);font-weight:400}summar
     <label>Fuente de datos <select id="dataset"></select></label>
     <label>Fecha del censo histórico <input type="date" id="fecha"></label>
     <label>Capacidad supuesta (camas) <input type="number" id="capacidad" min="1"></label>
+    <label>Proyección <select id="horizonte" title="7 días es la proyección de la consigna; 15 y 30 días son extensiones con más incertidumbre">
+      <option value="7" selected>7 días</option><option value="15">15 días</option><option value="30">30 días</option></select></label>
     <div class="pildoras" id="casos" aria-label="Casos de la demo">
       <button type="button" data-escenario="normal" disabled>Normal</button>
       <button type="button" data-escenario="limite" disabled>Límite</button>
@@ -123,7 +125,7 @@ details{margin-top:12px;font-size:13px;color:var(--suave);font-weight:400}summar
 <section id="vista-proyeccion" class="tab-panel" role="tabpanel"
          aria-labelledby="tab-proyeccion">
 
-  <div class="titulo-seccion"><div><h2>¿Alcanzan las camas?</h2><p>Ocupación prevista para los próximos 7 días.</p></div><span class="etiqueta etiqueta-umbral">
+  <div class="titulo-seccion"><div><h2>¿Alcanzan las camas?</h2><p>Ocupación prevista para los próximos <span class="txtDias">7</span> días.</p></div><span class="etiqueta etiqueta-umbral">
   Umbral de alerta: ocupación superior al 90 %
 </span></div>
   <div id="mensaje" role="status">Consultando los datos y calculando la semana…</div>
@@ -133,7 +135,7 @@ details{margin-top:12px;font-size:13px;color:var(--suave);font-weight:400}summar
   <details>
   <summary>Cómo interpretar esta pantalla</summary>
   <p>El censo muestra la ocupación reconstruida para la fecha elegida.
-  El pronóstico estima los próximos siete días.
+  El pronóstico estima los próximos <span class="txtDias">7</span> días (la consigna pide 7; a 15 y 30 días el margen de error es mayor).
   Los escenarios cambian la capacidad supuesta y mantienen la demanda.</p>
 </details>
   <section class="dos">
@@ -173,7 +175,7 @@ details{margin-top:12px;font-size:13px;color:var(--suave);font-weight:400}summar
   </section>
 
   <section class="panel">
-    <h3>Proyección diaria de los próximos 7 días</h3><p class="nota">
+    <h3>Proyección diaria de los próximos <span class="txtDias">7</span> días</h3><p class="nota">
   Camas ocupadas del día = camas ocupadas del día anterior
   + ingresos previstos − altas estimadas.
   Las altas se infieren por balance.
@@ -404,7 +406,8 @@ async function proyectar() {
   const dataset = $("#dataset").value, fecha = $("#fecha").value;
   const textoCapacidad = $("#capacidad").value.trim();
   const cap = textoCapacidad === "" ? null : Number(textoCapacidad);
-  $("#mensaje").textContent = "Calculando proyeccion...";
+  const dias = Number($("#horizonte").value) || 7;   // 7 (consigna), 15 o 30
+  $("#mensaje").textContent = dias > 7 ? `Calculando proyeccion a ${dias} dias (la primera vez puede tardar unos segundos)...` : "Calculando proyeccion...";
   proy = null; real = null;
   $("#resumenCamas").replaceChildren();
   $("#kpis").replaceChildren(); $("#camas").replaceChildren(); $("#tDias").replaceChildren();
@@ -439,8 +442,8 @@ async function proyectar() {
     }
     const [nuevaProy, nuevoReal] = await Promise.all([
       api("/proyeccion-camas", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dataset, fecha, capacidad: cap }) }),
-      api(`/modelo/ocupacion-real?dataset=${dataset}&desde=${fecha}`).catch(() => null),
+        body: JSON.stringify({ dataset, fecha, capacidad: cap, dias }) }),
+      api(`/modelo/ocupacion-real?dataset=${dataset}&desde=${fecha}&dias=${dias}`).catch(() => null),
     ]);
     if (consulta !== consultaProyeccion) return;
     proy = nuevaProy; real = nuevoReal;
@@ -470,6 +473,7 @@ async function proyectar() {
     kpi(`${proy.alos_historico} días`, "ALOS de egresos anteriores al censo") +
     kpi(fmt(proy.dia_pico), "Día de mayor ocupación esperada");
   $("#dia").max = proy.proyeccion.length;
+  document.querySelectorAll(".txtDias").forEach(e => { e.textContent = proy.proyeccion.length; });
   dibujarCamas(+$("#dia").value);
   dibujarProyeccion();
   $("#tDias").innerHTML = `<thead><tr><th>Día</th><th>Ingresos</th><th>Altas (balance)</th><th>Ocupadas</th><th>Superior nominal (P90)</th>
@@ -693,11 +697,12 @@ async function iniciar() {
     $("#capacidad").value = d.capacidad_total;
     $("#casos").hidden = false;
     document.querySelectorAll("#casos button").forEach(b => b.disabled = true);
-    $("#subtitulo").textContent = `${d.nombre}, ${d.capacidad_total} camas. Proyección a 7 días y Alerta de Saturación.`;
+    $("#subtitulo").textContent = `${d.nombre}, ${d.capacidad_total} camas. Proyección a 7, 15 o 30 días y Alerta de Saturación.`;
   };
   $("#dataset").addEventListener("change", async () => { elegirDataset(); await proyectar(); await cargarEscenarios(); });
   $("#fecha").addEventListener("change", proyectar);
   $("#capacidad").addEventListener("change", proyectar);
+  $("#horizonte").addEventListener("change", proyectar);
     document.querySelectorAll("#casos button").forEach(b => {
     b.addEventListener("click", async () => {
       if (!proy ||

@@ -59,5 +59,7 @@ DATASET_POR_DEFECTO = "hdhi"
 # ============================================================
 # Agente y alertas (consigna Grupo 1)
 # ============================================================
-DIAS_PROYECCION = 7          # proyeccion de los proximos 7 dias
+DIAS_PROYECCION = 7          # proyeccion de los proximos 7 dias (la de la consigna)
+DIAS_PROYECCION_MAX = 30     # horizonte maximo admitido (proyecciones a 15 y 30 dias)
+HORIZONTES_PROYECCION = (7, 15, 30)   # opciones que ofrece el panel
 UMBRAL_SATURACION = 0.90     # ocupacion proyectada > 90 % -> "Alerta de Saturacion"

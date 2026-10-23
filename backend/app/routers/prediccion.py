@@ -40,17 +40,20 @@ def backtest(dataset: NombreDataset = Query(config.DATASET_POR_DEFECTO),
 
 
 @router.get("/evaluacion-agente", summary="Que tan bien proyecta el agente (contra la realidad)")
-def evaluacion_agente(dataset: NombreDataset = Query(config.DATASET_POR_DEFECTO)):
-    """Reconstruye el censo de fechas pasadas, proyecta 7 dias y compara con la ocupacion
+def evaluacion_agente(dataset: NombreDataset = Query(config.DATASET_POR_DEFECTO),
+                      dias: Literal[7, 15, 30] = Query(config.DIAS_PROYECCION,
+                                                       description="Horizonte evaluado: 7, 15 o 30 dias")):
+    """Reconstruye el censo de fechas pasadas, proyecta `dias` dias y compara con la ocupacion
     que realmente hubo. Devuelve el error por dia de horizonte y la precision / recall
-    de distintas reglas de alerta."""
-    return prediccion.evaluar_agente(dataset)
+    de distintas reglas de alerta. A 15 y 30 dias se evalua una fecha cada dos semanas
+    (el primer calculo tarda unos minutos y despues queda en memoria)."""
+    return prediccion.evaluar_agente(dataset, cada_dias=7 if dias == 7 else 14, dias=dias)
 
 
 @router.get("/ocupacion-real", summary="Camas que realmente se ocuparon despues de una fecha")
 def ocupacion_real(dataset: NombreDataset = Query(config.DATASET_POR_DEFECTO),
                    desde: Optional[date] = Query(None, description="Por defecto, la fecha de prueba"),
-                   dias: int = Query(config.DIAS_PROYECCION, ge=1, le=14)):
+                   dias: int = Query(config.DIAS_PROYECCION, ge=1, le=config.DIAS_PROYECCION_MAX)):
     desde = pd.Timestamp(desde or config.DATASETS[dataset]["fecha_demo"])
     real = prediccion.ocupacion_real(agente.cargar_internaciones(dataset))
     tramo = real.loc[desde + pd.Timedelta(days=1): desde + pd.Timedelta(days=dias)]
