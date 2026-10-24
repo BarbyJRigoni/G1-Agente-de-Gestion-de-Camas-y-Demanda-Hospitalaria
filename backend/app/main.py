@@ -1,8 +1,8 @@
 """
 Punto de entrada de la API (FastAPI).
 
-Crea la aplicacion, habilita CORS para el frontend, registra los endpoints
-de routers/inventario.py y sirve el dashboard en la raiz.
+Crea la aplicacion, protege el acceso, registra los endpoints
+y sirve la portada, el panel y sus archivos de estilos y JavaScript.
 
 Ejecutar desde la carpeta backend/app:
     uvicorn main:app --reload
@@ -103,6 +103,22 @@ def js_registro():
         config.RUTA_FRONTEND.parent / "js" / "registro.js",
         media_type="text/javascript"
     )
+
+# Recursos del panel: requieren una sesión, igual que /panel.
+@app.get("/panel/css/panel.css", include_in_schema=False)
+def css_panel():
+    return FileResponse(config.RUTA_FRONTEND.parent / "css" / "panel.css", media_type="text/css")
+
+
+@app.get("/panel/js/panel.js", include_in_schema=False)
+def js_panel():
+    return FileResponse(config.RUTA_FRONTEND.parent / "js" / "panel.js", media_type="text/javascript")
+
+
+@app.get("/panel/js/administracion.js", include_in_schema=False)
+def js_administracion():
+    return FileResponse(config.RUTA_FRONTEND.parent / "js" / "administracion.js", media_type="text/javascript")
+
 
 @app.get("/salud", tags=["Sistema"], summary="Estado de la API")
 def salud():
