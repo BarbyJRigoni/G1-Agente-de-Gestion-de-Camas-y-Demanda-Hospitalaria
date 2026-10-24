@@ -1,0 +1,12 @@
+# Lo que NO entra en la imagen
+.git
+.gitignore
+.venv
+.vscode
+**/__pycache__
+**/*.pyc
+.ipynb_checkpoints
+*.patch
+docs
+# CSV originales: la app solo usa los procesados (backend/data/procesados)
+backend/data/*.csv

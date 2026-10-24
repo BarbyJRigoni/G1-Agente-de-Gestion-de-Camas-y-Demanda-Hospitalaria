@@ -13,10 +13,19 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from urllib.parse import urlsplit
+import asyncio
+import hashlib
+import json
+import logging
+import tempfile
+import threading
+import time
 from services import acceso
 from routers.acceso import router as router_acceso
 
 from core import config
+from pathlib import Path
+from services import prediccion
 from routers.inventario import router as router_camas
 from routers.prediccion import router as router_prediccion   # modelo de demanda (Barbara)
 
@@ -30,6 +39,114 @@ app = FastAPI(
         "Grupo 1 — Desarrollo de Sistemas de I.A. — Instituto Terciario Malvinas Argentinas."
     ),
 )
+
+# ============================================================
+# Precalculo al arrancar (tiempos de carga)
+# ============================================================
+# La primera proyeccion y la evaluacion tardan porque entrenan los modelos.
+# Se calculan en segundo plano al iniciar el servidor. Si alguien pide esos
+# datos mientras tanto, la consulta ESPERA a que termine el precalculo en vez
+# de calcular lo mismo en paralelo (eso hacia que todo tardara el doble).
+panel_listo = threading.Event()        # proyecciones de la fecha de demo
+evaluacion_lista = threading.Event()   # solapa Evaluacion
+
+RUTAS_PANEL = ("/proyeccion-camas", "/escenarios", "/modelo/ocupacion-real")
+RUTAS_EVALUACION = ("/modelo/demanda", "/modelo/backtest", "/modelo/evaluacion-agente")
+ESPERA_MAXIMA = 180     # segundos; despues la consulta sigue y calcula por su cuenta
+
+
+# ============================================================
+# Evaluacion guardada en un archivo
+# ============================================================
+# La evaluacion del agente siempre da lo mismo para los mismos datos y el mismo
+# codigo. La primera vez se calcula y se guarda en un .json; en los siguientes
+# arranques se lee del archivo (menos de 1 s en vez de ~1 min).
+# El nombre del archivo lleva una "huella" de los datos y del codigo: si algo
+# cambia, la huella cambia y la evaluacion se vuelve a calcular sola.
+CARPETA_EVALUACIONES = Path(tempfile.gettempdir()) / "AgenteCamas" / "evaluaciones"
+_evaluar_agente_original = prediccion.evaluar_agente
+_evaluaciones = {}
+_candado_evaluacion = threading.Lock()
+
+
+def huella_datos_y_codigo():
+    """Resume en 16 caracteres los CSV procesados y el codigo del agente."""
+    h = hashlib.sha256()
+    for ruta in sorted(config.CARPETA_PROCESADOS.rglob("*.csv")):
+        info = ruta.stat()
+        h.update(f"{ruta.name}|{info.st_size}|{info.st_mtime_ns}".encode())
+    carpeta_app = Path(__file__).resolve().parent
+    for carpeta in ("agents", "core", "services"):
+        for ruta in sorted((carpeta_app / carpeta).glob("*.py")):
+            h.update(ruta.read_bytes())
+    return h.hexdigest()[:16]
+
+
+def evaluar_agente_guardada(dataset="hdhi", cada_dias=7):
+    """Igual que prediccion.evaluar_agente, pero lee y guarda el resultado en disco."""
+    clave = (dataset, cada_dias)
+    with _candado_evaluacion:
+        if clave not in _evaluaciones:
+            archivo = CARPETA_EVALUACIONES / f"{dataset}_{cada_dias}d_{huella_datos_y_codigo()}.json"
+            try:
+                _evaluaciones[clave] = json.loads(archivo.read_text(encoding="utf-8"))
+            except (OSError, ValueError):          # no existe o esta danado: se calcula
+                _evaluaciones[clave] = _evaluar_agente_original(dataset, cada_dias)
+                try:
+                    archivo.parent.mkdir(parents=True, exist_ok=True)
+                    archivo.write_text(json.dumps(_evaluaciones[clave]), encoding="utf-8")
+                except OSError:
+                    pass                               # si no se puede guardar, sigue en memoria
+        return _evaluaciones[clave]
+
+
+# El endpoint /modelo/evaluacion-agente usa esta version
+prediccion.evaluar_agente = evaluar_agente_guardada
+
+
+def precalcular():
+    from agents.inventario_agent import proyectar_camas
+    from services.prediccion import modelo_demanda
+
+    log = logging.getLogger("uvicorn.error")
+    inicio = time.perf_counter()
+    try:
+        # 0. Si la evaluacion ya esta guardada, se lee primero (tarda menos de 1 s)
+        if (CARPETA_EVALUACIONES / f"hdhi_7d_{huella_datos_y_codigo()}.json").is_file():
+            evaluar_agente_guardada("hdhi")
+            evaluacion_lista.set()
+            log.info("Evaluacion leida del archivo en %.1f s", time.perf_counter() - inicio)
+        # 1. Lo que pide el panel al entrar: la fecha de demo de cada dataset
+        for dataset, datos in config.DATASETS.items():
+            proyectar_camas(dataset, fecha=datos["fecha_demo"])
+            modelo_demanda(dataset)
+        panel_listo.set()
+        log.info("Precalculo del panel listo en %.1f s", time.perf_counter() - inicio)
+        # 2. La solapa Evaluacion (es lo mas lento)
+        evaluar_agente_guardada("hdhi")
+        log.info("Precalculo completo en %.1f s", time.perf_counter() - inicio)
+    except Exception as error:
+        log.warning("Precalculo incompleto: %s", error)
+    finally:
+        panel_listo.set()          # si algo fallo, no se deja esperando a nadie
+        evaluacion_lista.set()
+
+
+@app.on_event("startup")
+def iniciar_precalculo():
+    threading.Thread(target=precalcular, daemon=True).start()
+
+
+@app.middleware("http")
+async def esperar_precalculo(request: Request, siguiente):
+    ruta = request.url.path
+    evento = (panel_listo if ruta.startswith(RUTAS_PANEL)
+              else evaluacion_lista if ruta.startswith(RUTAS_EVALUACION) else None)
+    limite = time.perf_counter() + ESPERA_MAXIMA
+    while evento is not None and not evento.is_set() and time.perf_counter() < limite:
+        await asyncio.sleep(0.2)
+    return await siguiente(request)
+
 
 # El frontend y la API se sirven desde el mismo origen; no se habilita CORS abierto.
 @app.middleware("http")
@@ -75,6 +192,8 @@ async def proteger_acceso(request: Request, siguiente):
     return respuesta
 
 app.include_router(router_acceso)
+
+
 
 # Endpoints del agente (paso 4)
 app.include_router(router_camas)
