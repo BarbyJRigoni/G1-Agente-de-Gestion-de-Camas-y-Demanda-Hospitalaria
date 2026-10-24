@@ -270,20 +270,47 @@
   </section>
 </section>
 
-<section id="vista-administracion" class="tab-panel"
-         role="tabpanel" aria-labelledby="tab-administracion" hidden>
-  <section class="panel">
-    <h2>Administración de usuarios</h2>
-    <p>Consulta de usuarios registrados y sus permisos.</p>
-
-    <button id="recargarUsuarios" type="button">
-      Actualizar usuarios
-    </button>
-
-    <p id="mensajeAdministracion" role="status"></p>
-
-    <div id="listaUsuarios"></div>
+<section id="vista-administracion" class="tab-panel" role="tabpanel" aria-labelledby="tab-administracion" hidden>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true"><symbol id="admin-icon-escudo" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol><symbol id="admin-icon-personas" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6M18 15a5 5 0 0 1 3 4v2"/></symbol><symbol id="admin-icon-activo" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2m1-9 2 2 4-4"/></symbol><symbol id="admin-icon-inactivo" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2m2-12 4 4m0-4-4 4"/></symbol><symbol id="admin-icon-buscar" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol><symbol id="admin-icon-editar" viewBox="0 0 24 24"><path d="m14 5 5 5M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15z"/></symbol><symbol id="admin-icon-recargar" viewBox="0 0 24 24"><path d="M20 7a9 9 0 1 0 1 8M20 3v5h-5"/></symbol><symbol id="admin-icon-mas" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="admin-icon-pausa" viewBox="0 0 24 24"><path d="M9 7v10M15 7v10"/><circle cx="12" cy="12" r="9"/></symbol><symbol id="admin-icon-reactivar" viewBox="0 0 24 24"><path d="m10 8 6 4-6 4z"/><circle cx="12" cy="12" r="9"/></symbol><symbol id="admin-icon-historial" viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2 7M3 4v7h7M12 7v5l3 2"/></symbol></svg>
+  <section class="panel admin-presentacion">
+    <div class="admin-identidad"><span class="admin-icono-cabecera"><svg class="admin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#admin-icon-escudo"/></svg></span><div><span class="admin-sobrelinea">Gestión del sistema</span><h2>Administración de usuarios</h2><p>Personas, permisos y acceso. Todo en un mismo lugar.</p></div></div>
+    <span class="admin-acceso"><svg class="admin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#admin-icon-escudo"/></svg>Solo administradores</span>
   </section>
+  <section class="admin-resumen" aria-label="Resumen de cuentas">
+    <div class="kpi admin-metrica total"><div class="admin-metrica-top"><span>Total usuarios</span><span class="admin-metrica-icono"><svg class="admin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#admin-icon-personas"/></svg></span></div><b id="adminTotal">—</b><div class="admin-metrica-pie"><span>Activos e inactivos</span></small></div></div>
+    <div class="kpi admin-metrica activos"><div class="admin-metrica-top"><span>Activos</span><span class="admin-metrica-icono"><svg class="admin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#admin-icon-activo"/></svg></span></div><b id="adminActivos">—</b><div class="admin-metrica-pie"><span>Acceso habilitado</span></small></div></div>
+    <div class="kpi admin-metrica inactivos"><div class="admin-metrica-top"><span>Inactivos</span><span class="admin-metrica-icono"><svg class="admin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#admin-icon-inactivo"/></svg></span></div><b id="adminInactivos">—</b><div class="admin-metrica-pie"><span>Acceso deshabilitado</span></small></div></div>
+  </section>
+  <section class="panel admin-area">
+    <div class="admin-herramientas">
+      <label class="admin-busqueda">Buscar usuarios<span class="admin-campo-buscar"><svg class="admin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#admin-icon-buscar"/></svg><input id="buscarUsuarios" type="search" placeholder="Buscar por nombre completo, usuario o correo" maxlength="254"></span></label>
+      <label>Rol<select id="filtrarRol"><option value="">Todos</option><option value="usuario">Usuario común</option><option value="administrador">Administrador</option></select></label>
+      <label>Estado<select id="filtrarEstado"><option value="">Todos</option><option value="activo">Activos</option><option value="inactivo">Inactivos</option></select></label>
+      <button id="recargarUsuarios" class="admin-boton" type="button"><svg class="admin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#admin-icon-recargar"/></svg>Actualizar</button>
+      <button id="nuevoUsuarioAdmin" class="admin-boton principal" type="button"><svg class="admin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#admin-icon-mas"/></svg>Nuevo usuario</button>
+    </div>
+    <p id="mensajeAdministracion" role="status" aria-live="polite"></p>
+    <div id="listaUsuarios" class="scroll" tabindex="0" aria-label="Listado de usuarios"></div>
+  </section>
+  <section class="panel">
+    <details id="detalleAuditoria"><summary><svg class="admin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#admin-icon-historial"/></svg>Historial de cambios de usuarios</summary>
+      <button id="recargarAuditoria" class="admin-boton" type="button">Actualizar historial</button>
+      <p id="mensajeAuditoria" role="status"></p><div id="listaAuditoria" class="scroll" tabindex="0" aria-label="Auditoría de usuarios"></div>
+    </details>
+  </section>
+  <dialog id="dialogoUsuario" class="admin-dialogo" aria-labelledby="tituloUsuarioAdmin">
+    <form id="formUsuarioAdmin" class="admin-form">
+      <span class="admin-sobrelinea">Gestión de cuentas</span><h2 id="tituloUsuarioAdmin">Nuevo usuario</h2>
+      <label>Nombre completo<input id="adminNombre" name="nombre_completo" minlength="2" maxlength="120" autocomplete="name" required></label>
+      <label>Nombre de usuario<input id="adminUsuario" name="usuario" minlength="3" maxlength="40" pattern="[a-zA-Z0-9._-]{3,40}" autocomplete="off" required></label>
+      <label>Correo electrónico<input id="adminCorreo" name="correo" type="email" maxlength="254" autocomplete="email" required></label>
+      <label>Rol<select id="adminRol" name="rol"><option value="usuario">Usuario común</option><option value="administrador">Administrador</option></select></label>
+      <label id="campoClaveAdmin">Contraseña inicial<input id="adminClave" name="clave" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></label>
+      <p class="nota">El nombre de usuario no se cambia al editar. El rol administrador permite gestionar otras cuentas. Las contraseñas existentes nunca se muestran.</p>
+      <p id="mensajeFormAdmin" role="status" aria-live="polite"></p>
+      <div class="admin-acciones"><button id="cancelarUsuarioAdmin" class="admin-boton" type="button">Cancelar</button><button id="guardarUsuarioAdmin" class="admin-boton principal" type="submit">Guardar</button></div>
+    </form>
+  </dialog>
 </section>
 
 </main>

@@ -69,6 +69,8 @@ def conexion():
           ON intentos(instante);
         """)
 
+        # Serializar la migración para el primer acceso simultáneo.
+        db.execute("BEGIN IMMEDIATE")
         # Migración: agregar correo sin eliminar cuentas existentes.
         columnas = {
             fila[1]
@@ -85,6 +87,18 @@ def conexion():
                 "ALTER TABLE usuarios ADD COLUMN rol TEXT NOT NULL DEFAULT 'usuario'"
             )
 
+        # Ampliación compatible: todas las cuentas existentes siguen habilitadas.
+        if "nombre_completo" not in columnas:
+            db.execute("ALTER TABLE usuarios ADD COLUMN nombre_completo TEXT")
+        if "activo" not in columnas:
+            db.execute("ALTER TABLE usuarios ADD COLUMN activo INTEGER NOT NULL DEFAULT 1")
+        db.execute("""CREATE TABLE IF NOT EXISTS auditoria_usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            instante TEXT NOT NULL, actor TEXT NOT NULL,
+            accion TEXT NOT NULL, usuario_afectado TEXT NOT NULL,
+            cambios TEXT NOT NULL
+        )""")
+
         # Evitar que dos cuentas tengan el mismo correo.
         db.execute("""
             CREATE UNIQUE INDEX IF NOT EXISTS usuarios_correo_unico
@@ -96,6 +110,7 @@ def conexion():
         except OSError:
             pass
 
+        db.commit()  # Termina la migración antes de las operaciones de la cuenta.
         yield db
         db.commit()
 
@@ -146,11 +161,11 @@ def es_administrador(usuario):
 
     with conexion() as db:
         fila = db.execute(
-            "SELECT rol FROM usuarios WHERE usuario=?",
+            "SELECT rol, activo FROM usuarios WHERE usuario=?",
             (usuario,)
         ).fetchone()
 
-    return bool(fila and fila[0] == "administrador")
+    return bool(fila and fila[0] == "administrador" and fila[1])
 
 
 def asignar_administrador_local(usuario):
@@ -184,11 +199,11 @@ def autenticar(usuario, clave, ip, token_anterior=None):
         por_cuenta = db.execute("SELECT count(*) FROM intentos WHERE ip=? AND usuario=?", (ip, usuario)).fetchone()[0]
         if por_ip >= 20 or por_cuenta >= 5:
             raise DemasiadosIntentos("Demasiados intentos. Espere cinco minutos antes de volver a probar.")
-        fila = db.execute("SELECT sal,derivada,iteraciones FROM usuarios WHERE usuario=?", (usuario,)).fetchone()
+        fila = db.execute("SELECT sal,derivada,iteraciones,activo FROM usuarios WHERE usuario=?", (usuario,)).fetchone()
         sal = bytes.fromhex(fila[0]) if fila else _SAL_FICTICIA
         derivada = hashlib.pbkdf2_hmac("sha256", clave.encode(), sal, fila[2] if fila else ITERACIONES).hex()
         correcta = hmac.compare_digest(derivada, fila[1] if fila else "0" * 64)
-        if not correcta or not fila:
+        if not correcta or not fila or not fila[3]:
             db.execute("INSERT INTO intentos VALUES (?,?,?)", (ip, usuario, ahora))
             return None
         db.execute("DELETE FROM intentos WHERE ip=? AND usuario=?", (ip, usuario))
@@ -208,7 +223,7 @@ def usuario_de_sesion(token):
     if not token or len(token) > 100:
         return None
     with conexion() as db:
-        fila = db.execute("SELECT usuario FROM sesiones WHERE token_hash=? AND vence>?", (_hash_token(token), time.time())).fetchone()
+        fila = db.execute("SELECT s.usuario FROM sesiones s JOIN usuarios u ON u.usuario=s.usuario WHERE s.token_hash=? AND s.vence>? AND u.activo=1", (_hash_token(token), time.time())).fetchone()
         return fila[0] if fila else None
 
 

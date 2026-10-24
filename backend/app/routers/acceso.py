@@ -106,26 +106,6 @@ def registrar(datos: Registro, request: Request):
     }
     
 
-@router.get("/admin/usuarios")
-def listar_usuarios(request: Request):
-    # Verificar permisos de administrador.
-    requerir_administrador(request)
-
-    # Consultar usuarios registrados.
-    with acceso.conexion() as db:
-        filas = db.execute("""
-            SELECT usuario, correo, rol
-            FROM usuarios
-            ORDER BY usuario
-        """).fetchall()
-
-    return {
-        "usuarios": [
-            {
-                "usuario": fila[0],
-                "correo": fila[1],
-                "rol": fila[2]
-            }
-            for fila in filas
-        ]
-    }
+# Las operaciones administrativas tienen su propio módulo.
+from routers.administracion_usuarios import router as router_administracion
+router.include_router(router_administracion)
