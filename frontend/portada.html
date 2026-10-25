@@ -49,45 +49,68 @@
         id="nuevoUsuario"
         type="text"
         minlength="3"
-        maxlength="40"
+        maxlength="14"
         pattern="[a-zA-Z0-9._-]{3,40}"
         autocomplete="username"
         required
         placeholder="Elegí tu usuario"
+    >
 
     <label for="nuevoCorreo">Correo electrónico</label>
     <input
         id="nuevoCorreo"
         name="email"
         type="email"
-        maxlength="254"
+        maxlength="14"
         autocomplete="email"
         required
         placeholder="ejemplo@correo.com"
     >
     
-
     <label for="nuevaClave">Contraseña</label>
+<div class="clave">
     <input
         id="nuevaClave"
         type="password"
-        minlength="12"
-        maxlength="128"
+        minlength="8"
+        maxlength="14"
         autocomplete="new-password"
+        aria-describedby="ayudaClaveRegistro"
         required
-        placeholder="Mínimo 12 caracteres"
+        placeholder="Elegí tu contraseña"
     >
+    <button
+        class="mostrar"
+        type="button"
+        data-clave-registro="nuevaClave"
+        aria-controls="nuevaClave"
+        aria-pressed="false"
+    >Mostrar</button>
+</div>
 
-    <label for="confirmarClave">Confirmar contraseña</label>
+<p id="ayudaClaveRegistro" class="ayuda-clave">
+    Entre 8 y 14 caracteres.
+</p>
+
+<label for="confirmarClave">Confirmar contraseña</label>
+<div class="clave">
     <input
         id="confirmarClave"
         type="password"
-        minlength="12"
-        maxlength="128"
+        minlength="8"
+        maxlength="14"
         autocomplete="new-password"
         required
         placeholder="Repetí tu contraseña"
     >
+    <button
+        class="mostrar"
+        type="button"
+        data-clave-registro="confirmarClave"
+        aria-controls="confirmarClave"
+        aria-pressed="false"
+    >Mostrar</button>
+</div>
 
     <button id="guardarRegistro" class="entrar" type="submit">
         Crear cuenta

@@ -868,3 +868,25 @@ footer {
 .calendario-rango{padding:9px 11px;background:#eff5f8;border-radius:9px;color:#526e7f;font-size:10px;line-height:1.5;margin:10px 0 7px}
 .calendario-ayuda{font-size:10px;line-height:1.5;color:#617788;margin:0}
 @media(max-width:600px){.calendario-censo{padding:13px}.calendario-cabecera h2{font-size:20px}.calendario-navegacion{grid-template-columns:30px 1fr 78px 30px;gap:5px;padding:8px}.calendario-navegacion>button{width:30px}.semana-calendario,.dias-calendario{gap:3px}.dias-calendario .dia-vistazo{min-height:76px;padding:5px 1px}.dias-calendario .dia-vistazo .ocupacion-dia-vistazo{font-size:12px}.dias-calendario .dia-vistazo>small{font-size:8px}.numero-dia-vistazo{margin-left:2px;font-size:11px}.vistazo-resumen{font-size:10px}.vistazo-leyenda{gap:9px}}
+
+/* Historial con desplazamiento dentro del cuadro */
+#listaAuditoria {
+    max-height: 360px;
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+
+/* Encabezados visibles al recorrer el historial */
+#listaAuditoria thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: #f2f6fa;
+}
+
+/* Cuadro más compacto en celulares */
+@media (max-width: 600px) {
+    #listaAuditoria {
+        max-height: 280px;
+    }
+}
