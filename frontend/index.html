@@ -7,6 +7,7 @@
 <!-- frontend/index.html — Dashboard del agente. Responsable: Bárbara (IA e interfaz).
      Consume la API del equipo: /datasets, /estadisticas, /proyeccion-camas y /modelo/* -->
 <script src="/vendor/chart.umd.min.js"></script>
+<script src="/vendor/xlsx.mini.min.js"></script>
 <link rel="stylesheet" href="/panel/css/panel.css">
 </head>
 <body>
@@ -57,6 +58,7 @@
   <div class="titulo-seccion"><div><h2>¿Alcanzan las camas?</h2><p>Ocupación prevista para los próximos <span class="txtDias">7</span> días.</p></div><span class="etiqueta etiqueta-umbral">
   Umbral de alerta: ocupación superior al 90 %
 </span></div>
+  <div id="cargando" class="cargando" role="status" aria-live="polite" hidden><span class="spinner" aria-hidden="true"></span><span id="cargandoTexto">Procesando datos…</span></div>
   <div id="mensaje" role="status">Consultando los datos y calculando la semana…</div>
 
   <section class="kpis" id="kpis"></section>
@@ -105,7 +107,8 @@
   </section>
 
   <section class="panel">
-    <h3>Proyección diaria de los próximos <span class="txtDias">7</span> días</h3><p class="nota">
+    <div class="encabezado-tabla"><h3>Proyección diaria de los próximos <span class="txtDias">7</span> días</h3>
+      <button type="button" id="exportarExcel" class="boton-exportar" disabled title="Descarga en Excel la proyección que se ve en pantalla">Exportar a Excel</button></div><p class="nota">
   Camas ocupadas del día = camas ocupadas del día anterior
   + ingresos previstos − altas estimadas.
   Las altas se infieren por balance.
@@ -229,6 +232,7 @@
     <div class="panel">
       <h3>Ingresos reales vs. pronóstico</h3>
       <div class="grafico"><canvas id="gBack"></canvas></div>
+      <p class="nota">Gris: ingresos que realmente hubo. Verde: lo que pronosticó el método elegido, entrenado solo con datos anteriores. Amarillo punteado: la referencia más simple (promedio de las últimas 4 semanas).</p>
       <p class="nota" id="notaBack"></p>
     </div>
   </section>
@@ -237,6 +241,10 @@
     <div class="panel">
       <h3>Error del agente según los días de anticipación</h3>
       <div class="grafico"><canvas id="gHorizonte"></canvas></div>
+      <p class="nota">Cada barra es el error promedio, en camas, según cuántos días hacia adelante se proyecta (barras más bajas = mejor).
+        <b>Agente actual</b>: el que usa el panel (modelo de ocupación).
+        <b>Agente anterior</b>: la primera versión, basada en cuánto duran las internaciones.
+        <b>Referencia simple</b>: suponer que la ocupación de los próximos días es igual a la de hoy.</p>
       <p class="nota" id="notaHorizonte"></p>
     </div>
     <div class="panel">

@@ -82,16 +82,18 @@ def huella_datos_y_codigo():
     return h.hexdigest()[:16]
 
 
-def evaluar_agente_guardada(dataset="hdhi", cada_dias=7):
-    """Igual que prediccion.evaluar_agente, pero lee y guarda el resultado en disco."""
-    clave = (dataset, cada_dias)
+def evaluar_agente_guardada(dataset="hdhi", cada_dias=7, dias=config.DIAS_PROYECCION):
+    """Igual que prediccion.evaluar_agente, pero lee y guarda el resultado en disco.
+    `dias` es el horizonte evaluado (7 por defecto; 15 y 30 para las proyecciones largas)."""
+    clave = (dataset, cada_dias, dias)
     with _candado_evaluacion:
         if clave not in _evaluaciones:
-            archivo = CARPETA_EVALUACIONES / f"{dataset}_{cada_dias}d_{huella_datos_y_codigo()}.json"
+            horizonte = "" if dias == config.DIAS_PROYECCION else f"_h{dias}"
+            archivo = CARPETA_EVALUACIONES / f"{dataset}_{cada_dias}d{horizonte}_{huella_datos_y_codigo()}.json"
             try:
                 _evaluaciones[clave] = json.loads(archivo.read_text(encoding="utf-8"))
             except (OSError, ValueError):          # no existe o esta danado: se calcula
-                _evaluaciones[clave] = _evaluar_agente_original(dataset, cada_dias)
+                _evaluaciones[clave] = _evaluar_agente_original(dataset, cada_dias, dias)
                 try:
                     archivo.parent.mkdir(parents=True, exist_ok=True)
                     archivo.write_text(json.dumps(_evaluaciones[clave]), encoding="utf-8")

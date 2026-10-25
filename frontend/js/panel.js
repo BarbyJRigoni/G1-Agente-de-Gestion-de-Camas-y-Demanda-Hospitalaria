@@ -8,7 +8,31 @@ let consultaProyeccion = 0;
 const $ = s => document.querySelector(s);
 const fmt = f => new Date(f + "T00:00").toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "numeric" });
 const fmtLargo = f => new Date(f + "T00:00").toLocaleDateString("es-AR");
+// Indicador de carga: se muestra mientras haya consultas a la API en curso
+// (con una demora corta para que no parpadee en las respuestas rápidas).
+let consultasEnCurso = 0, temporizadorCarga = null;
+function indicadorCarga(delta) {
+  consultasEnCurso = Math.max(0, consultasEnCurso + delta);
+  const caja = document.getElementById("cargando");
+  if (!caja) return;
+  clearTimeout(temporizadorCarga);
+  if (consultasEnCurso > 0) {
+    temporizadorCarga = setTimeout(() => { caja.hidden = false; }, 200);
+    document.body.setAttribute("aria-busy", "true");
+  } else {
+    caja.hidden = true;
+    document.body.removeAttribute("aria-busy");
+  }
+}
 async function api(url, opciones = {}) {
+  indicadorCarga(+1);
+  try {
+    return await consultarApi(url, opciones);
+  } finally {
+    indicadorCarga(-1);
+  }
+}
+async function consultarApi(url, opciones = {}) {
   const r = await fetch(API + url, {...opciones, credentials:"same-origin", headers:{...opciones.headers,"X-Requested-With":"AgenteCamas"}});
   if(r.status===401){ document.querySelector("main").hidden=true;location.replace("/ingresar");throw new Error("La sesion finalizo. Inicia sesion nuevamente."); }
   const datos = await r.json().catch(() => ({}));
@@ -36,6 +60,8 @@ async function proyectar() {
   const textoCapacidad = $("#capacidad").value.trim();
   const cap = textoCapacidad === "" ? null : Number(textoCapacidad);
   const dias = Number($("#horizonte").value) || 7;   // 7 (horizonte controlado), 15 o 30
+  $("#cargandoTexto").textContent = dias > 7 ? `Calculando la proyección a ${dias} días…` : "Calculando la proyección…";
+  $("#exportarExcel").disabled = true;
   $("#mensaje").textContent = dias > 7 ? `Calculando proyeccion a ${dias} dias (la primera vez puede tardar unos segundos)...` : "Calculando proyeccion...";
   proy = null; real = null;
   $("#resumenCamas").replaceChildren();
@@ -98,6 +124,7 @@ async function proyectar() {
     kpi(fmt(proy.dia_pico), "Día de mayor ocupación esperada");
   $("#dia").max = proy.proyeccion.length;
   document.querySelectorAll(".txtDias").forEach(e => { e.textContent = proy.proyeccion.length; });
+  $("#exportarExcel").disabled = false;
   dibujarCamas(+$("#dia").value);
   dibujarProyeccion();
   $("#tDias").innerHTML = `<thead><tr><th>Día</th><th>Ingresos</th><th>Altas (balance)</th><th>Ocupadas</th><th>Superior nominal (P90)</th>
@@ -203,9 +230,9 @@ if (!modelos.length) throw new Error(fallos.join(" | "));
 (async () => {
 const b = await api("/modelo/backtest?dataset=hdhi");
   grafico("#gBack", { type: "line", data: { labels: b.fechas.map(f => f.slice(5)), datasets: [
-    { label: "Real", data: b.real, borderColor: "#7b8ca3", borderWidth: 1, pointRadius: 0 },
-    { label: NOMBRE[b.metodo_elegido], data: b[b.metodo_elegido], borderColor: "#11888b", borderWidth: 2, pointRadius: 0 },
-    { label: "Media 28 días", data: b.media_28d, borderColor: "#d6a21e", borderWidth: 2, borderDash: [4, 3], pointRadius: 0 },
+    { label: "Ingresos reales", data: b.real, borderColor: "#7b8ca3", borderWidth: 1, pointRadius: 0 },
+    { label: `Pronóstico: ${NOMBRE[b.metodo_elegido]} (elegido)`, data: b[b.metodo_elegido], borderColor: "#11888b", borderWidth: 2, pointRadius: 0 },
+    { label: "Referencia: media de 28 días", data: b.media_28d, borderColor: "#d6a21e", borderWidth: 2, borderDash: [4, 3], pointRadius: 0 },
   ]}, options: opc({ scales: { x: { ticks: { maxTicksLimit: 10 } }, y: { title: { display: true, text: "Ingresos por día" } } } }) });
   $("#notaBack").textContent = `HDHI, ${b.fechas[0]} a ${b.fechas.at(-1)}. El modelo sigue el patrón semanal; los picos diarios no siempre son anticipados por estos metodos.`;
 
@@ -217,20 +244,22 @@ const b = await api("/modelo/backtest?dataset=hdhi");
 (async () => {
 const ev = await api("/modelo/evaluacion-agente?dataset=hdhi");
   grafico("#gHorizonte", { type: "bar", data: {
-    labels: ev.error_por_dia.mae_camas.map((_, i) => `Dia ${i + 1}`),
+    labels: ev.error_por_dia.mae_camas.map((_, i) => `${i + 1} día${i ? "s" : ""}`),
     datasets: [
-      { label: "Agente nuevo", data: ev.error_por_dia.mae_camas, backgroundColor: "#11888b" },
-      { label: "Agente anterior", data: ev.comparacion_referencia.mae_agente_anterior_por_dia, backgroundColor: "#b47d48" },
-      { label: "Mantener censo", data: ev.comparacion_referencia.mae_camas_por_dia, backgroundColor: "#9baebd" }
-    ] }, options: opc({ scales: { y: { title: { display: true, text: "Error en camas" } } } }) });
+      { label: "Agente actual (modelo de ocupación)", data: ev.error_por_dia.mae_camas, backgroundColor: "#11888b" },
+      { label: "Agente anterior (duración de internaciones)", data: ev.comparacion_referencia.mae_agente_anterior_por_dia, backgroundColor: "#b47d48" },
+      { label: "Referencia simple (ocupación igual a hoy)", data: ev.comparacion_referencia.mae_camas_por_dia, backgroundColor: "#9baebd" }
+    ] }, options: opc({ scales: {
+      x: { title: { display: true, text: "Días de anticipación" } },
+      y: { title: { display: true, text: "Error promedio (camas)" } } } }) });
   const ref = ev.comparacion_referencia;
   const cob = ev.cobertura_limite_superior;
-  $("#notaHorizonte").textContent = `Evaluacion desde ${ev.fechas_evaluadas} censos. Error medio global: nuevo ${ref.mae_global_agente}; anterior ${ref.mae_global_agente_anterior}; mantener censo ${ref.mae_global_referencia} camas. Este total incluye desarrollo.`;
+  $("#notaHorizonte").textContent = `Evaluación con ${ev.fechas_evaluadas} censos históricos. Error promedio: agente actual ${ref.mae_global_agente}, agente anterior ${ref.mae_global_agente_anterior} y referencia simple ${ref.mae_global_referencia} camas (incluye el período de desarrollo).`;
   if (ev.validacion_posterior) {
     const v = ev.validacion_posterior;
-    $("#notaHorizonte").textContent += ` Validacion posterior (${v.fechas} censos, ${v.primer_censo} a ${v.ultimo_censo}): nuevo ${v.mae_agente}; anterior ${v.mae_agente_anterior}; mantener censo ${v.mae_referencia} camas.`;
+    $("#notaHorizonte").textContent += ` Validación final con fechas que el modelo no vio (${v.fechas} censos, ${v.primer_censo} a ${v.ultimo_censo}): agente actual ${v.mae_agente}, agente anterior ${v.mae_agente_anterior} y referencia simple ${v.mae_referencia} camas.`;
   }
-  if (cob.empirico_pct != null) $("#notaHorizonte").textContent += ` Limite superior nominal 90 %: cobertura ${cob.empirico_pct} %, sobre ${cob.pronosticos_comparables} predicciones comparables. No garantiza cobertura futura.`;
+  if (cob.empirico_pct != null) $("#notaHorizonte").textContent += ` Escenario pesimista (P90): la ocupación real quedó por debajo en el ${cob.empirico_pct} % de ${cob.pronosticos_comparables} casos (lo esperado es 90 %).`;
 
   const reglas = { ocupacion_esperada_mayor_90: "Ocupación esperada > 90 % (consigna)",
                    p90_mayor_90: "Limite superior nominal (P90) > 90 %", probabilidad_mayor_30: "Estimacion de excedencia ≥ 30 % (preventiva)" };
@@ -701,3 +730,46 @@ function abrirCalendarioCenso(){
   dibujar();dialogo.showModal();
   (dialogo.querySelector('[aria-pressed="true"]:not(:disabled)')||dialogo.querySelector('.dias-calendario button:not(:disabled)'))?.focus();
 }
+
+
+// ------------------------------------------------------------------
+// Exportar a Excel lo que se ve en pantalla (SheetJS, incluido en /vendor:
+// funciona sin internet). Respeta dataset, fecha, capacidad y horizonte elegidos.
+// ------------------------------------------------------------------
+function exportarExcel() {
+  if (!proy || typeof XLSX === "undefined") return;
+  const nombreDataset = $("#dataset").selectedOptions[0]?.textContent || proy.dataset;
+  const dias = proy.proyeccion.length;
+  const resumen = [
+    ["Agente de Gestión de Camas · Grupo 1"],
+    [],
+    ["Fuente de datos", nombreDataset],
+    ["Fecha del censo", fmtLargo(proy.fecha_censo)],
+    ["Capacidad (camas)", proy.capacidad],
+    ["Horizonte proyectado (días)", dias],
+    ["Camas ocupadas al censo", proy.camas_ocupadas_hoy],
+    ["Ocupación al censo (%)", proy.tasa_ocupacion_hoy_pct],
+    ["Ocupación proyectada máxima (%)", proy.tasa_ocupacion_maxima_pct],
+    ["Día de mayor ocupación", proy.dia_pico],
+    ["Alerta de Saturación", proy.alerta_saturacion ? "Sí" : "No"],
+    ["Alerta preventiva", proy.alerta_preventiva ? "Sí" : "No"],
+    ["Mensaje del agente", proy.mensaje],
+    [],
+    ["Exportado el", new Date().toLocaleString("es-AR")],
+  ];
+  const encabezados = ["Fecha", "Ingresos previstos", "Altas estimadas", "Camas ocupadas", "Escenario pesimista (P90)",
+                       "Camas libres", "Ocupación (%)", "Excedencia estimada (%)", "Ocupación real (camas)", "Alerta de Saturación"];
+  const filas = proy.proyeccion.map((d, i) => [
+    d.fecha, d.ingresos_previstos, d.altas_previstas, d.camas_ocupadas, d.camas_ocupadas_p90 ?? "",
+    d.camas_libres, d.tasa_ocupacion_pct, d.prob_superar_umbral_pct ?? "", real?.camas_ocupadas?.[i] ?? "",
+    d.alerta_saturacion ? "Sí" : "No"]);
+  const libro = XLSX.utils.book_new();
+  const hojaResumen = XLSX.utils.aoa_to_sheet(resumen);
+  hojaResumen["!cols"] = [{ wch: 32 }, { wch: 70 }];
+  const hojaDias = XLSX.utils.aoa_to_sheet([encabezados, ...filas]);
+  hojaDias["!cols"] = encabezados.map(t => ({ wch: Math.max(12, t.length + 2) }));
+  XLSX.utils.book_append_sheet(libro, hojaResumen, "Resumen");
+  XLSX.utils.book_append_sheet(libro, hojaDias, `Proyección ${dias} días`);
+  XLSX.writeFile(libro, `proyeccion_${proy.dataset}_${proy.fecha_censo}_${dias}dias.xlsx`);
+}
+document.getElementById("exportarExcel")?.addEventListener("click", exportarExcel);

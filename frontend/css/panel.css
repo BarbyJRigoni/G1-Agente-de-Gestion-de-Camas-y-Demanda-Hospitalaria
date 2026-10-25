@@ -890,3 +890,29 @@ footer {
         max-height: 280px;
     }
 }
+
+/* Indicador de carga (aparece mientras se consultan datos) */
+.cargando {
+  position:fixed; top:16px; right:16px; z-index:50;
+  display:flex; align-items:center; gap:10px;
+  background:var(--tinta); color:#fff; padding:10px 16px; border-radius:999px;
+  box-shadow:var(--sombra); font-weight:600; font-size:14px;
+}
+.spinner {
+  width:18px; height:18px; border-radius:50%;
+  border:3px solid #ffffff55; border-top-color:#fff;
+  animation:girar .8s linear infinite;
+}
+@keyframes girar { to { transform:rotate(360deg) } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration:2.4s } }
+
+/* Encabezado de la tabla con el botón de exportar */
+.encabezado-tabla { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap }
+.encabezado-tabla h3 { margin:0 }
+.boton-exportar {
+  font:inherit; font-weight:600; padding:8px 16px; border-radius:999px; cursor:pointer;
+  border:2px solid var(--acento); background:transparent; color:var(--acento);
+}
+.boton-exportar:hover:not(:disabled) { background:var(--acento); color:#fff }
+.boton-exportar:disabled { opacity:.45; cursor:not-allowed }
+.boton-exportar:focus-visible { outline:3px solid var(--aviso); outline-offset:2px }
