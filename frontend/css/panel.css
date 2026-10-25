@@ -128,6 +128,7 @@ select,input[type=date],input[type=number] {
 }
 .pildoras {
   display:flex;
+  justify-content:center;
   gap:7px;
   flex-wrap:wrap;
   align-items:center;
@@ -136,10 +137,13 @@ select,input[type=date],input[type=number] {
   padding-top:14px
 }
 .pildoras:before {
-  content:'Probá otra capacidad';
-  font-size:12px;
+  content:'Simular capacidad de camas';
+  flex-basis:100%;
+  text-align:center;
+  font-size:13px;
+  font-weight:650;
   color:#d8e8ee;
-  margin-right:5px
+  margin:0
 }
 button {
   font:inherit;
@@ -166,6 +170,7 @@ button:disabled {
 .pildoras button[aria-pressed=true]:before{content:'✓';width:12px;height:auto;background:transparent;border-radius:0;font-size:14px;line-height:1}
 
 #notaEscenarios {
+  text-align:center;
   flex-basis:100%;
   color:#d4e5ef;
   font-size:12px;
@@ -814,3 +819,51 @@ footer {
 @media(max-width:600px){.admin-resumen{grid-template-columns:1fr;gap:12px}.admin-metrica.kpi{padding:17px 20px}.admin-presentacion{padding:20px}.admin-presentacion h2{font-size:23px}.admin-identidad{align-items:flex-start;gap:12px}.admin-icono-cabecera{width:44px;height:44px;border-radius:13px}.admin-icono-cabecera .admin-icon{width:24px;height:24px}.admin-acceso{font-size:10px}.admin-metrica b{font-size:32px}.admin-herramientas{padding:12px}.admin-herramientas label{flex:1 1 calc(50% - 12px)}.admin-herramientas button{flex:1}.admin-busqueda{min-width:0}.admin-dialogo{padding:22px}.admin-herramientas select{min-width:0;width:100%}}
 
 @media(max-width:600px){.pildoras{gap:8px}.pildoras button{min-width:105px;min-height:46px;padding:10px 13px;font-size:15px}}
+
+/* Selector compacto: misma altura que los otros campos del encabezado. */
+.campo-fecha-censo{display:grid;gap:6px;width:190px;max-width:100%}
+.controles .campo-fecha-censo>label{min-width:0;flex:initial;font-size:12px;font-weight:650;color:#d8e8ee}
+.fecha-original{position:absolute!important;width:1px!important;height:1px!important;opacity:0;pointer-events:none;padding:0!important;min-height:0!important}
+.fecha-compacta{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;height:44px;min-height:44px;padding:10px 12px;border:1px solid #c8d9e0;border-radius:10px;background:#fff;color:var(--tinta);font:inherit;font-size:14px;text-align:left}
+.icono-fecha-compacta{display:block;line-height:0;color:#087e82;flex-shrink:0}
+.icono-fecha-compacta svg{width:19px;height:19px}
+.fecha-compacta:hover{border-color:#087e82;box-shadow:0 0 0 2px #79c8bd26}
+/* La información se muestra dentro del calendario emergente; el campo sigue midiendo 44 px. */
+.calendario-censo{padding:23px;border:1px solid #c8dfdf;border-radius:21px;width:min(790px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;background:#fff;color:#1e3447;box-shadow:0 28px 90px #082f4a55}
+.calendario-censo::backdrop{background:#092d416e;backdrop-filter:blur(4px)}
+.calendario-cabecera{display:flex;align-items:start;gap:15px;justify-content:space-between}
+.calendario-cabecera span{color:#087e82;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em}
+.calendario-cabecera h2{font-size:24px;line-height:1.25;margin:5px 0 0}
+.cerrar-calendario{border:0;background:#edf4f7;color:#526878;border-radius:50%;width:36px;height:36px;font-size:24px;flex-shrink:0}
+.calendario-contexto{font-size:12px;color:#527487;margin:9px 0}
+.vistazo-resumen{padding:10px 12px;border-radius:10px;background:#eaf6f3;color:#235f5b;font-size:12px;line-height:1.5;margin:10px 0 14px}
+.calendario-navegacion{display:grid;grid-template-columns:40px 1fr 110px 40px;align-items:end;gap:9px;padding:11px;background:#f1f6f8;border-radius:12px}
+.calendario-navegacion label{display:grid;gap:4px;font-size:10px;font-weight:750;color:#356368}
+.calendario-navegacion select{padding:7px;min-height:40px;font-size:14px;width:100%;min-width:0;text-transform:capitalize}
+.calendario-navegacion>button{width:40px;height:40px;border:1px solid #bbd9d8;background:#fff;border-radius:10px;font-size:25px;color:#087e82}
+.semana-calendario,.dias-calendario{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.semana-calendario{margin:10px 0 6px;color:#617788;font-size:11px;text-align:center;font-weight:750}
+.semana-calendario span{padding:5px 0}
+.dias-calendario .dia-vistazo{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;min-width:0;min-height:80px;padding:7px 3px;border:1px solid #e3ebf0;background:#f8fafc;color:#294b60;border-radius:10px;font-size:13px;cursor:pointer;box-shadow:none}
+.numero-dia-vistazo{font-size:13px;font-weight:700;align-self:flex-start;margin-left:4px}
+.dias-calendario .dia-vistazo>small{font-size:10px;line-height:1.25}
+.dias-calendario .dia-vistazo .ocupacion-dia-vistazo{font-size:16px;line-height:1.2;color:#126a62}
+.dias-calendario .dia-vistazo.dia-pronostico{background:#eaf7f2;border-color:#a9d7c9}
+.dias-calendario .dia-vistazo.dia-alerta{background:#fff0f3;border-color:#e5a8b7}
+.dias-calendario .dia-alerta .ocupacion-dia-vistazo,.dias-calendario .dia-alerta .estado-dia-vistazo{color:#ad2846}
+.estado-dia-vistazo{color:#27685b;font-weight:650}
+.dias-calendario .dia-vistazo.dia-censo{border:2px solid #087e82;background:#edf9fa;color:#155b65}
+.marca-censo{color:#087e82;background:#d6efef;border-radius:5px;padding:3px 5px;font-weight:750}
+.dias-calendario .dia-vistazo:hover:not(:disabled){box-shadow:inset 0 0 0 1px #087e82;border-color:#087e82}
+.dias-calendario .dia-vistazo:disabled{cursor:not-allowed;opacity:1}
+.dias-calendario .dia-vistazo:disabled:not(.dia-pronostico):not(.dia-alerta){background:#f6f7f9;color:#b0bac5}
+.dias-calendario .otro-mes .numero-dia-vistazo{color:#8594a3}
+.dias-calendario .otro-mes.dia-pronostico .numero-dia-vistazo,.dias-calendario .otro-mes.dia-alerta .numero-dia-vistazo{color:#294b60}
+.calendario-navegacion button:disabled{background:#f5f5f5;color:#bac3cd;opacity:.8;cursor:not-allowed}
+.vistazo-leyenda{display:flex;gap:14px;flex-wrap:wrap;font-size:10px;color:#5c7484;margin:12px 0}
+.vistazo-leyenda span{display:flex;align-items:center;gap:5px}
+.vistazo-leyenda i{display:block;width:9px;height:9px;border-radius:3px}
+.clave-censo{background:#087e82}.clave-pronostico{background:#79bda6}.clave-alerta{background:#bd3049}
+.calendario-rango{padding:9px 11px;background:#eff5f8;border-radius:9px;color:#526e7f;font-size:10px;line-height:1.5;margin:10px 0 7px}
+.calendario-ayuda{font-size:10px;line-height:1.5;color:#617788;margin:0}
+@media(max-width:600px){.calendario-censo{padding:13px}.calendario-cabecera h2{font-size:20px}.calendario-navegacion{grid-template-columns:30px 1fr 78px 30px;gap:5px;padding:8px}.calendario-navegacion>button{width:30px}.semana-calendario,.dias-calendario{gap:3px}.dias-calendario .dia-vistazo{min-height:76px;padding:5px 1px}.dias-calendario .dia-vistazo .ocupacion-dia-vistazo{font-size:12px}.dias-calendario .dia-vistazo>small{font-size:8px}.numero-dia-vistazo{margin-left:2px;font-size:11px}.vistazo-resumen{font-size:10px}.vistazo-leyenda{gap:9px}}

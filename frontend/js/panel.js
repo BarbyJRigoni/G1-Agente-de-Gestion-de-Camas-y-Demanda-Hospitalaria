@@ -104,6 +104,7 @@ async function proyectar() {
       <td>${d.camas_ocupadas}</td><td>${d.camas_ocupadas_p90 ?? "–"}</td><td>${d.camas_libres}</td><td>${d.tasa_ocupacion_pct}%</td>
       <td>${d.prob_superar_umbral_pct ?? "–"}%</td><td>${real?.camas_ocupadas[i] ?? "–"}</td>
       <td class="${d.alerta_saturacion ? "si" : ""}">${d.alerta_saturacion ? "Saturación" : "–"}</td></tr>`).join("") + "</tbody>";
+  sincronizarFechaVisible();
 }
 
 function dibujarCamas(dia) {
@@ -254,7 +255,7 @@ const ev = await api("/modelo/evaluacion-agente?dataset=hdhi");
 
 async function cargarEscenarios() {
   $("#notaEscenarios").textContent =
-    "Los escenarios mantienen la fecha elegida y cambian la capacidad supuesta.";
+    "Cambia la cantidad de camas; la fecha y la demanda prevista se mantienen.";
 
   document.querySelectorAll("#casos button").forEach(b => {
     b.disabled = !proy;
@@ -304,6 +305,7 @@ function configurarCalendario() {
 
   calendario.title = ayuda.textContent;
   ayuda.hidden = true;
+  sincronizarFechaVisible();
 }
 
 
@@ -311,7 +313,7 @@ function configurarCalendario() {
 async function iniciar() {
   try { datasets = await api("/datasets"); }
   catch (e) { $("#mensaje").innerHTML = `<span class="error">No se pudo conectar con la API. ¿Está corriendo uvicorn? (${e.message})</span>`; return; }
-  $("#dataset").innerHTML = datasets.map(d => `<option value="${d.clave}">${d.nombre}</option>`).join("");
+  $("#dataset").innerHTML = datasets.map(d => `<option value="${d.clave}">${FUENTES_PANEL[d.clave] || d.nombre}</option>`).join("");
   const elegirDataset = () => {
     const d = datasets.find(x => x.clave === $("#dataset").value);
     $("#fecha").value = d.fecha_demo;
@@ -591,3 +593,108 @@ window.addEventListener("pageshow",event=>{if(event.persisted)location.reload();
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")verificarAcceso();});
 setInterval(()=>{if(document.visibilityState==="visible")verificarAcceso();},60000);
 verificarAcceso().then(permitido=>{if(permitido)iniciar();});
+
+// Etiquetas de presentación: las claves internas y los CSV no cambian.
+const FUENTES_PANEL={hdhi:'Admisiones hospitalarias · HDHI',lengthofstay:'Estancias hospitalarias · Microsoft',healthcare:'Atención hospitalaria · datos sintéticos'};
+function numeroVisual(valor,decimales=1){return Number(valor).toLocaleString('es-AR',{maximumFractionDigits:decimales});}
+function sincronizarFechaVisible(){
+  const entrada=$('#fecha');let boton=$('#abrirFecha');
+  if(!boton){
+    boton=document.createElement('button');boton.type='button';boton.id='abrirFecha';boton.className='fecha-compacta';
+    boton.setAttribute('aria-haspopup','dialog');boton.setAttribute('aria-controls','calendarioCenso');
+    entrada.after(boton);entrada.classList.add('fecha-original');entrada.tabIndex=-1;
+    boton.addEventListener('click',abrirCalendarioCenso);entrada.addEventListener('change',sincronizarFechaVisible);
+    document.querySelector('.campo-fecha-censo>label').htmlFor='abrirFecha';
+  }
+  boton.replaceChildren();const texto=document.createElement('span');texto.textContent=entrada.value?fmtLargo(entrada.value):'Elegir fecha';
+  const icono=document.createElement('span');icono.className='icono-fecha-compacta';icono.setAttribute('aria-hidden','true');
+  icono.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v5m10-5v5M3 11h18m-13 4h2m4 0h2m-8 3h2"/></svg>';
+  boton.append(texto,icono);boton.setAttribute('aria-label','Fecha del censo: '+texto.textContent+'. Abrir calendario');
+  boton.title=entrada.title;
+}
+
+// El calendario muestra únicamente la proyección vigente; no genera pronósticos nuevos.
+function abrirCalendarioCenso(){
+  const entrada=$('#fecha'),min=entrada.min,max=entrada.max;
+  if(!min||!max)return;
+  const vigente=proy && proy.dataset===$('#dataset').value && proy.fecha_censo===entrada.value &&
+    (!$('#capacidad').value.trim() || proy.capacidad===Number($('#capacidad').value));
+  const resultados=vigente?new Map(proy.proyeccion.map(d=>[d.fecha,d])):new Map();
+  const ultimoPronostico=vigente?proy.proyeccion.at(-1)?.fecha:null;
+  const finVisible=ultimoPronostico && ultimoPronostico>max?ultimoPronostico:max;
+  $('#calendarioCenso')?.remove();
+  const dialogo=document.createElement('dialog');dialogo.id='calendarioCenso';dialogo.className='calendario-censo';
+  dialogo.setAttribute('aria-labelledby','tituloCalendarioCenso');
+  dialogo.innerHTML=`<div class="calendario-cabecera"><div><span>Censo y demanda prevista</span><h2 id="tituloCalendarioCenso">Tu semana de un vistazo</h2></div><button type="button" class="cerrar-calendario" aria-label="Cerrar calendario">×</button></div><p class="calendario-contexto"></p><div class="vistazo-resumen" role="status"></div><div class="calendario-navegacion"><button type="button" class="mes-previo" aria-label="Mes anterior">‹</button><label>Mes<select class="mes-calendario"></select></label><label>Año<select class="anio-calendario"></select></label><button type="button" class="mes-siguiente" aria-label="Mes siguiente">›</button></div><div class="semana-calendario" aria-hidden="true"><span>Lu</span><span>Ma</span><span>Mi</span><span>Ju</span><span>Vi</span><span>Sá</span><span>Do</span></div><div class="dias-calendario" role="group" aria-label="Fechas del censo y ocupación prevista"></div><div class="vistazo-leyenda"><span><i class="clave-censo"></i>Censo elegido</span><span><i class="clave-pronostico"></i>Con pronóstico</span><span><i class="clave-alerta"></i>Saturación prevista</span></div><p class="calendario-rango"></p><p class="calendario-ayuda">Los datos dentro de los días son estimaciones de la proyección vigente. Las fechas sin pronóstico no tienen cifras. Al elegir otra fecha habilitada se calcula un nuevo censo histórico.</p>`;
+  document.body.append(dialogo);
+  dialogo.querySelector('.calendario-contexto').textContent=FUENTES_PANEL[$('#dataset').value] || 'Fuente seleccionada';
+  const resumen=dialogo.querySelector('.vistazo-resumen');
+  if(vigente && proy.proyeccion.length){
+    const dias=proy.proyeccion,alertas=dias.filter(d=>d.alerta_saturacion).length;
+    resumen.textContent=`${fmtLargo(dias[0].fecha)} al ${fmtLargo(dias.at(-1).fecha)} · ${proy.capacidad} camas supuestas · ${alertas} de ${dias.length} días con saturación prevista`;
+  } else resumen.textContent='Sin proyección vigente. Elegí una fecha habilitada y esperá el cálculo para ver la ocupación prevista.';
+  dialogo.querySelector('.calendario-rango').textContent=`Podés elegir censos del ${fmtLargo(min)} al ${fmtLargo(max)}. Los pronósticos posteriores al final del historial se muestran como estimaciones y no se pueden elegir como censo.`;
+  const [a0,m0]=min.split('-').map(Number),[a1,m1]=finVisible.split('-').map(Number);
+  const inicial=entrada.value>=min&&entrada.value<=max?entrada.value:min;
+  let [anio,mes]=inicial.split('-').map(Number);mes--;
+  const selMes=dialogo.querySelector('.mes-calendario'),selAnio=dialogo.querySelector('.anio-calendario');
+  for(let a=a0;a<=a1;a++){const o=document.createElement('option');o.value=a;o.textContent=a;selAnio.append(o);}
+  const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  function dibujar(){
+    selAnio.value=anio;selMes.replaceChildren();
+    for(let m=0;m<12;m++){
+      const o=document.createElement('option');o.value=m;o.textContent=new Date(anio,m,1).toLocaleDateString('es-AR',{month:'long'});
+      o.disabled=(anio===a0&&m<m0-1)||(anio===a1&&m>m1-1);selMes.append(o);
+    }
+    selMes.value=mes;
+    dialogo.querySelector('.mes-previo').disabled=anio*12+mes<=a0*12+m0-1;
+    dialogo.querySelector('.mes-siguiente').disabled=anio*12+mes>=a1*12+m1-1;
+    const contenedor=dialogo.querySelector('.dias-calendario');contenedor.replaceChildren();
+    const primero=new Date(anio,mes,1),offset=(primero.getDay()+6)%7,total=new Date(anio,mes+1,0).getDate();
+    const comienzo=new Date(anio,mes,1-offset);
+    let cantidad=Math.ceil((offset+total)/7)*7;
+    // Si la semana cruza de mes, se incluyen sus días para verla completa al abrir.
+    if(ultimoPronostico && inicial.slice(0,7)===iso(primero).slice(0,7)){
+      const fin=new Date(ultimoPronostico+'T12:00:00');
+      const distancia=Math.round((Date.UTC(fin.getFullYear(),fin.getMonth(),fin.getDate())-Date.UTC(comienzo.getFullYear(),comienzo.getMonth(),comienzo.getDate()))/86400000);
+      cantidad=Math.max(cantidad,Math.ceil((distancia+1)/7)*7);
+    }
+    for(let i=0;i<cantidad;i++){
+      const fechaDate=new Date(comienzo);fechaDate.setDate(comienzo.getDate()+i);
+      const fecha=iso(fechaDate),dato=resultados.get(fecha),esCenso=fecha===entrada.value;
+      const b=document.createElement('button');b.type='button';b.dataset.fecha=fecha;
+      b.disabled=fecha<min||fecha>max;b.className='dia-vistazo';
+      if(fechaDate.getMonth()!==mes)b.classList.add('otro-mes');
+      if(esCenso)b.classList.add('dia-censo');
+      if(dato)b.classList.add(dato.alerta_saturacion?'dia-alerta':'dia-pronostico');
+      b.setAttribute('aria-pressed',String(esCenso));
+      const titulo=fechaDate.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+      const numero=document.createElement('span');numero.className='numero-dia-vistazo';numero.textContent=fechaDate.getMonth()===mes?fechaDate.getDate():fechaDate.getDate()+' '+fechaDate.toLocaleDateString('es-AR',{month:'short'});b.append(numero);
+      if(esCenso){const marca=document.createElement('small');marca.className='marca-censo';marca.textContent='Censo';b.append(marca);}
+      if(dato){
+        const porcentaje=document.createElement('b');porcentaje.className='ocupacion-dia-vistazo';porcentaje.textContent=numeroVisual(dato.tasa_ocupacion_pct)+' %';
+        const libres=document.createElement('small');libres.textContent=numeroVisual(dato.camas_libres)+' libres';
+        const estado=document.createElement('small');estado.className='estado-dia-vistazo';estado.textContent=dato.alerta_saturacion?'⚠ Saturación':'Sin saturación';
+        b.append(porcentaje,libres,estado);
+        b.setAttribute('aria-label',`${titulo}. Ocupación prevista ${numeroVisual(dato.tasa_ocupacion_pct)} por ciento. ${numeroVisual(dato.camas_libres)} camas libres estimadas. ${dato.alerta_saturacion?'Saturación prevista.':'Sin saturación prevista.'}${b.disabled?' Solo pronóstico; fuera del período habilitado para censos.':' Elegir como nuevo censo.'}`);
+      }else b.setAttribute('aria-label',titulo+(esCenso?'. Censo elegido.':'. Sin pronóstico para este día.'));
+      if(!b.disabled)b.addEventListener('click',()=>{if(esCenso){dialogo.close();return;}entrada.value=fecha;sincronizarFechaVisible();dialogo.close();entrada.dispatchEvent(new Event('change',{bubbles:true}));});
+      b.title=b.getAttribute('aria-label');contenedor.append(b);
+    }
+  }
+  const limitarMes=()=>{mes=Math.max(anio===a0?m0-1:0,Math.min(anio===a1?m1-1:11,mes));};
+  selMes.addEventListener('change',()=>{mes=Number(selMes.value);dibujar();});
+  selAnio.addEventListener('change',()=>{anio=Number(selAnio.value);limitarMes();dibujar();});
+  for(const [clase,delta] of [['mes-previo',-1],['mes-siguiente',1]])dialogo.querySelector('.'+clase).addEventListener('click',()=>{const f=new Date(anio,mes+delta,1);anio=f.getFullYear();mes=f.getMonth();dibujar();});
+  dialogo.querySelector('.cerrar-calendario').addEventListener('click',()=>dialogo.close());
+  dialogo.addEventListener('close',()=>$('#abrirFecha').focus());
+  contenedorTeclas();
+  function contenedorTeclas(){dialogo.querySelector('.dias-calendario').addEventListener('keydown',e=>{
+    if(!e.target.dataset.fecha)return;
+    const salto={ArrowRight:1,ArrowLeft:-1,ArrowDown:7,ArrowUp:-7}[e.key];if(salto==null)return;e.preventDefault();
+    const f=new Date(e.target.dataset.fecha+'T12:00:00');f.setDate(f.getDate()+salto);const fecha=iso(f);
+    if(fecha<min||fecha>max)return;anio=f.getFullYear();mes=f.getMonth();dibujar();dialogo.querySelector(`[data-fecha="${fecha}"]`)?.focus();
+  });}
+  dibujar();dialogo.showModal();
+  (dialogo.querySelector('[aria-pressed="true"]:not(:disabled)')||dialogo.querySelector('.dias-calendario button:not(:disabled)'))?.focus();
+}
