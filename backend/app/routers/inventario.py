@@ -52,7 +52,8 @@ class CensoActual(BaseModel):
                 raise ValueError("Con sectores, envie censo y capacidad dentro de cada sector, sin capacidad ni dias_internados agregados.")
         return self
 
-    dias: int = Field(config.DIAS_PROYECCION, ge=1, le=14, description="Dias a proyectar")
+    dias: int = Field(config.DIAS_PROYECCION, ge=1, le=config.DIAS_PROYECCION_MAX,
+                      description="Dias a proyectar: 7 por defecto (consigna); el panel ofrece 7, 15 y 30")
 
 
 class DiaProyectado(BaseModel):

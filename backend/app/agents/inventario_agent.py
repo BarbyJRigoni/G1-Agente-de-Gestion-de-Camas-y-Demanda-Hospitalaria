@@ -115,8 +115,8 @@ def _proyectar_camas_base(dataset, fecha=None, dias_internados=None,
     datos = config.DATASETS.get(dataset, {})
     fecha = pd.Timestamp(fecha or datos.get("fecha_demo"))
     capacidad = datos.get("capacidad_total") if capacidad is None else capacidad
-    if not isinstance(dias, (int, np.integer)) or not 1 <= dias <= 14:
-        raise ValueError("La proyeccion admite entre 1 y 14 dias.")
+    if not isinstance(dias, (int, np.integer)) or not 1 <= dias <= config.DIAS_PROYECCION_MAX:
+        raise ValueError(f"La proyeccion admite entre 1 y {config.DIAS_PROYECCION_MAX} dias.")
     if capacidad is None or not np.isfinite(capacidad) or capacidad <= 0:
         raise ValueError("La capacidad debe ser mayor a cero.")
 

@@ -35,7 +35,8 @@ async function proyectar() {
   const dataset = $("#dataset").value, fecha = $("#fecha").value;
   const textoCapacidad = $("#capacidad").value.trim();
   const cap = textoCapacidad === "" ? null : Number(textoCapacidad);
-  $("#mensaje").textContent = "Calculando proyeccion...";
+  const dias = Number($("#horizonte").value) || 7;   // 7 (horizonte controlado), 15 o 30
+  $("#mensaje").textContent = dias > 7 ? `Calculando proyeccion a ${dias} dias (la primera vez puede tardar unos segundos)...` : "Calculando proyeccion...";
   proy = null; real = null;
   $("#resumenCamas").replaceChildren();
   $("#kpis").replaceChildren(); $("#camas").replaceChildren(); $("#tDias").replaceChildren();
@@ -65,8 +66,8 @@ async function proyectar() {
     }
     const [nuevaProy, nuevoReal] = await Promise.all([
       api("/proyeccion-camas", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dataset, fecha, capacidad: cap }) }),
-      api(`/modelo/ocupacion-real?dataset=${dataset}&desde=${fecha}`).catch(() => null),
+        body: JSON.stringify({ dataset, fecha, capacidad: cap, dias }) }),
+      api(`/modelo/ocupacion-real?dataset=${dataset}&desde=${fecha}&dias=${dias}`).catch(() => null),
     ]);
     if (consulta !== consultaProyeccion) return;
     proy = nuevaProy; real = nuevoReal;
@@ -96,6 +97,7 @@ async function proyectar() {
     kpi(`${proy.alos_historico} días`, "ALOS de egresos anteriores al censo") +
     kpi(fmt(proy.dia_pico), "Día de mayor ocupación esperada");
   $("#dia").max = proy.proyeccion.length;
+  document.querySelectorAll(".txtDias").forEach(e => { e.textContent = proy.proyeccion.length; });
   dibujarCamas(+$("#dia").value);
   dibujarProyeccion();
   $("#tDias").innerHTML = `<thead><tr><th>Día</th><th>Ingresos</th><th>Altas (balance)</th><th>Ocupadas</th><th>Superior nominal (P90)</th>
@@ -325,6 +327,7 @@ async function iniciar() {
   $("#dataset").addEventListener("change", async () => { elegirDataset(); await proyectar(); await cargarEscenarios(); });
   $("#fecha").addEventListener("change", proyectar);
   $("#capacidad").addEventListener("change", proyectar);
+  $("#horizonte").addEventListener("change", proyectar);
     document.querySelectorAll("#casos button").forEach(b => {
     b.addEventListener("click", async () => {
       if (!proy ||

@@ -143,8 +143,8 @@ class ModeloDemanda:
     def predecir(self, desde, dias: int, metodo: str = "auto"):
         """Seleccion y calibracion conocidas al cierre de la fecha del censo."""
         fecha = pd.Timestamp(desde).normalize()
-        if not 1 <= dias <= 14:
-            raise ValueError("La proyeccion admite entre 1 y 14 dias.")
+        if not 1 <= dias <= config.DIAS_PROYECCION_MAX:
+            raise ValueError(f"La proyeccion admite entre 1 y {config.DIAS_PROYECCION_MAX} dias.")
         hasta = min(fecha, self.y.index.max())
         historia = self.y.loc[:hasta]
         if len(historia) < 148:
@@ -239,20 +239,21 @@ def ocupacion_real(internaciones: pd.DataFrame) -> pd.Series:
 
 
 @lru_cache(maxsize=None)
-def evaluar_agente(dataset: str = 'hdhi', cada_dias: int = 7) -> dict:
+def evaluar_agente(dataset: str = 'hdhi', cada_dias: int = 7, dias: int = config.DIAS_PROYECCION) -> dict:
+    """Proyecta desde fechas pasadas a `dias` dias y compara con lo que realmente paso."""
     from agents import inventario_agent as agente
     from services.modelo_ocupacion import INICIO_VALIDACION_HDHI
     internaciones = agente.cargar_internaciones(dataset)
     real = ocupacion_real(internaciones)
     capacidad = config.DATASETS[dataset]['capacidad_total']
     umbral = config.UMBRAL_SATURACION
-    fechas = real.index[147:-8:cada_dias]
+    fechas = real.index[147:-(dias + 1):cada_dias]   # cada fecha necesita `dias` dias reales despues
     if not len(fechas):
         raise ValueError('No hay historia suficiente para evaluar el agente.')
     errores, anteriores, referencias, casos = [], [], [], []
     cubre, cubre_ant = [], []
     for f in fechas:
-        r = agente.proyectar_camas(dataset, fecha=f.date())
+        r = agente.proyectar_camas(dataset, fecha=f.date(), dias=dias)
         pred = np.array([d['camas_ocupadas'] for d in r['proyeccion']])
         viejo = np.array([d.get('camas_ocupadas_agente_anterior', d['camas_ocupadas']) for d in r['proyeccion']])
         obs = real.reindex(pd.date_range(f + pd.Timedelta(days=1), periods=len(pred))).to_numpy()
@@ -274,7 +275,7 @@ def evaluar_agente(dataset: str = 'hdhi', cada_dias: int = 7) -> dict:
                 'precision': round(aciertos / int(aviso.sum()), 2) if aviso.any() else None,
                 'recall': round(aciertos / int(saturo.sum()), 2) if saturo.any() else None}
     resultado = {
-        'dataset': dataset, 'fechas_evaluadas': len(fechas), 'capacidad': capacidad,
+        'dataset': dataset, 'dias_proyectados': dias, 'fechas_evaluadas': len(fechas), 'capacidad': capacidad,
         'semanas_que_realmente_superaron_el_umbral': int(saturo.sum()),
         'error_por_dia': {'mae_camas': np.abs(e).mean(axis=0).round(1).tolist(),
                          'mae_pct_capacidad': (100 * np.abs(e).mean(axis=0) / capacidad).round(1).tolist(),

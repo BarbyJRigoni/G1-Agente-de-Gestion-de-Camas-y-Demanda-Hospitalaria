@@ -20,6 +20,8 @@
     <label>Fuente de datos <select id="dataset"></select></label>
     <div class="campo-fecha-censo"><label for="fecha">Fecha del censo histórico</label><input type="date" id="fecha"></div>
     <label>Capacidad supuesta (camas) <input type="number" id="capacidad" min="1"></label>
+    <label>Proyección <select id="horizonte" title="7 días es el horizonte controlado (consigna); 15 y 30 días son extensiones con más margen de error">
+      <option value="7" selected>7 días</option><option value="15">15 días</option><option value="30">30 días</option></select></label>
     <div class="pildoras" id="casos" aria-label="Casos de la demo">
       <button type="button" data-escenario="normal" disabled>Normal</button>
       <button type="button" data-escenario="limite" disabled>Límite</button>
@@ -52,7 +54,7 @@
 <section id="vista-proyeccion" class="tab-panel" role="tabpanel"
          aria-labelledby="tab-proyeccion">
 
-  <div class="titulo-seccion"><div><h2>¿Alcanzan las camas?</h2><p>Ocupación prevista para los próximos 7 días.</p></div><span class="etiqueta etiqueta-umbral">
+  <div class="titulo-seccion"><div><h2>¿Alcanzan las camas?</h2><p>Ocupación prevista para los próximos <span class="txtDias">7</span> días.</p></div><span class="etiqueta etiqueta-umbral">
   Umbral de alerta: ocupación superior al 90 %
 </span></div>
   <div id="mensaje" role="status">Consultando los datos y calculando la semana…</div>
@@ -62,7 +64,7 @@
   <details>
   <summary>Cómo interpretar esta pantalla</summary>
   <p>El censo muestra la ocupación reconstruida para la fecha elegida.
-  El pronóstico estima los próximos siete días.
+  El pronóstico estima los próximos <span class="txtDias">7</span> días (7 es el horizonte controlado; a 15 y 30 días el margen de error es mayor).
   Los escenarios cambian la capacidad supuesta y mantienen la demanda.</p>
 </details>
   <section class="dos">
@@ -103,7 +105,7 @@
   </section>
 
   <section class="panel">
-    <h3>Proyección diaria de los próximos 7 días</h3><p class="nota">
+    <h3>Proyección diaria de los próximos <span class="txtDias">7</span> días</h3><p class="nota">
   Camas ocupadas del día = camas ocupadas del día anterior
   + ingresos previstos − altas estimadas.
   Las altas se infieren por balance.
