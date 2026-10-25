@@ -170,6 +170,7 @@ button:disabled {
 .pildoras button[aria-pressed=true]:before{content:'✓';width:12px;height:auto;background:transparent;border-radius:0;font-size:14px;line-height:1}
 
 #notaEscenarios {
+  display: none;
   text-align:center;
   flex-basis:100%;
   color:#d4e5ef;
