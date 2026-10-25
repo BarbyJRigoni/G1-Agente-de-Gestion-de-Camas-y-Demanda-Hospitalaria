@@ -348,7 +348,7 @@
     });
     // 3. Mensajes en espanol
     // 3b. Campos con minimo 1 (camas habilitadas, estancia): no se puede empezar con 0
-    i.addEventListener("input", () => { if (Number(i.min) >= 1 && /^0/.test(i.value)) i.value = i.value.replace(/^0+/, ""); });
+    i.addEventListener("input", () => { if (Number(i.min) >= 1 && /^0/.test(i.value)) { i.value = i.value.replace(/^0+/, ""); setTimeout(() => { i.setCustomValidity(`El valor mínimo es ${i.min}.`); i.reportValidity(); }, 0); } });
     i.addEventListener("input", () => { i.setCustomValidity(""); i.setCustomValidity(mensaje(i)); });
     i.addEventListener("invalid", () => { i.setCustomValidity(""); i.setCustomValidity(mensaje(i)); });
   });
