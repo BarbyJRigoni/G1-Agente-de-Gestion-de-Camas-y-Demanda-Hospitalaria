@@ -1,0 +1,33 @@
+AGENTE DE GESTION DE CAMAS Y DEMANDA HOSPITALARIA
+Grupo 1 - Desarrollo de Sistemas de Inteligencia Artificial
+==========================================================
+
+QUE NECESITAS
+  - Una computadora con Windows 10 u 11.
+  - Docker Desktop instalado: https://www.docker.com/products/docker-desktop/
+    (se instala una sola vez, como cualquier programa).
+
+COMO USARLO
+  1. Abri Docker Desktop y espera a que diga "Engine running".
+  2. Hace doble clic en  iniciar.bat
+       - La primera vez instala la aplicacion (tarda unos minutos)
+         y te pide crear tu usuario y contrasena.
+       - Cuando termina, se abre el navegador solo.
+  3. Ingresa con tu usuario y contrasena.
+
+PARA APAGARLO
+  Doble clic en  detener.bat
+
+SI TE PASAN UNA VERSION NUEVA
+  Reemplaza la carpeta por la nueva y hace doble clic en  actualizar.bat
+  (tus usuarios se conservan).
+
+PARA AGREGAR OTRO USUARIO
+  Con el sistema encendido, doble clic en  crear_usuario.bat
+
+SI ALGO NO FUNCIONA
+  - "Docker Desktop no esta abierto": abrilo y volve a intentar.
+  - "Puerto 8000 ocupado": cerra otros programas que lo usen o reinicia la PC.
+  - La pagina no carga: espera un minuto y actualiza el navegador (F5).
+
+No hace falta instalar Python ni saber programar.
