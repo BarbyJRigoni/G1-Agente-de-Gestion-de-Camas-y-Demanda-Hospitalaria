@@ -320,5 +320,42 @@
 
 <script src="/panel/js/administracion.js"></script>
 <script src="/panel/js/panel.js"></script>
+<script>
+// VALIDACION_NUMEROS_V1 (Dario): los campos numericos solo aceptan numeros.
+// El navegador deja escribir e, E, + y - en type="number" (notacion cientifica);
+// aca se bloquean, y si el valor no sirve se avisa en espanol en vez de usarlo.
+(() => {
+  // Entero si el campo no tiene step="any" (camas y censos); decimal si lo tiene (estancias, %)
+  const esEntero = i => i.getAttribute("step") !== "any";
+  const mensaje = i => {
+    const v = i.validity;
+    if (v.valueMissing) return "Completá este campo.";
+    if (v.badInput) return "Ingresá solo números.";
+    if (v.stepMismatch) return "Ingresá un número entero, sin decimales.";
+    if (v.rangeUnderflow) return `El valor mínimo es ${i.min}.`;
+    if (v.rangeOverflow) return `El valor máximo es ${i.max}.`;
+    return "";
+  };
+  document.querySelectorAll('input[type="number"]').forEach(i => {
+    // 1. Teclas que no son numeros
+    i.addEventListener("keydown", e => {
+      if (["e", "E", "+", "-"].includes(e.key) || ([".", ","].includes(e.key) && esEntero(i))) e.preventDefault();
+    });
+    // 2. Pegar texto que no es un numero
+    i.addEventListener("paste", e => {
+      const texto = (e.clipboardData || window.clipboardData).getData("text").trim();
+      if (!(esEntero(i) ? /^\d+$/ : /^\d+([.,]\d+)?$/).test(texto)) e.preventDefault();
+    });
+    // 3. Mensajes en espanol
+    i.addEventListener("input", () => { i.setCustomValidity(""); i.setCustomValidity(mensaje(i)); });
+    i.addEventListener("invalid", () => { i.setCustomValidity(""); i.setCustomValidity(mensaje(i)); });
+  });
+  // 4. Camas: si el valor no es valido, avisar y NO proyectar con la capacidad por defecto
+  const camas = document.querySelector("#capacidad");
+  if (camas) camas.addEventListener("change", e => {
+    if (!camas.checkValidity()) { e.stopImmediatePropagation(); camas.reportValidity(); }
+  }, true);
+})();
+</script>
 </body>
 </html>
