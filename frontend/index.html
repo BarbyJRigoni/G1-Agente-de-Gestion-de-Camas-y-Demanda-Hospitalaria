@@ -7,6 +7,7 @@
 <!-- frontend/index.html — Dashboard del agente. Responsable: Bárbara (IA e interfaz).
      Consume la API del equipo: /datasets, /estadisticas, /proyeccion-camas y /modelo/* -->
 <script src="/vendor/chart.umd.min.js"></script>
+<script src="/vendor/xlsx.mini.min.js"></script>
 <link rel="stylesheet" href="/panel/css/panel.css">
 </head>
 <body class="panel-lateral">
@@ -40,7 +41,7 @@
   <div class="controles" id="controlesProyeccion">
     <label>Fuente de datos <select id="dataset"></select></label>
     <div class="campo-fecha-censo"><label for="fecha">Fecha del censo histórico</label><input type="date" id="fecha"></div>
-    <label>Capacidad supuesta (camas) <input type="number" id="capacidad" min="1"></label>
+    <label>Capacidad supuesta (camas) <input type="number" id="capacidad" min="1" step="1" required></label>
     <label>Proyección <select id="horizonte" title="7 días es el horizonte controlado (consigna); 15 y 30 días son extensiones con más margen de error">
       <option value="7" selected>7 días</option><option value="15">15 días</option><option value="30">30 días</option></select></label>
     <div class="pildoras" id="casos" aria-label="Casos de la demo">
@@ -97,10 +98,10 @@
   <div class="camas" id="camas"></div>
 </details>
       <div class="leyenda">
-        <span><i style="background:#11888b"></i>ocupada (esperado)</span>
-        <span><i style="background:var(--nueva)"></i>adicionales hasta el límite P90</span>
-        <span><i style="background:var(--vacia)"></i>libre</span>
-        <span><i style="background:var(--alerta)"></i>demanda por encima de la capacidad</span>
+        <span><i class="leyenda-ocupada"></i>ocupada (esperado)</span>
+        <span><i class="leyenda-p90"></i>adicionales hasta el límite P90</span>
+        <span><i class="leyenda-libre"></i>libre</span>
+        <span><i class="leyenda-exceso"></i>demanda por encima de la capacidad</span>
       </div>
     </div>
     <div class="panel">
@@ -119,7 +120,10 @@
   </section>
 
   <section class="panel">
-    <h3>Proyección diaria de los próximos <span class="txtDias">7</span> días</h3><p class="nota">
+    <div class="encabezado-tabla"><h3>Proyección diaria de los próximos <span class="txtDias">7</span> días</h3>
+      <button type="button" id="exportarExcel" class="boton-exportar" disabled title="Descarga en Excel la proyección que se ve en pantalla">Exportar a Excel</button></div>
+    <p id="estadoExportacion" class="nota" role="status" aria-live="polite"></p>
+    <p class="nota">
   Camas ocupadas del día = camas ocupadas del día anterior
   + ingresos previstos − altas estimadas.
   Las altas se infieren por balance.
@@ -256,6 +260,7 @@
     <div class="panel">
       <h3>Ingresos reales vs. pronóstico</h3>
       <div class="grafico"><canvas id="gBack"></canvas></div>
+      <p class="nota">Gris: ingresos que realmente hubo. Verde: lo que pronosticó el método elegido, entrenado solo con datos anteriores. Amarillo punteado: la referencia más simple (promedio de las últimas 4 semanas).</p>
       <p class="nota" id="notaBack"></p>
     </div>
     <div class="panel">
@@ -269,6 +274,10 @@
     <div class="panel">
       <h3>Error del agente según los días de anticipación</h3>
       <div class="grafico"><canvas id="gHorizonte"></canvas></div>
+      <p class="nota">Cada barra es el error promedio, en camas, según cuántos días hacia adelante se proyecta (barras más bajas = mejor).
+        <b>Agente actual</b>: el que usa el panel (modelo de ocupación).
+        <b>Agente anterior</b>: la primera versión, basada en cuánto duran las internaciones.
+        <b>Referencia simple</b>: suponer que la ocupación de los próximos días es igual a la de hoy.</p>
       <p class="nota" id="notaHorizonte"></p>
     </div>
     <div class="panel">
@@ -305,7 +314,7 @@
 </section>
 
 <section id="vista-administracion" class="tab-panel" role="tabpanel" aria-labelledby="tab-administracion" hidden>
-<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true"><symbol id="admin-icon-escudo" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol><symbol id="admin-icon-personas" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6M18 15a5 5 0 0 1 3 4v2"/></symbol><symbol id="admin-icon-activo" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2m1-9 2 2 4-4"/></symbol><symbol id="admin-icon-inactivo" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2m2-12 4 4m0-4-4 4"/></symbol><symbol id="admin-icon-buscar" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol><symbol id="admin-icon-editar" viewBox="0 0 24 24"><path d="m14 5 5 5M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15z"/></symbol><symbol id="admin-icon-recargar" viewBox="0 0 24 24"><path d="M20 7a9 9 0 1 0 1 8M20 3v5h-5"/></symbol><symbol id="admin-icon-mas" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="admin-icon-pausa" viewBox="0 0 24 24"><path d="M9 7v10M15 7v10"/><circle cx="12" cy="12" r="9"/></symbol><symbol id="admin-icon-reactivar" viewBox="0 0 24 24"><path d="m10 8 6 4-6 4z"/><circle cx="12" cy="12" r="9"/></symbol><symbol id="admin-icon-historial" viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2 7M3 4v7h7M12 7v5l3 2"/></symbol></svg>
+<svg xmlns="http://www.w3.org/2000/svg" class="simbolos-admin" aria-hidden="true"><symbol id="admin-icon-escudo" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol><symbol id="admin-icon-personas" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6M18 15a5 5 0 0 1 3 4v2"/></symbol><symbol id="admin-icon-activo" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2m1-9 2 2 4-4"/></symbol><symbol id="admin-icon-inactivo" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2m2-12 4 4m0-4-4 4"/></symbol><symbol id="admin-icon-buscar" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol><symbol id="admin-icon-editar" viewBox="0 0 24 24"><path d="m14 5 5 5M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15z"/></symbol><symbol id="admin-icon-recargar" viewBox="0 0 24 24"><path d="M20 7a9 9 0 1 0 1 8M20 3v5h-5"/></symbol><symbol id="admin-icon-mas" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="admin-icon-pausa" viewBox="0 0 24 24"><path d="M9 7v10M15 7v10"/><circle cx="12" cy="12" r="9"/></symbol><symbol id="admin-icon-reactivar" viewBox="0 0 24 24"><path d="m10 8 6 4-6 4z"/><circle cx="12" cy="12" r="9"/></symbol><symbol id="admin-icon-historial" viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2 7M3 4v7h7M12 7v5l3 2"/></symbol></svg>
   <section class="panel admin-presentacion">
     <div class="admin-identidad"><span class="admin-icono-cabecera"><svg class="admin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#admin-icon-escudo"/></svg></span><div><span class="admin-sobrelinea">Gestión del sistema</span><h2>Administración de usuarios</h2><p>Personas, permisos y acceso. Todo en un mismo lugar.</p></div></div>
     <span class="admin-acceso"><svg class="admin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#admin-icon-escudo"/></svg>Solo administradores</span>
@@ -351,6 +360,7 @@
 <footer>Grupo 1 · Gestión de Camas y Demanda Hospitalaria · Datos históricos para una simulación académica. Las fuentes se analizan por separado.</footer>
 
 </div>
+  <div id="cargando" class="cargando" role="status" aria-live="polite" hidden><span class="spinner" aria-hidden="true"></span><span id="cargandoTexto">Procesando datos…</span></div>
 <script src="/panel/js/administracion.js"></script>
 <script src="/panel/js/panel.js"></script>
 </body>

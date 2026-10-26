@@ -8,7 +8,47 @@ let consultaProyeccion = 0;
 const $ = s => document.querySelector(s);
 const fmt = f => new Date(f + "T00:00").toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "numeric" });
 const fmtLargo = f => new Date(f + "T00:00").toLocaleDateString("es-AR");
+// Indicador de carga: se muestra mientras haya consultas a la API en curso
+// (con una demora corta para que no parpadee en las respuestas rápidas).
+let consultasEnCurso = 0, temporizadorCarga = null;
+function actualizarTextoCarga() {
+  const seccion = document.querySelector('#solapas-principales [aria-selected="true"]')?.dataset.tab;
+  const textos = {estadisticas:'Consultando las estancias…', evaluacion:'Evaluando el modelo…',
+    sectores:'Consultando la simulación UTI/general…', administracion:'Consultando datos…'};
+  const dias = Number($('#horizonte').value) || 7;
+  $('#cargandoTexto').textContent = textos[seccion] || `Calculando la proyección a ${dias} días…`;
+}
+
+function indicadorCarga(delta) {
+  consultasEnCurso = Math.max(0, consultasEnCurso + delta);
+  const caja = $('#cargando');
+  if (!caja) return;
+  if (consultasEnCurso > 0) {
+    actualizarTextoCarga();
+    if (caja.hidden && temporizadorCarga === null) {
+      temporizadorCarga = setTimeout(() => {
+        temporizadorCarga = null;
+        if (consultasEnCurso > 0) caja.hidden = false;
+      }, 200);
+    }
+    $('#contenidoAplicacion').setAttribute('aria-busy', 'true');
+  } else {
+    clearTimeout(temporizadorCarga);
+    temporizadorCarga = null;
+    caja.hidden = true;
+    $('#contenidoAplicacion').removeAttribute('aria-busy');
+  }
+}
+
 async function api(url, opciones = {}) {
+  indicadorCarga(+1);
+  try {
+    return await consultarApi(url, opciones);
+  } finally {
+    indicadorCarga(-1);
+  }
+}
+async function consultarApi(url, opciones = {}) {
   const r = await fetch(API + url, {...opciones, credentials:"same-origin", headers:{...opciones.headers,"X-Requested-With":"AgenteCamas"}});
   if(r.status===401){ document.querySelector("main").hidden=true;location.replace("/ingresar");throw new Error("La sesion finalizo. Inicia sesion nuevamente."); }
   const datos = await r.json().catch(() => ({}));
@@ -99,6 +139,8 @@ async function proyectar() {
   const textoCapacidad = $("#capacidad").value.trim();
   const cap = textoCapacidad === "" ? null : Number(textoCapacidad);
   const dias = Number($("#horizonte").value) || 7;   // 7 (horizonte controlado), 15 o 30
+  $("#cargandoTexto").textContent = dias > 7 ? `Calculando la proyección a ${dias} días…` : "Calculando la proyección…";
+  $("#exportarExcel").disabled = true;
   $("#mensaje").textContent = dias > 7 ? `Calculando proyeccion a ${dias} dias (la primera vez puede tardar unos segundos)...` : "Calculando proyeccion...";
   proy = null; real = null;
   $("#resumenCamas").replaceChildren();
@@ -163,6 +205,7 @@ async function proyectar() {
     kpi(fmt(proy.dia_pico), "Día de mayor ocupación esperada");
   $("#dia").max = proy.proyeccion.length;
   document.querySelectorAll(".txtDias").forEach(e => { e.textContent = proy.proyeccion.length; });
+  actualizarDisponibilidadExportacion();
   dibujarCamas(+$("#dia").value);
   dibujarProyeccion();
   $("#tDias").innerHTML = `<thead><tr><th>Día</th><th>Ingresos</th><th>Altas (balance)</th><th>Ocupadas</th><th>Límite superior estimado (P90)</th>
@@ -255,17 +298,17 @@ if (!modelos.length) throw new Error(fallos.join(" | "));
     const x = r.backtest.metricas[k];
     filas += `<tr class="${k === r.metodo_elegido ? "elegido" : ""}">
       <td>${i === 0 ? `${r.dataset} <small>(${r.ingresos_promedio_dia}/día)</small>` : ""}</td>
-      <td style="text-align:left">${NOMBRE[k]}${k === r.metodo_elegido ? " ✓" : ""}</td>
+      <td class="texto-izquierda">${NOMBRE[k]}${k === r.metodo_elegido ? " ✓" : ""}</td>
       <td>${x.mae}</td><td>${x.wape_pct}%</td><td>${x.wape_semanal_pct}%</td><td>${x.cobertura_80pct}%</td></tr>`;
   }));
-  $("#tMetodos").innerHTML = `<thead><tr><th>Dataset</th><th style="text-align:left">Método</th><th>MAE</th>
+  $("#tMetodos").innerHTML = `<thead><tr><th>Dataset</th><th class="texto-izquierda">Método</th><th>MAE</th>
     <th>WAPE diario</th><th>WAPE semanal</th><th>Cobertura IC 80 %</th></tr></thead><tbody>${filas}</tbody>`;
 
   
     if (fallos.length) {
       const aviso = document.createElement("caption");
       aviso.className = "error";
-      aviso.style.captionSide = "bottom";
+      aviso.classList.add("nota-tabla");
       aviso.textContent = "No se pudieron cargar: " + fallos.join(" | ");
       $("#tMetodos").appendChild(aviso);
     }
@@ -275,9 +318,9 @@ if (!modelos.length) throw new Error(fallos.join(" | "));
 const b = await api("/modelo/backtest?dataset=hdhi");
   dibujarDispersionIngresos(b);
   grafico("#gBack", { type: "line", data: { labels: b.fechas.map(f => f.slice(5)), datasets: [
-    { label: "Real", data: b.real, borderColor: "#7b8ca3", borderWidth: 1, pointRadius: 0 },
-    { label: NOMBRE[b.metodo_elegido], data: b[b.metodo_elegido], borderColor: "#11888b", borderWidth: 2, pointRadius: 0 },
-    { label: "Media 28 días", data: b.media_28d, borderColor: "#d6a21e", borderWidth: 2, borderDash: [4, 3], pointRadius: 0 },
+    { label: "Ingresos reales", data: b.real, borderColor: "#7b8ca3", borderWidth: 1, pointRadius: 0 },
+    { label: `Pronóstico: ${NOMBRE[b.metodo_elegido]} (elegido)`, data: b[b.metodo_elegido], borderColor: "#11888b", borderWidth: 2, pointRadius: 0 },
+    { label: "Referencia: media de 28 días", data: b.media_28d, borderColor: "#d6a21e", borderWidth: 2, borderDash: [4, 3], pointRadius: 0 },
   ]}, options: opc({ scales: { x: { ticks: { maxTicksLimit: 10 } }, y: { title: { display: true, text: "Ingresos por día" } } } }) });
   $("#notaBack").textContent = `HDHI, ${b.fechas[0]} a ${b.fechas.at(-1)}. El modelo sigue el patrón semanal; los picos diarios no siempre son anticipados por estos metodos.`;
 
@@ -289,31 +332,33 @@ const b = await api("/modelo/backtest?dataset=hdhi");
 (async () => {
 const ev = await api("/modelo/evaluacion-agente?dataset=hdhi");
   grafico("#gHorizonte", { type: "bar", data: {
-    labels: ev.error_por_dia.mae_camas.map((_, i) => `Dia ${i + 1}`),
+    labels: ev.error_por_dia.mae_camas.map((_, i) => `${i + 1} día${i ? "s" : ""}`),
     datasets: [
-      { label: "Agente nuevo", data: ev.error_por_dia.mae_camas, backgroundColor: "#139d9a", borderRadius:5 },
-      { label: "Agente anterior", data: ev.comparacion_referencia.mae_agente_anterior_por_dia, backgroundColor: "#9272c7", borderRadius:5 },
-      { label: "Mantener censo", data: ev.comparacion_referencia.mae_camas_por_dia, backgroundColor: "#6896c2", borderRadius:5 }
-    ] }, options: opc({ scales: { y: { title: { display: true, text: "Error en camas" } } } }) });
+      { label: "Agente actual (modelo de ocupación)", data: ev.error_por_dia.mae_camas, backgroundColor: "#139d9a", borderRadius:5 },
+      { label: "Agente anterior (duración de internaciones)", data: ev.comparacion_referencia.mae_agente_anterior_por_dia, backgroundColor: "#9272c7", borderRadius:5 },
+      { label: "Referencia simple (ocupación igual a hoy)", data: ev.comparacion_referencia.mae_camas_por_dia, backgroundColor: "#6896c2", borderRadius:5 }
+    ] }, options: opc({ scales: {
+      x: { title: { display: true, text: "Días de anticipación" } },
+      y: { title: { display: true, text: "Error promedio (camas)" } } } }) });
   const ref = ev.comparacion_referencia;
   const cob = ev.cobertura_limite_superior;
-  $("#notaHorizonte").textContent = `Evaluacion desde ${ev.fechas_evaluadas} censos. Error medio global: nuevo ${ref.mae_global_agente}; anterior ${ref.mae_global_agente_anterior}; mantener censo ${ref.mae_global_referencia} camas. Este total incluye desarrollo.`;
+  $("#notaHorizonte").textContent = `Evaluación con ${ev.fechas_evaluadas} censos históricos. Error promedio: agente actual ${ref.mae_global_agente}, agente anterior ${ref.mae_global_agente_anterior} y referencia simple ${ref.mae_global_referencia} camas (incluye el período de desarrollo).`;
   if (ev.validacion_posterior) {
     const v = ev.validacion_posterior;
-    $("#notaHorizonte").textContent += ` Validacion posterior (${v.fechas} censos, ${v.primer_censo} a ${v.ultimo_censo}): nuevo ${v.mae_agente}; anterior ${v.mae_agente_anterior}; mantener censo ${v.mae_referencia} camas.`;
+    $("#notaHorizonte").textContent += ` Validación posterior con corte temporal (${v.fechas} censos, ${v.primer_censo} a ${v.ultimo_censo}): agente actual ${v.mae_agente}, agente anterior ${v.mae_agente_anterior} y referencia simple ${v.mae_referencia} camas.`;
   }
-  if (cob.empirico_pct != null) $("#notaHorizonte").textContent += ` Limite superior nominal 90 %: cobertura ${cob.empirico_pct} %, sobre ${cob.pronosticos_comparables} predicciones comparables. No garantiza cobertura futura.`;
+  if (cob.empirico_pct != null) $("#notaHorizonte").textContent += ` Límite superior estimado (P90): cobertura observada de ${cob.empirico_pct} % en ${cob.pronosticos_comparables} casos; el nivel nominal es 90 %. No garantiza cobertura futura.`;
 
   const reglas = { ocupacion_esperada_mayor_90: "Ocupación esperada > 90 % (consigna)",
-                   p90_mayor_90: "Limite superior nominal (P90) > 90 %", probabilidad_mayor_30: "Estimacion de excedencia ≥ 30 % (preventiva)" };
+                   p90_mayor_90: "Límite superior estimado (P90) > 90 %", probabilidad_mayor_30: "Estimacion de excedencia ≥ 30 % (preventiva)" };
   $("#tReglas").innerHTML = `<thead><tr><th>Regla</th><th>Alertas</th><th>Aciertos</th><th>Precisión</th><th>Recall</th></tr></thead><tbody>` +
     Object.entries(ev.reglas_de_alerta).map(([k, v]) => `<tr><td>${reglas[k]}</td><td>${v.alertas}</td><td>${v.aciertos}</td>
       <td>${v.precision == null ? "No aplica" : Math.round(100 * v.precision) + "%"}</td><td>${v.recall == null ? "No aplica" : Math.round(100 * v.recall) + "%"}</td></tr>`).join("") +
-    `</tbody><caption style="caption-side:bottom;text-align:left" class="nota">Semanas que realmente superaron el 90 %: ${ev.semanas_que_realmente_superaron_el_umbral} de ${ev.fechas_evaluadas}.</caption>`;
+    `</tbody><caption class="nota nota-tabla">Semanas que realmente superaron el 90 %: ${ev.semanas_que_realmente_superaron_el_umbral} de ${ev.fechas_evaluadas}.</caption>`;
 
       const aviso = document.createElement("caption");
       aviso.className = "nota";
-      aviso.style.captionSide = "bottom";
+      aviso.classList.add("nota-tabla");
       aviso.textContent = "Evaluacion historica de HDHI con capacidad base: "
         + ev.capacidad + " camas. El campo Camas de arriba solo modifica la proyeccion.";
       $("#tReglas").appendChild(aviso);
@@ -543,6 +588,7 @@ function seleccionarSolapa(nombre) {
   if (nombre === "estadisticas" && !estadisticasCargadas) cargarEstadisticasHDHI();
   if (nombre === "evaluacion" && !evaluacionCargada) cargarEvaluacionSolapa();
   if (nombre === "administracion") actualizarPanelAdministracion();
+  actualizarTextoCarga();
   navegarDesdeMenu();
   // Chart.js recalcula dimensiones cuando su contenedor deja de estar oculto.
   requestAnimationFrame(() => Object.values(charts).forEach(c => c.resize()));
@@ -738,6 +784,66 @@ function inicializarMenuLateral() {
 }
 
 
+// Validaciones de interfaz de Darío, unificadas sin eventos duplicados.
+// La API mantiene sus propias validaciones de seguridad y de dominio.
+function inicializarValidacionNumerica() {
+  const esEntero = campo => {
+    const paso = campo.getAttribute('step');
+    return paso !== 'any' && (paso === null || Number.isInteger(Number(paso)));
+  };
+  function validar(campo) {
+    campo.setCustomValidity('');
+    const estado = campo.validity;
+    let mensaje = '';
+    if (estado.valueMissing) mensaje = 'Completá este campo.';
+    else if (estado.badInput) mensaje = 'Ingresá solo números.';
+    else if (estado.rangeUnderflow) mensaje = `El valor mínimo es ${campo.min}.`;
+    else if (estado.rangeOverflow) mensaje = `El valor máximo es ${campo.max}.`;
+    else if (estado.stepMismatch) mensaje = esEntero(campo)
+      ? 'Ingresá un número entero, sin decimales.'
+      : `Respetá el incremento permitido: ${campo.step}.`;
+    campo.setCustomValidity(mensaje);
+    return mensaje === '';
+  }
+  document.querySelectorAll('input[type="number"]').forEach(campo => {
+    campo.addEventListener('keydown', evento => {
+      if (evento.ctrlKey || evento.metaKey || evento.altKey) return;
+      if (['e','E','+','-'].includes(evento.key) ||
+          (esEntero(campo) && ['.',','].includes(evento.key))) evento.preventDefault();
+    });
+    campo.addEventListener('paste', evento => {
+      const texto = evento.clipboardData?.getData('text').trim();
+      if (texto == null) return;
+      evento.preventDefault();
+      const formato = esEntero(campo) ? /^\d+$/ : /^\d+(?:[.,]\d+)?$/;
+      if (!formato.test(texto)) {
+        campo.setCustomValidity(esEntero(campo) ? 'Pegá un número entero, sin letras ni signos.' : 'Pegá un número válido, sin letras.');
+        campo.reportValidity();
+        return;
+      }
+      campo.value = texto.replace(',', '.');
+      campo.dispatchEvent(new Event('input', {bubbles:true}));
+    });
+    campo.addEventListener('input', () => {
+      validar(campo);
+      // Conservar el cero inválido para que no se interprete como un campo vacío
+      // y se use por accidente la capacidad predeterminada.
+      if (campo.value !== '' && Number(campo.min) >= 1 && campo.validity.rangeUnderflow) {
+        campo.reportValidity();
+      }
+    });
+    campo.addEventListener('invalid', () => validar(campo));
+    campo.addEventListener('change', evento => {
+      validar(campo);
+      if (!campo.checkValidity()) {
+        evento.stopImmediatePropagation();
+        campo.reportValidity();
+      }
+    }, true);
+  });
+}
+
+inicializarValidacionNumerica();
 inicializarMenuLateral();
 verificarAcceso().then(permitido=>{if(permitido)iniciar();});
 
@@ -845,3 +951,64 @@ function abrirCalendarioCenso(){
   dibujar();dialogo.showModal();
   (dialogo.querySelector('[aria-pressed="true"]:not(:disabled)')||dialogo.querySelector('.dias-calendario button:not(:disabled)'))?.focus();
 }
+
+
+// ------------------------------------------------------------------
+// Exportar a Excel lo que se ve en pantalla (SheetJS, incluido en /vendor:
+// funciona sin internet). Respeta dataset, fecha, capacidad y horizonte elegidos.
+// ------------------------------------------------------------------
+function exportarExcel() {
+  actualizarDisponibilidadExportacion();
+  if ($('#exportarExcel').disabled) return;
+  const nombreDataset = $("#dataset").selectedOptions[0]?.textContent || proy.dataset;
+  const dias = proy.proyeccion.length;
+  const resumen = [
+    ["Agente de Gestión de Camas · Grupo 1"],
+    [],
+    ["Fuente de datos", nombreDataset],
+    ["Fecha del censo", fmtLargo(proy.fecha_censo)],
+    ["Capacidad (camas)", proy.capacidad],
+    ["Horizonte proyectado (días)", dias],
+    ["Camas ocupadas al censo", proy.camas_ocupadas_hoy],
+    ["Ocupación al censo (%)", proy.tasa_ocupacion_hoy_pct],
+    ["Ocupación proyectada máxima (%)", proy.tasa_ocupacion_maxima_pct],
+    ["Día de mayor ocupación", proy.dia_pico],
+    ["Alerta de Saturación", proy.alerta_saturacion ? "Sí" : "No"],
+    ["Alerta preventiva", proy.alerta_preventiva ? "Sí" : "No"],
+    ["Mensaje del agente", proy.mensaje],
+    [],
+    ["Exportado el", new Date().toLocaleString("es-AR")],
+  ];
+  const encabezados = ["Fecha", "Ingresos previstos", "Altas estimadas", "Camas ocupadas", "Límite superior estimado (P90)",
+                       "Camas libres", "Ocupación (%)", "Excedencia estimada (%)", "Ocupación real (camas)", "Alerta de Saturación"];
+  const filas = proy.proyeccion.map((d, i) => [
+    d.fecha, d.ingresos_previstos, d.altas_previstas, d.camas_ocupadas, d.camas_ocupadas_p90 ?? "",
+    d.camas_libres, d.tasa_ocupacion_pct, d.prob_superar_umbral_pct ?? "", real?.camas_ocupadas?.[i] ?? "",
+    d.alerta_saturacion ? "Sí" : "No"]);
+  const libro = XLSX.utils.book_new();
+  const hojaResumen = XLSX.utils.aoa_to_sheet(resumen);
+  hojaResumen["!cols"] = [{ wch: 32 }, { wch: 70 }];
+  const hojaDias = XLSX.utils.aoa_to_sheet([encabezados, ...filas]);
+  hojaDias["!cols"] = encabezados.map(t => ({ wch: Math.max(12, t.length + 2) }));
+  XLSX.utils.book_append_sheet(libro, hojaResumen, "Resumen");
+  XLSX.utils.book_append_sheet(libro, hojaDias, `Proyección ${dias} días`);
+  XLSX.writeFile(libro, `proyeccion_${proy.dataset}_${proy.fecha_censo}_${dias}dias.xlsx`);
+}
+function actualizarDisponibilidadExportacion() {
+  const disponible = typeof XLSX !== 'undefined';
+  const vigente = proy && proy.dataset === $('#dataset').value && proy.fecha_censo === $('#fecha').value
+    && proy.capacidad === Number($('#capacidad').value)
+    && proy.proyeccion.length === Number($('#horizonte').value);
+  $('#exportarExcel').disabled = !disponible || !vigente;
+  $('#estadoExportacion').textContent = !disponible
+    ? 'No se cargó la biblioteca de Excel. Revisá /vendor/xlsx.mini.min.js.'
+    : proy && !vigente ? 'Calculá la proyección para los controles elegidos antes de exportar.' : '';
+}
+$('#exportarExcel').addEventListener('click', () => {
+  try { exportarExcel(); }
+  catch (error) { $('#estadoExportacion').textContent = 'No se pudo generar el Excel: ' + error.message; }
+});
+['dataset','fecha','capacidad','horizonte'].forEach(id => {
+  $('#'+id).addEventListener('input', actualizarDisponibilidadExportacion);
+});
+actualizarDisponibilidadExportacion();
