@@ -28,20 +28,13 @@
     aria-controls="vista-sectores" aria-selected="false" tabindex="-1"><span class="tab-num" aria-hidden="true">03</span> UTI y general</button>
   <button id="tab-evaluacion" type="button" role="tab" data-tab="evaluacion"
     aria-controls="vista-evaluacion" aria-selected="false" tabindex="-1"><span class="tab-num" aria-hidden="true">04</span> Evaluación</button>
-  <button id="tab-administracion" type="button" role="tab"
-    data-tab="administracion"
-    aria-controls="vista-administracion"
-    aria-selected="false"
-    tabindex="-1"
-    hidden>
-    <span class="tab-num" aria-hidden="true">05</span> Administración
-  </button>
+
 </nav>
   <section class="lateral-configuracion" aria-label="Controles de proyección">
   <div class="controles" id="controlesProyeccion">
     <label>Fuente de datos <select id="dataset"></select></label>
     <div class="campo-fecha-censo"><label for="fecha">Fecha del censo histórico</label><input type="date" id="fecha"></div>
-    <label>Capacidad supuesta (camas) <input type="number" id="capacidad" min="1"></label>
+    <label>Capacidad supuesta (camas) <input type="number" id="capacidad" min="1" step="1" required></label>
     <label>Proyección <select id="horizonte" title="7 días es el horizonte controlado (consigna); 15 y 30 días son extensiones con más margen de error">
       <option value="7" selected>7 días</option><option value="15">15 días</option><option value="30">30 días</option></select></label>
     <div class="pildoras" id="casos" aria-label="Casos de la demo">
@@ -52,6 +45,12 @@
     </div>
   </div>
   </section>
+  <div class="lateral-administracion">
+    <button id="tab-administracion" type="button" data-tab="administracion"
+      aria-controls="vista-administracion" aria-pressed="false" hidden>
+      <span class="admin-engranaje" aria-hidden="true">⚙</span> Administración
+    </button>
+  </div>
 </aside>
 <div id="contenidoAplicacion">
 
@@ -69,10 +68,9 @@
 <section id="vista-proyeccion" class="tab-panel" role="tabpanel"
          aria-labelledby="tab-proyeccion">
 
-  <div class="titulo-seccion"><div><h2>¿Alcanzan las camas?</h2><p>Ocupación prevista para los próximos <span class="txtDias">7</span> días.</p></div><span class="etiqueta etiqueta-umbral">
+  <div class="titulo-seccion"><div><h2>Proyección de ocupación y disponibilidad de camas</h2><p>Ocupación prevista para los próximos <span class="txtDias">7</span> días.</p></div><span class="etiqueta etiqueta-umbral">
   Umbral de alerta: ocupación superior al 90 %
 </span></div>
-  <div id="cargando" class="cargando" role="status" aria-live="polite" hidden><span class="spinner" aria-hidden="true"></span><span id="cargandoTexto">Procesando datos…</span></div>
   <div id="mensaje" role="status">Consultando los datos y calculando la semana…</div>
 
   <section class="kpis" id="kpis"></section>
@@ -99,16 +97,16 @@
   <div class="camas" id="camas"></div>
 </details>
       <div class="leyenda">
-        <span><i style="background:#11888b"></i>ocupada (esperado)</span>
-        <span><i style="background:var(--nueva)"></i>adicionales hasta el límite P90</span>
-        <span><i style="background:var(--vacia)"></i>libre</span>
-        <span><i style="background:var(--alerta)"></i>demanda por encima de la capacidad</span>
+        <span><i class="leyenda-ocupada"></i>ocupada (esperado)</span>
+        <span><i class="leyenda-p90"></i>adicionales hasta el límite P90</span>
+        <span><i class="leyenda-libre"></i>libre</span>
+        <span><i class="leyenda-exceso"></i>demanda por encima de la capacidad</span>
       </div>
     </div>
     <div class="panel">
       <h3>Ocupación prevista y observada</h3>
       <p class="nota">Compará el pronóstico con lo ocurrido y con el umbral de alerta.</p>
-      <div class="grafico"><canvas id="gProy"></canvas></div>
+      <div class="grafico grafico-vivo"><canvas id="gProy"></canvas></div>
       <details>
   <summary>Cómo leer las líneas</summary>
   <p>Verde: ocupación esperada.
@@ -122,13 +120,15 @@
 
   <section class="panel">
     <div class="encabezado-tabla"><h3>Proyección diaria de los próximos <span class="txtDias">7</span> días</h3>
-      <button type="button" id="exportarExcel" class="boton-exportar" disabled title="Descarga en Excel la proyección que se ve en pantalla">Exportar a Excel</button></div><p class="nota">
+      <button type="button" id="exportarExcel" class="boton-exportar" disabled title="Descarga en Excel la proyección que se ve en pantalla">Exportar a Excel</button></div>
+    <p id="estadoExportacion" class="nota" role="status" aria-live="polite"></p>
+    <p class="nota">
   Camas ocupadas del día = camas ocupadas del día anterior
   + ingresos previstos − altas estimadas.
   Las altas se infieren por balance.
   Los valores proyectados pueden tener decimales porque son estimaciones.
 </p>
-    <div class="grafico "><canvas id="gMovimientos" role="img" aria-label="Ingresos previstos y altas estimadas por día"></canvas></div>
+    <div class="grafico grafico-vivo"><canvas id="gMovimientos" role="img" aria-label="Ingresos previstos y altas estimadas por día"></canvas></div>
     <p class="nota">Verde azulado: ingresos previstos. Azul: altas estimadas por balance. Son movimientos de pacientes, no porcentajes de ocupación.</p>
     <details class="datos-grafico"><summary>Ver el detalle diario completo</summary><div class="scroll"><table id="tDias"></table></div></details>
   </section>
@@ -144,13 +144,7 @@
     <h2>¿Cuánto duran las internaciones?</h2>
 
     <p>
-      Estancias registradas por patología y edad · HDHI revisado.
-    </p>
-
-    <p class="nota">
-      Esta solapa describe la cohorte revisada completa.
-      No cambia con la fecha ni la capacidad de Proyección
-      y no predice el alta de un paciente.
+      Estancias por patología y edad · HDHI 
     </p>
 
     <p id="estadoEstadisticas" class="nota" role="status">
@@ -166,8 +160,8 @@
 
   <section class="panel">
     <h3>Estancia por patología o comorbilidad</h3>
-    <p class="nota">Compará la duración promedio. Pasá sobre una barra o tocala para consultar la mediana y las cantidades.</p>
-<div class="grafico grafico-patologias"><canvas id="gPatologias" role="img" aria-label="Estancia promedio por patología, en días"></canvas></div>
+    <p class="nota">Cada círculo marca la estancia promedio. Pasá sobre un punto o tocá su línea para ver la mediana y las cantidades.</p>
+<div class="grafico grafico-patologias grafico-vivo"><canvas id="gPatologias" role="img" aria-label="Estancia promedio por patología, en días"></canvas></div>
 
     <details class="datos-grafico"><summary>Ver cantidades y valores por patología</summary>
     <div class="scroll">
@@ -184,8 +178,8 @@
 
   <section class="panel">
     <h3>Estancia por grupo de edad</h3>
-    <p class="nota">Barras intensas: promedio. Barras claras: mediana. Cada grupo de edad tiene su propio color.</p>
-<div class="grafico "><canvas id="gEdades" role="img" aria-label="Promedio y mediana de estancia por grupo de edad, en días"></canvas></div>
+    <p class="nota">Columnas de color: promedio. Rombos violetas: mediana. Cada grupo de edad conserva su color.</p>
+<div class="grafico grafico-vivo"><canvas id="gEdades" role="img" aria-label="Promedio y mediana de estancia por grupo de edad, en días"></canvas></div>
 
     <details class="datos-grafico"><summary>Ver cantidades y valores por edad</summary>
     <div class="scroll">
@@ -258,13 +252,13 @@
   <section class="dos">
     <div class="panel">
       <h3>Ingresos reales vs. pronóstico</h3>
-      <div class="grafico"><canvas id="gBack"></canvas></div>
+      <div class="grafico grafico-vivo"><canvas id="gBack"></canvas></div>
       <p class="nota">Gris: ingresos que realmente hubo. Verde: lo que pronosticó el método elegido, entrenado solo con datos anteriores. Amarillo punteado: la referencia más simple (promedio de las últimas 4 semanas).</p>
       <p class="nota" id="notaBack"></p>
     </div>
     <div class="panel">
       <h3>¿Cuánto se acercan los ingresos previstos a los observados?</h3>
-<div class="grafico "><canvas id="gDispersion" role="img" aria-label="Ingresos observados frente a previstos en HDHI"></canvas></div>
+<div class="grafico grafico-vivo"><canvas id="gDispersion" role="img" aria-label="Ingresos observados frente a previstos en HDHI"></canvas></div>
       <p class="nota">Cada punto es un día de HDHI. La diagonal indica coincidencia exacta: cuanto más cerca quede el punto, menor es el error. Por encima, el modelo sobreestima; por debajo, subestima.</p>
     </div>
   </section>
@@ -272,7 +266,7 @@
   <section class="dos">
     <div class="panel">
       <h3>Error del agente según los días de anticipación</h3>
-      <div class="grafico"><canvas id="gHorizonte"></canvas></div>
+      <div class="grafico grafico-vivo"><canvas id="gHorizonte"></canvas></div>
       <p class="nota">Cada barra es el error promedio, en camas, según cuántos días hacia adelante se proyecta (barras más bajas = mejor).
         <b>Agente actual</b>: el que usa el panel (modelo de ocupación).
         <b>Agente anterior</b>: la primera versión, basada en cuánto duran las internaciones.
@@ -306,22 +300,27 @@
   <section id="resultadoSectores" class="tab-panel" hidden>
     <div id="evidenciaSectores" class="sector-aviso"></div>
     <div class="dos" id="tarjetasSectores"></div>
-    <section class="panel"><h3>Dos sectores, una semana</h3><p class="nota">Las líneas muestran demanda esperada respecto de la capacidad de cada sector. Si supera el 100 %, hay demanda teórica sin cama; las camas de general no reemplazan a las de UTI.</p><div class="grafico"><canvas id="gSectores"></canvas></div></section>
+    <section class="panel"><h3>Dos sectores, una semana</h3><p class="nota">Las líneas muestran demanda esperada respecto de la capacidad de cada sector. Si supera el 100 %, hay demanda teórica sin cama; las camas de general no reemplazan a las de UTI.</p><div class="grafico grafico-vivo"><canvas id="gSectores"></canvas></div></section>
     <section class="panel"><h3>Ingresos, traslados y altas</h3><p class="nota">Los ingresos externos se cuentan una sola vez. Los traslados aparecen en ambos sectores y se cancelan en el balance hospitalario. Valores esperados: pueden contener decimales.</p><div class="scroll"><table id="tablaSectores"></table></div></section>
     <section class="panel"><details><summary>Ver parámetros, referencia y límites de este escenario</summary><p id="parametrosUsadosSectores" class="nota"></p><ul id="supuestosSectores"></ul></details></section>
   </section>
 </section>
 
-<section id="vista-administracion" class="tab-panel" role="tabpanel" aria-labelledby="tab-administracion" hidden>
-<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true"><symbol id="admin-icon-escudo" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol><symbol id="admin-icon-personas" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6M18 15a5 5 0 0 1 3 4v2"/></symbol><symbol id="admin-icon-activo" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2m1-9 2 2 4-4"/></symbol><symbol id="admin-icon-inactivo" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2m2-12 4 4m0-4-4 4"/></symbol><symbol id="admin-icon-buscar" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol><symbol id="admin-icon-editar" viewBox="0 0 24 24"><path d="m14 5 5 5M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15z"/></symbol><symbol id="admin-icon-recargar" viewBox="0 0 24 24"><path d="M20 7a9 9 0 1 0 1 8M20 3v5h-5"/></symbol><symbol id="admin-icon-mas" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="admin-icon-pausa" viewBox="0 0 24 24"><path d="M9 7v10M15 7v10"/><circle cx="12" cy="12" r="9"/></symbol><symbol id="admin-icon-reactivar" viewBox="0 0 24 24"><path d="m10 8 6 4-6 4z"/><circle cx="12" cy="12" r="9"/></symbol><symbol id="admin-icon-historial" viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2 7M3 4v7h7M12 7v5l3 2"/></symbol></svg>
+<section id="vista-administracion" class="tab-panel" role="region" aria-labelledby="tituloAdministracion" hidden>
+<svg xmlns="http://www.w3.org/2000/svg" class="simbolos-admin" aria-hidden="true"><symbol id="admin-icon-escudo" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol><symbol id="admin-icon-personas" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6M18 15a5 5 0 0 1 3 4v2"/></symbol><symbol id="admin-icon-activo" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2m1-9 2 2 4-4"/></symbol><symbol id="admin-icon-inactivo" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-2a6 6 0 0 1 12 0v2m2-12 4 4m0-4-4 4"/></symbol><symbol id="admin-icon-buscar" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol><symbol id="admin-icon-editar" viewBox="0 0 24 24"><path d="m14 5 5 5M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15z"/></symbol><symbol id="admin-icon-recargar" viewBox="0 0 24 24"><path d="M20 7a9 9 0 1 0 1 8M20 3v5h-5"/></symbol><symbol id="admin-icon-mas" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol><symbol id="admin-icon-pausa" viewBox="0 0 24 24"><path d="M9 7v10M15 7v10"/><circle cx="12" cy="12" r="9"/></symbol><symbol id="admin-icon-reactivar" viewBox="0 0 24 24"><path d="m10 8 6 4-6 4z"/><circle cx="12" cy="12" r="9"/></symbol><symbol id="admin-icon-historial" viewBox="0 0 24 24"><path d="M3 11a9 9 0 1 1 2 7M3 4v7h7M12 7v5l3 2"/></symbol></svg>
   <section class="panel admin-presentacion">
-    <div class="admin-identidad"><span class="admin-icono-cabecera"><svg class="admin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#admin-icon-escudo"/></svg></span><div><span class="admin-sobrelinea">Gestión del sistema</span><h2>Administración de usuarios</h2><p>Personas, permisos y acceso. Todo en un mismo lugar.</p></div></div>
+    <div class="admin-identidad"><span class="admin-icono-cabecera"><svg class="admin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#admin-icon-escudo"/></svg></span><div><span class="admin-sobrelinea">Gestión del sistema</span><h2 id="tituloAdministracion">Administración del sistema</h2><p>Gestioná las cuentas, los permisos y el historial de cambios.</p></div></div>
     <span class="admin-acceso"><svg class="admin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#admin-icon-escudo"/></svg>Solo administradores</span>
   </section>
+  <div class="admin-navegacion" role="group" aria-label="Apartados de administración">
+    <button id="adminVerUsuarios" class="admin-boton" type="button" aria-pressed="true" aria-controls="adminPanelUsuarios">Usuarios</button>
+    <button id="adminVerHistorial" class="admin-boton" type="button" aria-pressed="false" aria-controls="adminPanelHistorial">Historial de cambios</button>
+  </div>
+  <div id="adminPanelUsuarios" role="region" aria-labelledby="adminVerUsuarios">
   <section class="admin-resumen" aria-label="Resumen de cuentas">
-    <div class="kpi admin-metrica total"><div class="admin-metrica-top"><span>Total usuarios</span><span class="admin-metrica-icono"><svg class="admin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#admin-icon-personas"/></svg></span></div><b id="adminTotal">—</b><div class="admin-metrica-pie"><span>Activos e inactivos</span></small></div></div>
-    <div class="kpi admin-metrica activos"><div class="admin-metrica-top"><span>Activos</span><span class="admin-metrica-icono"><svg class="admin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#admin-icon-activo"/></svg></span></div><b id="adminActivos">—</b><div class="admin-metrica-pie"><span>Acceso habilitado</span></small></div></div>
-    <div class="kpi admin-metrica inactivos"><div class="admin-metrica-top"><span>Inactivos</span><span class="admin-metrica-icono"><svg class="admin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#admin-icon-inactivo"/></svg></span></div><b id="adminInactivos">—</b><div class="admin-metrica-pie"><span>Acceso deshabilitado</span></small></div></div>
+    <div class="kpi admin-metrica total"><div class="admin-metrica-top"><span>Total usuarios</span><span class="admin-metrica-icono"><svg class="admin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#admin-icon-personas"/></svg></span></div><b id="adminTotal">—</b><div class="admin-metrica-pie"><span>Activos e inactivos</span></div></div>
+    <div class="kpi admin-metrica activos"><div class="admin-metrica-top"><span>Activos</span><span class="admin-metrica-icono"><svg class="admin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#admin-icon-activo"/></svg></span></div><b id="adminActivos">—</b><div class="admin-metrica-pie"><span>Acceso habilitado</span></div></div>
+    <div class="kpi admin-metrica inactivos"><div class="admin-metrica-top"><span>Inactivos</span><span class="admin-metrica-icono"><svg class="admin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#admin-icon-inactivo"/></svg></span></div><b id="adminInactivos">—</b><div class="admin-metrica-pie"><span>Acceso deshabilitado</span></div></div>
   </section>
   <section class="panel admin-area">
     <div class="admin-herramientas">
@@ -334,7 +333,8 @@
     <p id="mensajeAdministracion" role="status" aria-live="polite"></p>
     <div id="listaUsuarios" class="scroll" tabindex="0" aria-label="Listado de usuarios"></div>
   </section>
-  <section class="panel">
+  </div>
+  <section id="adminPanelHistorial" class="panel" role="region" aria-labelledby="adminVerHistorial" hidden>
     <details id="detalleAuditoria"><summary><svg class="admin-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#admin-icon-historial"/></svg>Historial de cambios de usuarios</summary>
       <button id="recargarAuditoria" class="admin-boton" type="button">Actualizar historial</button>
       <p id="mensajeAuditoria" role="status"></p><div id="listaAuditoria" class="scroll" tabindex="0" aria-label="Auditoría de usuarios"></div>
@@ -359,46 +359,8 @@
 <footer>Grupo 1 · Gestión de Camas y Demanda Hospitalaria · Datos históricos para una simulación académica. Las fuentes se analizan por separado.</footer>
 
 </div>
+  <div id="cargando" class="cargando" role="status" aria-live="polite" hidden><span class="spinner" aria-hidden="true"></span><span id="cargandoTexto">Procesando datos…</span></div>
 <script src="/panel/js/administracion.js"></script>
 <script src="/panel/js/panel.js"></script>
-<script>
-// VALIDACION_NUMEROS_V1 (Dario): los campos numericos solo aceptan numeros.
-// El navegador deja escribir e, E, + y - en type="number" (notacion cientifica);
-// aca se bloquean, y si el valor no sirve se avisa en espanol en vez de usarlo.
-(() => {
-  // Entero si el campo no tiene step="any" (camas y censos); decimal si lo tiene (estancias, %)
-  const esEntero = i => i.getAttribute("step") !== "any";
-  const mensaje = i => {
-    const v = i.validity;
-    if (v.valueMissing) return "Completá este campo.";
-    if (v.badInput) return "Ingresá solo números.";
-    if (v.stepMismatch) return "Ingresá un número entero, sin decimales.";
-    if (v.rangeUnderflow) return `El valor mínimo es ${i.min}.`;
-    if (v.rangeOverflow) return `El valor máximo es ${i.max}.`;
-    return "";
-  };
-  document.querySelectorAll('input[type="number"]').forEach(i => {
-    // 1. Teclas que no son numeros
-    i.addEventListener("keydown", e => {
-      if (["e", "E", "+", "-"].includes(e.key) || ([".", ","].includes(e.key) && esEntero(i))) e.preventDefault();
-    });
-    // 2. Pegar texto que no es un numero
-    i.addEventListener("paste", e => {
-      const texto = (e.clipboardData || window.clipboardData).getData("text").trim();
-      if (!(esEntero(i) ? /^\d+$/ : /^\d+([.,]\d+)?$/).test(texto)) e.preventDefault();
-    });
-    // 3. Mensajes en espanol
-    // 3b. Campos con minimo 1 (camas habilitadas, estancia): no se puede empezar con 0
-    i.addEventListener("input", () => { if (Number(i.min) >= 1 && /^0/.test(i.value)) { i.value = i.value.replace(/^0+/, ""); setTimeout(() => { i.setCustomValidity(`El valor mínimo es ${i.min}.`); i.reportValidity(); }, 0); } });
-    i.addEventListener("input", () => { i.setCustomValidity(""); i.setCustomValidity(mensaje(i)); });
-    i.addEventListener("invalid", () => { i.setCustomValidity(""); i.setCustomValidity(mensaje(i)); });
-  });
-  // 4. Camas: si el valor no es valido, avisar y NO proyectar con la capacidad por defecto
-  const camas = document.querySelector("#capacidad");
-  if (camas) camas.addEventListener("change", e => {
-    if (!camas.checkValidity()) { e.stopImmediatePropagation(); camas.reportValidity(); }
-  }, true);
-})();
-</script>
 </body>
 </html>

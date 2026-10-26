@@ -11,19 +11,35 @@ const fmtLargo = f => new Date(f + "T00:00").toLocaleDateString("es-AR");
 // Indicador de carga: se muestra mientras haya consultas a la API en curso
 // (con una demora corta para que no parpadee en las respuestas rápidas).
 let consultasEnCurso = 0, temporizadorCarga = null;
+function actualizarTextoCarga() {
+  const seccion = document.querySelector('#solapas-principales [aria-selected="true"]')?.dataset.tab;
+  const textos = {estadisticas:'Consultando las estancias…', evaluacion:'Evaluando el modelo…',
+    sectores:'Consultando la simulación UTI/general…', administracion:'Consultando datos…'};
+  const dias = Number($('#horizonte').value) || 7;
+  $('#cargandoTexto').textContent = textos[seccion] || `Calculando la proyección a ${dias} días…`;
+}
+
 function indicadorCarga(delta) {
   consultasEnCurso = Math.max(0, consultasEnCurso + delta);
-  const caja = document.getElementById("cargando");
+  const caja = $('#cargando');
   if (!caja) return;
-  clearTimeout(temporizadorCarga);
   if (consultasEnCurso > 0) {
-    temporizadorCarga = setTimeout(() => { caja.hidden = false; }, 200);
-    document.body.setAttribute("aria-busy", "true");
+    actualizarTextoCarga();
+    if (caja.hidden && temporizadorCarga === null) {
+      temporizadorCarga = setTimeout(() => {
+        temporizadorCarga = null;
+        if (consultasEnCurso > 0) caja.hidden = false;
+      }, 200);
+    }
+    $('#contenidoAplicacion').setAttribute('aria-busy', 'true');
   } else {
+    clearTimeout(temporizadorCarga);
+    temporizadorCarga = null;
     caja.hidden = true;
-    document.body.removeAttribute("aria-busy");
+    $('#contenidoAplicacion').removeAttribute('aria-busy');
   }
 }
+
 async function api(url, opciones = {}) {
   indicadorCarga(+1);
   try {
@@ -48,10 +64,139 @@ function grafico(id, cfg) {
     return;
   }
   if (charts[id]) charts[id].destroy();
-  charts[id] = new Chart($(id), cfg);
+  charts[id] = new Chart($(id), estilizarGrafico(id, cfg));
 }
 const opc = extra => ({ maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
   plugins: { legend: { labels: { boxWidth: 14 } } }, ...extra });
+
+// PRESENTACIÓN DE GRÁFICOS. No modifica respuestas, métricas ni pronósticos.
+function degradadoGrafico(inicio, fin) {
+  return contexto => {
+    const grafico = contexto.chart, area = grafico.chartArea;
+    if (!area || !grafico.ctx?.createLinearGradient) return inicio;
+    const gradiente = grafico.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+    gradiente.addColorStop(0, inicio); gradiente.addColorStop(1, fin);
+    return gradiente;
+  };
+}
+
+const etiquetasBarras = {
+  id:'etiquetasBarrasVivas',
+  afterDatasetsDraw(grafico, argumentos, opciones) {
+    const contexto = grafico.ctx;
+    contexto.save(); contexto.font='600 11px system-ui'; contexto.fillStyle='#36566b';
+    contexto.textAlign='left'; contexto.textBaseline='middle';
+    const meta = grafico.getDatasetMeta(0), dataset = grafico.data.datasets[0];
+    meta.data.forEach((barra, indice) => {
+      if (!Number.isFinite(Number(dataset.data[indice]))) return;
+      if (opciones.puntos) {
+        contexto.beginPath();contexto.arc(barra.x,barra.y,6,0,Math.PI*2);
+        contexto.fillStyle=Array.isArray(dataset.backgroundColor)?dataset.backgroundColor[indice]:'#087f83';
+        contexto.fill();contexto.strokeStyle='#fff';contexto.lineWidth=2;contexto.stroke();
+      }
+      contexto.fillStyle='#36566b';
+      contexto.fillText(numeroVisual(dataset.data[indice])+(opciones.sufijo||''),barra.x+11,barra.y);
+    });
+    contexto.restore();
+  }
+};
+
+function estilizarGrafico(id, configuracion) {
+  const opciones = configuracion.options || (configuracion.options = {});
+  const series = configuracion.data.datasets;
+  const reducido = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  opciones.animation = reducido ? false : {duration:350};
+  opciones.plugins = opciones.plugins || {};
+  const leyenda = opciones.plugins.legend || (opciones.plugins.legend = {});
+  if (leyenda.display !== false) {
+    leyenda.position='bottom';
+    leyenda.labels={...leyenda.labels,usePointStyle:true,boxWidth:9,padding:18,color:'#4f667b'};
+  }
+  opciones.plugins.tooltip = {
+    backgroundColor:'#203d50',titleColor:'#fff',bodyColor:'#e5f3f5',padding:13,
+    cornerRadius:11,boxPadding:5,...opciones.plugins.tooltip
+  };
+  if (opciones.scales) Object.entries(opciones.scales).forEach(([nombre,eje]) => {
+    eje.border={display:false,...eje.border};
+    eje.ticks={color:'#62788b',font:{size:11},...eje.ticks};
+    eje.grid={color:'#e8eff4',drawTicks:false,...eje.grid};
+  });
+  if (id==='#gProy' || id==='#gBack') {
+    const elegida=series.find(s=>s.label==='Esperada'||s.label.startsWith('Pronóstico:'));
+    if (elegida) {
+      elegida.backgroundColor=degradadoGrafico('#18aaa947','#18aaa903');elegida.fill=true;
+      elegida.borderWidth=3;elegida.pointBorderColor='#fff';elegida.pointBorderWidth=2;elegida.pointHoverRadius=7;
+    }
+    series.filter(s=>s.label==='Real'||s.label==='Ingresos reales').forEach(s=>{s.borderDash=[3,3];s.borderColor='#7d91a8';});
+  }
+  if (id==='#gMovimientos') {
+    series[0].backgroundColor=degradadoGrafico('#21c3bc','#087f83');
+    series[1].backgroundColor=degradadoGrafico('#a8b6ed','#587bad');
+    series.forEach(s=>{s.borderRadius=8;s.borderSkipped=false;s.maxBarThickness=26;});
+  }
+  if (id==='#gPatologias' || id.startsWith('#gMetodos-')) {
+    const puntos=id==='#gPatologias';
+    series[0].barThickness=puntos?4:18;series[0].borderRadius=12;
+    const maximo=Math.max(0,...series[0].data.filter(v=>typeof v==='number'&&Number.isFinite(v)));
+    opciones.layout={...opciones.layout,padding:{right:42}};
+    opciones.scales.x.suggestedMax=maximo*1.25;
+    configuracion.plugins=[...(configuracion.plugins||[]),etiquetasBarras];
+    opciones.plugins.etiquetasBarrasVivas={puntos,sufijo:puntos?' días':' %'};
+  }
+  if (id==='#gEdades') {
+    series[0].borderRadius=8;series[0].borderSkipped=false;series[0].order=1;
+    series[1]={...series[1],type:'line',order:0,showLine:false,label:'Mediana (rombo)',
+      backgroundColor:'#8a6bbb',borderColor:'#8a6bbb',borderWidth:0,
+      pointStyle:'rectRot',pointRadius:6,pointHoverRadius:8,
+      pointBackgroundColor:'#8a6bbb',pointBorderColor:'#fff',pointBorderWidth:2};
+  }
+  if (id==='#gHorizonte') {
+    series[0].backgroundColor=degradadoGrafico('#23c4bb','#087f83');
+    series[0].borderRadius=7;series[0].maxBarThickness=34;series[0].order=1;
+    series.slice(1).forEach((s,i)=>{
+      s.type='line';s.order=0;s.borderColor=i?'#587bad':'#9272c7';s.backgroundColor=s.borderColor;
+      s.borderWidth=2;s.borderDash=i?[3,4]:[7,4];s.pointRadius=4;s.pointHoverRadius=6;
+      s.pointStyle=i?'rectRot':'circle';s.fill=false;s.tension=.15;
+    });
+  }
+  if (id==='#gSectores') {
+    configuracion.type='bar';
+    series.slice(0,2).forEach((s,i)=>{
+      s.type='bar';s.order=1;s.backgroundColor=i?degradadoGrafico('#28c6bd','#087f83'):degradadoGrafico('#9ec8ef','#4b78b0');
+      s.borderColor=i?'#087f83':'#4b78b0';s.borderWidth=0;s.borderRadius=6;s.maxBarThickness=27;
+    });
+    series[2].type='line';series[2].order=0;series[2].borderWidth=2;series[2].pointRadius=0;
+  }
+  if (id==='#gDispersion') {
+    series[0].backgroundColor='#16b7b080';series[0].borderColor='#087f83';
+    series[0].pointBorderWidth=1.5;series[0].pointRadius=5;series[0].pointHoverRadius=8;
+  }
+  return configuracion;
+}
+
+function dibujarDonaCamas(ocupadas, capacidad, libres, exceso, tasa) {
+  // La dona divide la capacidad en dos partes excluyentes. La demanda que la
+  // supera se informa aparte y nunca se oculta ni se cuenta como cama física.
+  $('#resumenCamas').innerHTML = `
+    <div class="ocupacion-circular">
+      <div class="dona-camas"><canvas id="gDonaCamas" role="img" aria-label="${Math.min(ocupadas,capacidad)} camas de capacidad cubiertas por la demanda y ${libres} libres; ${exceso} camas de exceso de demanda"></canvas>
+        <div class="centro-dona"><strong>${numeroVisual(tasa)}<small>%</small></strong><span>de la capacidad</span></div>
+      </div>
+      <div class="cifras-dona">
+        <div><i class="punto-ocupadas" aria-hidden="true"></i><span>${exceso?'Demanda':'Ocupadas'}<b>${numeroVisual(ocupadas,0)}</b></span></div>
+        <div><i class="punto-libres" aria-hidden="true"></i><span>Libres<b>${numeroVisual(libres,0)}</b></span></div>
+        <p>Capacidad supuesta: <b>${numeroVisual(capacidad,0)} camas</b></p>
+        ${exceso?`<p class="exceso-dona">${numeroVisual(exceso,0)} camas de demanda por encima de la capacidad.</p>`:''}
+      </div>
+    </div>
+    <small>${$('#dia').value==='0'?'Censo histórico reconstruido':'Ocupación esperada, redondeada para esta representación'}.</small>`;
+  grafico('#gDonaCamas',{type:'doughnut',data:{labels:['Capacidad ocupada por la demanda','Libre'],datasets:[{
+    data:[Math.min(ocupadas,capacidad),libres],backgroundColor:contexto=>contexto.dataIndex===0
+      ? (tasa>90?degradadoGrafico('#df6d88','#bd3049'):degradadoGrafico('#26c8bb','#087f83'))(contexto) : '#dcebf0',
+    borderWidth:0,borderRadius:5,spacing:3,hoverOffset:5
+  }]},options:{responsive:true,maintainAspectRatio:false,cutout:'80%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.label+': '+numeroVisual(ctx.raw,0)+' camas'}}}}});
+}
+
 
 // Colores con significado constante: no se usan tortas para grupos que se superponen.
 const COLORES_METODOS = {media_28d:'#c99727',semana_anterior:'#587bad',dia_semana_8sem:'#139d9a',estacional:'#9272c7',regresion:'#087f83'};
@@ -88,7 +233,7 @@ function dibujarComparacionMetodos(modelos) {
     const bloque=document.createElement('section');bloque.className='metodos-fuente';
     const titulo=document.createElement('h4');titulo.textContent=FUENTES_PANEL[modelo.dataset]||modelo.dataset;
     const descripcion=document.createElement('p');descripcion.className='nota';descripcion.textContent='Error relativo diario (WAPE). Menor es mejor. ✓ indica el método seleccionado en esta evaluación.';
-    const marco=document.createElement('div');marco.className='grafico grafico-metodos';
+    const marco=document.createElement('div');marco.className='grafico grafico-metodos grafico-vivo';
     const canvas=document.createElement('canvas');canvas.id='gMetodos-'+modelo.dataset;
     canvas.setAttribute('role','img');canvas.setAttribute('aria-label','Error diario por método en '+titulo.textContent);
     marco.appendChild(canvas);bloque.append(titulo,descripcion,marco);contenedor.appendChild(bloque);
@@ -189,7 +334,7 @@ async function proyectar() {
     kpi(fmt(proy.dia_pico), "Día de mayor ocupación esperada");
   $("#dia").max = proy.proyeccion.length;
   document.querySelectorAll(".txtDias").forEach(e => { e.textContent = proy.proyeccion.length; });
-  $("#exportarExcel").disabled = false;
+  actualizarDisponibilidadExportacion();
   dibujarCamas(+$("#dia").value);
   dibujarProyeccion();
   $("#tDias").innerHTML = `<thead><tr><th>Día</th><th>Ingresos</th><th>Altas (balance)</th><th>Ocupadas</th><th>Límite superior estimado (P90)</th>
@@ -210,7 +355,7 @@ function dibujarCamas(dia) {
   const libres = Math.max(0, cap - ocup);
   const exceso = Math.max(0, ocup - cap);
   const tasa = 100 * ocup / cap;
-  $("#resumenCamas").innerHTML = `<div class="resumen-texto"><b>${ocup} ocupadas de ${cap}</b><span>${libres} libres${exceso ? ` · ${exceso} por encima de la capacidad` : ""}</span></div><div class="barra-camas ${tasa > 90 ? "alta" : ""}" aria-hidden="true"><span style="width:${Math.min(100, tasa)}%"></span></div><small>${dia === 0 ? "Censo histórico reconstruido" : "Ocupación esperada, redondeada para este mapa"} · ${tasa.toFixed(1)} % de la capacidad supuesta.</small>`;
+  dibujarDonaCamas(ocup, cap, libres, exceso, tasa);
   const total = Math.max(cap, p90);
   const escala = Math.max(1, Math.ceil(total / 2000));
   const bloques = Math.ceil(total / escala);
@@ -282,17 +427,17 @@ if (!modelos.length) throw new Error(fallos.join(" | "));
     const x = r.backtest.metricas[k];
     filas += `<tr class="${k === r.metodo_elegido ? "elegido" : ""}">
       <td>${i === 0 ? `${r.dataset} <small>(${r.ingresos_promedio_dia}/día)</small>` : ""}</td>
-      <td style="text-align:left">${NOMBRE[k]}${k === r.metodo_elegido ? " ✓" : ""}</td>
+      <td class="texto-izquierda">${NOMBRE[k]}${k === r.metodo_elegido ? " ✓" : ""}</td>
       <td>${x.mae}</td><td>${x.wape_pct}%</td><td>${x.wape_semanal_pct}%</td><td>${x.cobertura_80pct}%</td></tr>`;
   }));
-  $("#tMetodos").innerHTML = `<thead><tr><th>Dataset</th><th style="text-align:left">Método</th><th>MAE</th>
+  $("#tMetodos").innerHTML = `<thead><tr><th>Dataset</th><th class="texto-izquierda">Método</th><th>MAE</th>
     <th>WAPE diario</th><th>WAPE semanal</th><th>Cobertura IC 80 %</th></tr></thead><tbody>${filas}</tbody>`;
 
   
     if (fallos.length) {
       const aviso = document.createElement("caption");
       aviso.className = "error";
-      aviso.style.captionSide = "bottom";
+      aviso.classList.add("nota-tabla");
       aviso.textContent = "No se pudieron cargar: " + fallos.join(" | ");
       $("#tMetodos").appendChild(aviso);
     }
@@ -329,20 +474,20 @@ const ev = await api("/modelo/evaluacion-agente?dataset=hdhi");
   $("#notaHorizonte").textContent = `Evaluación con ${ev.fechas_evaluadas} censos históricos. Error promedio: agente actual ${ref.mae_global_agente}, agente anterior ${ref.mae_global_agente_anterior} y referencia simple ${ref.mae_global_referencia} camas (incluye el período de desarrollo).`;
   if (ev.validacion_posterior) {
     const v = ev.validacion_posterior;
-    $("#notaHorizonte").textContent += ` Validación final con fechas que el modelo no vio (${v.fechas} censos, ${v.primer_censo} a ${v.ultimo_censo}): agente actual ${v.mae_agente}, agente anterior ${v.mae_agente_anterior} y referencia simple ${v.mae_referencia} camas.`;
+    $("#notaHorizonte").textContent += ` Validación posterior con corte temporal (${v.fechas} censos, ${v.primer_censo} a ${v.ultimo_censo}): agente actual ${v.mae_agente}, agente anterior ${v.mae_agente_anterior} y referencia simple ${v.mae_referencia} camas.`;
   }
-  if (cob.empirico_pct != null) $("#notaHorizonte").textContent += ` Escenario pesimista (P90): la ocupación real quedó por debajo en el ${cob.empirico_pct} % de ${cob.pronosticos_comparables} casos (lo esperado es 90 %).`;
+  if (cob.empirico_pct != null) $("#notaHorizonte").textContent += ` Límite superior estimado (P90): cobertura observada de ${cob.empirico_pct} % en ${cob.pronosticos_comparables} casos; el nivel nominal es 90 %. No garantiza cobertura futura.`;
 
   const reglas = { ocupacion_esperada_mayor_90: "Ocupación esperada > 90 % (consigna)",
-                   p90_mayor_90: "Limite superior nominal (P90) > 90 %", probabilidad_mayor_30: "Estimacion de excedencia ≥ 30 % (preventiva)" };
+                   p90_mayor_90: "Límite superior estimado (P90) > 90 %", probabilidad_mayor_30: "Estimacion de excedencia ≥ 30 % (preventiva)" };
   $("#tReglas").innerHTML = `<thead><tr><th>Regla</th><th>Alertas</th><th>Aciertos</th><th>Precisión</th><th>Recall</th></tr></thead><tbody>` +
     Object.entries(ev.reglas_de_alerta).map(([k, v]) => `<tr><td>${reglas[k]}</td><td>${v.alertas}</td><td>${v.aciertos}</td>
       <td>${v.precision == null ? "No aplica" : Math.round(100 * v.precision) + "%"}</td><td>${v.recall == null ? "No aplica" : Math.round(100 * v.recall) + "%"}</td></tr>`).join("") +
-    `</tbody><caption style="caption-side:bottom;text-align:left" class="nota">Semanas que realmente superaron el 90 %: ${ev.semanas_que_realmente_superaron_el_umbral} de ${ev.fechas_evaluadas}.</caption>`;
+    `</tbody><caption class="nota nota-tabla">Semanas que realmente superaron el 90 %: ${ev.semanas_que_realmente_superaron_el_umbral} de ${ev.fechas_evaluadas}.</caption>`;
 
       const aviso = document.createElement("caption");
       aviso.className = "nota";
-      aviso.style.captionSide = "bottom";
+      aviso.classList.add("nota-tabla");
       aviso.textContent = "Evaluacion historica de HDHI con capacidad base: "
         + ev.capacidad + " camas. El campo Camas de arriba solo modifica la proyeccion.";
       $("#tReglas").appendChild(aviso);
@@ -562,20 +707,26 @@ function seleccionarSolapa(nombre) {
   document.querySelectorAll("#solapas-principales [role=tab]").forEach(b => {
     const activa = b.dataset.tab === nombre;
     b.setAttribute("aria-selected", String(activa));
-    b.tabIndex = activa ? 0 : -1;
+    b.tabIndex = activa || (nombre === "administracion" && b.dataset.tab === "proyeccion") ? 0 : -1;
   });
   ["proyeccion", "estadisticas", "evaluacion", "sectores", "administracion"].forEach(id => {
     $("#vista-" + id).hidden = id !== nombre;
   });
+  $("#tab-administracion").setAttribute("aria-pressed", String(nombre === "administracion"));
   $("#controlesProyeccion").hidden = nombre !== "proyeccion";
   if (nombre === "sectores" && !referenciaSectoresCargada) cargarReferenciasSectores();
   if (nombre === "estadisticas" && !estadisticasCargadas) cargarEstadisticasHDHI();
   if (nombre === "evaluacion" && !evaluacionCargada) cargarEvaluacionSolapa();
   if (nombre === "administracion") actualizarPanelAdministracion();
+  actualizarTextoCarga();
   navegarDesdeMenu();
   // Chart.js recalcula dimensiones cuando su contenedor deja de estar oculto.
   requestAnimationFrame(() => Object.values(charts).forEach(c => c.resize()));
 }
+
+$("#tab-administracion").addEventListener("click", () => {
+  if (!$("#tab-administracion").hidden) seleccionarSolapa("administracion");
+});
 
 const botonesSolapa = [...document.querySelectorAll("#solapas-principales [role=tab]")];
 botonesSolapa.forEach((b, i) => {
@@ -722,7 +873,7 @@ function establecerMenuLateral(abierto, enfocar = false) {
   boton.title = abierto ? 'Ocultar menú' : 'Mostrar menú';
   boton.textContent = abierto ? '‹' : '☰';
   if (enfocar) {
-    const activo = barra.querySelector('[role="tab"][aria-selected="true"]');
+    const activo = barra.querySelector('[role="tab"][aria-selected="true"], #tab-administracion[aria-pressed="true"]');
     if (abierto && pantallaMenuMovil.matches) activo?.focus();
     else boton.focus();
   }
@@ -767,6 +918,66 @@ function inicializarMenuLateral() {
 }
 
 
+// Validaciones de interfaz de Darío, unificadas sin eventos duplicados.
+// La API mantiene sus propias validaciones de seguridad y de dominio.
+function inicializarValidacionNumerica() {
+  const esEntero = campo => {
+    const paso = campo.getAttribute('step');
+    return paso !== 'any' && (paso === null || Number.isInteger(Number(paso)));
+  };
+  function validar(campo) {
+    campo.setCustomValidity('');
+    const estado = campo.validity;
+    let mensaje = '';
+    if (estado.valueMissing) mensaje = 'Completá este campo.';
+    else if (estado.badInput) mensaje = 'Ingresá solo números.';
+    else if (estado.rangeUnderflow) mensaje = `El valor mínimo es ${campo.min}.`;
+    else if (estado.rangeOverflow) mensaje = `El valor máximo es ${campo.max}.`;
+    else if (estado.stepMismatch) mensaje = esEntero(campo)
+      ? 'Ingresá un número entero, sin decimales.'
+      : `Respetá el incremento permitido: ${campo.step}.`;
+    campo.setCustomValidity(mensaje);
+    return mensaje === '';
+  }
+  document.querySelectorAll('input[type="number"]').forEach(campo => {
+    campo.addEventListener('keydown', evento => {
+      if (evento.ctrlKey || evento.metaKey || evento.altKey) return;
+      if (['e','E','+','-'].includes(evento.key) ||
+          (esEntero(campo) && ['.',','].includes(evento.key))) evento.preventDefault();
+    });
+    campo.addEventListener('paste', evento => {
+      const texto = evento.clipboardData?.getData('text').trim();
+      if (texto == null) return;
+      evento.preventDefault();
+      const formato = esEntero(campo) ? /^\d+$/ : /^\d+(?:[.,]\d+)?$/;
+      if (!formato.test(texto)) {
+        campo.setCustomValidity(esEntero(campo) ? 'Pegá un número entero, sin letras ni signos.' : 'Pegá un número válido, sin letras.');
+        campo.reportValidity();
+        return;
+      }
+      campo.value = texto.replace(',', '.');
+      campo.dispatchEvent(new Event('input', {bubbles:true}));
+    });
+    campo.addEventListener('input', () => {
+      validar(campo);
+      // Conservar el cero inválido para que no se interprete como un campo vacío
+      // y se use por accidente la capacidad predeterminada.
+      if (campo.value !== '' && Number(campo.min) >= 1 && campo.validity.rangeUnderflow) {
+        campo.reportValidity();
+      }
+    });
+    campo.addEventListener('invalid', () => validar(campo));
+    campo.addEventListener('change', evento => {
+      validar(campo);
+      if (!campo.checkValidity()) {
+        evento.stopImmediatePropagation();
+        campo.reportValidity();
+      }
+    }, true);
+  });
+}
+
+inicializarValidacionNumerica();
 inicializarMenuLateral();
 verificarAcceso().then(permitido=>{if(permitido)iniciar();});
 
@@ -881,7 +1092,8 @@ function abrirCalendarioCenso(){
 // funciona sin internet). Respeta dataset, fecha, capacidad y horizonte elegidos.
 // ------------------------------------------------------------------
 function exportarExcel() {
-  if (!proy || typeof XLSX === "undefined") return;
+  actualizarDisponibilidadExportacion();
+  if ($('#exportarExcel').disabled) return;
   const nombreDataset = $("#dataset").selectedOptions[0]?.textContent || proy.dataset;
   const dias = proy.proyeccion.length;
   const resumen = [
@@ -901,7 +1113,7 @@ function exportarExcel() {
     [],
     ["Exportado el", new Date().toLocaleString("es-AR")],
   ];
-  const encabezados = ["Fecha", "Ingresos previstos", "Altas estimadas", "Camas ocupadas", "Escenario pesimista (P90)",
+  const encabezados = ["Fecha", "Ingresos previstos", "Altas estimadas", "Camas ocupadas", "Límite superior estimado (P90)",
                        "Camas libres", "Ocupación (%)", "Excedencia estimada (%)", "Ocupación real (camas)", "Alerta de Saturación"];
   const filas = proy.proyeccion.map((d, i) => [
     d.fecha, d.ingresos_previstos, d.altas_previstas, d.camas_ocupadas, d.camas_ocupadas_p90 ?? "",
@@ -916,4 +1128,21 @@ function exportarExcel() {
   XLSX.utils.book_append_sheet(libro, hojaDias, `Proyección ${dias} días`);
   XLSX.writeFile(libro, `proyeccion_${proy.dataset}_${proy.fecha_censo}_${dias}dias.xlsx`);
 }
-document.getElementById("exportarExcel")?.addEventListener("click", exportarExcel);
+function actualizarDisponibilidadExportacion() {
+  const disponible = typeof XLSX !== 'undefined';
+  const vigente = proy && proy.dataset === $('#dataset').value && proy.fecha_censo === $('#fecha').value
+    && proy.capacidad === Number($('#capacidad').value)
+    && proy.proyeccion.length === Number($('#horizonte').value);
+  $('#exportarExcel').disabled = !disponible || !vigente;
+  $('#estadoExportacion').textContent = !disponible
+    ? 'No se cargó la biblioteca de Excel. Revisá /vendor/xlsx.mini.min.js.'
+    : proy && !vigente ? 'Calculá la proyección para los controles elegidos antes de exportar.' : '';
+}
+$('#exportarExcel').addEventListener('click', () => {
+  try { exportarExcel(); }
+  catch (error) { $('#estadoExportacion').textContent = 'No se pudo generar el Excel: ' + error.message; }
+});
+['dataset','fecha','capacidad','horizonte'].forEach(id => {
+  $('#'+id).addEventListener('input', actualizarDisponibilidadExportacion);
+});
+actualizarDisponibilidadExportacion();
