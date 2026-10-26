@@ -171,6 +171,52 @@ async function cambiarEstadoUsuarioAdmin(usuario) {
   finally { operacionAdmin = false; restaurarBotonesAdmin(); }
 }
 
+// Presentación legible: los eventos originales de la API no se modifican.
+function textoValorAuditoria(valor, campo) {
+  if (valor === null || valor === undefined || valor === '') return 'Sin registrar';
+  if (campo === 'activo' && typeof valor === 'boolean') return valor ? 'Activo' : 'Inactivo';
+  if (campo === 'rol') return nombreRolAdmin(valor);
+  if (Array.isArray(valor)) return valor.map(v => textoValorAuditoria(v, campo)).join(', ');
+  if (typeof valor === 'object') return Object.entries(valor).map(([k,v]) => `${k}: ${textoValorAuditoria(v,k)}`).join('; ');
+  return String(valor);
+}
+
+function dibujarCambiosAuditoria(celda, cambios) {
+  const nombres = { nombre_completo:'Nombre completo', correo:'Correo electrónico', rol:'Rol', activo:'Estado', usuario:'Usuario' };
+  let datos = cambios;
+  if (typeof datos === 'string') {
+    try { datos = JSON.parse(datos); } catch { celda.textContent = datos; return; }
+  }
+  if (!datos || typeof datos !== 'object' || !Object.keys(datos).length) {
+    celda.textContent = 'Sin detalles registrados'; return;
+  }
+  const lista = document.createElement('ul'); lista.className = 'admin-cambios';
+  Object.entries(datos).forEach(([campo, valor]) => {
+    const item = document.createElement('li');
+    const etiqueta = document.createElement('strong'); etiqueta.textContent = (nombres[campo] || campo.replaceAll('_', ' ')) + ': ';
+    item.appendChild(etiqueta);
+    const esCambio = valor && typeof valor === 'object' && ('antes' in valor || 'despues' in valor);
+    item.appendChild(document.createTextNode(esCambio
+      ? `${textoValorAuditoria(valor.antes, campo)} → ${textoValorAuditoria(valor.despues, campo)}`
+      : textoValorAuditoria(valor, campo)));
+    lista.appendChild(item);
+  });
+  celda.appendChild(lista);
+}
+
+function mostrarApartadoAdmin(apartado) {
+  const historial = apartado === 'historial';
+  elementoAdmin('adminPanelUsuarios').hidden = historial;
+  elementoAdmin('adminPanelHistorial').hidden = !historial;
+  elementoAdmin('adminVerUsuarios').setAttribute('aria-pressed', String(!historial));
+  elementoAdmin('adminVerHistorial').setAttribute('aria-pressed', String(historial));
+  if (historial) {
+    const detalle = elementoAdmin('detalleAuditoria');
+    if (!detalle.open) detalle.open = true; // Su evento toggle carga el historial.
+    else cargarAuditoriaAdmin();
+  }
+}
+
 async function cargarAuditoriaAdmin() {
   mensajeAdmin('mensajeAuditoria','Cargando historial…');
   try {
@@ -179,11 +225,20 @@ async function cargarAuditoriaAdmin() {
     const h = tabla.createTHead().insertRow();
     ['Fecha','Responsable','Acción','Usuario afectado','Cambios'].forEach(t => { const th = document.createElement('th'); th.textContent=t; th.scope='col'; h.appendChild(th); });
     const cuerpo = tabla.createTBody();
-    r.eventos.forEach(e => { const fila = cuerpo.insertRow(); [new Date(e.instante).toLocaleString('es-AR'),e.actor,e.accion,e.usuario_afectado,JSON.stringify(e.cambios)].forEach(t=>fila.insertCell().textContent=t); });
+    const acciones = {crear:'Cuenta creada', editar:'Datos modificados', desactivar:'Cuenta desactivada', reactivar:'Cuenta reactivada'};
+    r.eventos.forEach(e => {
+      const fila = cuerpo.insertRow();
+      [new Date(e.instante).toLocaleString('es-AR'), e.actor, acciones[e.accion] || e.accion, e.usuario_afectado]
+        .forEach(t => fila.insertCell().textContent = t);
+      dibujarCambiosAuditoria(fila.insertCell(), e.cambios);
+    });
     elementoAdmin('listaAuditoria').replaceChildren(tabla);
     mensajeAdmin('mensajeAuditoria',r.eventos.length ? `${r.eventos.length} cambios registrados.` : 'Todavía no hay cambios administrativos registrados.');
   } catch (error) { elementoAdmin('listaAuditoria').replaceChildren(); mensajeAdmin('mensajeAuditoria',error.message,true); }
 }
+
+elementoAdmin('adminVerUsuarios').addEventListener('click', () => mostrarApartadoAdmin('usuarios'));
+elementoAdmin('adminVerHistorial').addEventListener('click', () => mostrarApartadoAdmin('historial'));
 
 elementoAdmin('recargarUsuarios').addEventListener('click', actualizarPanelAdministracion);
 elementoAdmin('nuevoUsuarioAdmin').addEventListener('click', () => abrirFormularioUsuarioAdmin());

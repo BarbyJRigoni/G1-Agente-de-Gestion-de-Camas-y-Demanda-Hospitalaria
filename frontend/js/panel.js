@@ -707,11 +707,12 @@ function seleccionarSolapa(nombre) {
   document.querySelectorAll("#solapas-principales [role=tab]").forEach(b => {
     const activa = b.dataset.tab === nombre;
     b.setAttribute("aria-selected", String(activa));
-    b.tabIndex = activa ? 0 : -1;
+    b.tabIndex = activa || (nombre === "administracion" && b.dataset.tab === "proyeccion") ? 0 : -1;
   });
   ["proyeccion", "estadisticas", "evaluacion", "sectores", "administracion"].forEach(id => {
     $("#vista-" + id).hidden = id !== nombre;
   });
+  $("#tab-administracion").setAttribute("aria-pressed", String(nombre === "administracion"));
   $("#controlesProyeccion").hidden = nombre !== "proyeccion";
   if (nombre === "sectores" && !referenciaSectoresCargada) cargarReferenciasSectores();
   if (nombre === "estadisticas" && !estadisticasCargadas) cargarEstadisticasHDHI();
@@ -722,6 +723,10 @@ function seleccionarSolapa(nombre) {
   // Chart.js recalcula dimensiones cuando su contenedor deja de estar oculto.
   requestAnimationFrame(() => Object.values(charts).forEach(c => c.resize()));
 }
+
+$("#tab-administracion").addEventListener("click", () => {
+  if (!$("#tab-administracion").hidden) seleccionarSolapa("administracion");
+});
 
 const botonesSolapa = [...document.querySelectorAll("#solapas-principales [role=tab]")];
 botonesSolapa.forEach((b, i) => {
@@ -868,7 +873,7 @@ function establecerMenuLateral(abierto, enfocar = false) {
   boton.title = abierto ? 'Ocultar menú' : 'Mostrar menú';
   boton.textContent = abierto ? '‹' : '☰';
   if (enfocar) {
-    const activo = barra.querySelector('[role="tab"][aria-selected="true"]');
+    const activo = barra.querySelector('[role="tab"][aria-selected="true"], #tab-administracion[aria-pressed="true"]');
     if (abierto && pantallaMenuMovil.matches) activo?.focus();
     else boton.focus();
   }

@@ -1725,6 +1725,7 @@ footer {
 /* Indicador de carga (aparece mientras se consultan datos) */
 
 .cargando {
+
   max-width:calc(100vw - 32px); pointer-events:none;
 
   position:fixed; top:16px; right:16px; z-index:50;
@@ -1772,37 +1773,84 @@ footer {
 .boton-exportar:focus-visible { outline:3px solid var(--aviso); outline-offset:2px }
 
 /* Estilos estáticos extraídos de las plantillas HTML. */
+
 .leyenda-ocupada { background:#11888b; }
+
 .leyenda-p90 { background:var(--nueva); }
+
 .leyenda-libre { background:var(--vacia); }
+
 .leyenda-exceso { background:var(--alerta); }
+
 .simbolos-admin { display:none; }
+
 .texto-izquierda { text-align:left; }
+
 .nota-tabla { caption-side:bottom; text-align:left; }
 
-
 /* Presentación de gráficos: conserva la paleta y no modifica el resto del panel. */
+
 .grafico-vivo {
+
   border:1px solid #e0ebf0; border-radius:16px; padding:12px;
+
   background:radial-gradient(ellipse at top right,#dff7f142,transparent 65%),#fff;
+
 }
+
 .grafico-patologias.grafico-vivo {
+
   background:linear-gradient(135deg,#f0faf8a0,#fff 75%);
+
 }
+
 .metodos-fuente .grafico-vivo { border:0; background:transparent; padding:0; }
+
 .ocupacion-circular { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:24px; padding:10px 0; }
+
 .dona-camas { position:relative; width:200px; height:200px; flex:0 0 200px; }
+
 .centro-dona { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; pointer-events:none; }
+
 .centro-dona strong { font-size:34px; line-height:1.15; letter-spacing:-.04em; color:#153c50; }
+
 .centro-dona strong small { font-size:16px; margin-left:2px; color:#5c7686; }
+
 .centro-dona>span { font-size:11px; color:#627c8c; margin-top:5px; }
+
 .cifras-dona { display:grid; grid-template-columns:1fr 1fr; gap:16px; flex:1 1 170px; max-width:310px; }
+
 .cifras-dona>div { display:flex; align-items:flex-start; gap:7px; font-size:12px; color:#5f7587; }
+
 .cifras-dona b { color:#214458; }
+
 .cifras-dona>div b { display:block; font-size:25px; line-height:1.3; }
+
 .cifras-dona i { display:block; width:9px; height:9px; border-radius:50%; margin-top:5px; flex-shrink:0; }
+
 .punto-ocupadas { background:#087f83; }
+
 .punto-libres { background:#bfdae4; }
+
 .cifras-dona>p { grid-column:1/-1; margin:0; font-size:11px; line-height:1.6; color:#5f7587; }
+
 .cifras-dona .exceso-dona { background:#fff0f3; color:#a62643; padding:9px 11px; border-radius:9px; }
+
 @media(max-width:600px) { .grafico-vivo { padding:7px; } .ocupacion-circular { gap:16px; } }
+
+/* Administración separada del análisis: conserva colores y controles actuales. */
+#barraLateral { display:flex; flex-direction:column; }
+#barraLateral > * { flex-shrink:0; }
+.lateral-administracion { margin-top:auto; padding-top:24px; }
+#tab-administracion { display:flex; align-items:center; gap:12px; width:100%; padding:15px 14px; border:0; border-top:1px solid #ffffff30; border-radius:12px; background:#ffffff0c; color:#e1f1f1; font:inherit; font-weight:700; text-align:left; cursor:pointer; }
+#tab-administracion:hover { background:#ffffff20; }
+#tab-administracion[aria-pressed=true] { background:#e2f5f1; color:#066f70; }
+#tab-administracion:focus-visible { outline:3px solid #a1e7d6; outline-offset:3px; }
+.admin-engranaje { font-size:23px; line-height:1; }
+.admin-navegacion { display:flex; gap:10px; flex-wrap:wrap; margin:0 0 22px; }
+.admin-navegacion .admin-boton[aria-pressed=true] { color:white; background:#087e82; border-color:#087e82; }
+.admin-cambios { margin:0; padding:0; list-style:none; min-width:220px; white-space:normal; overflow-wrap:anywhere; }
+.admin-cambios li + li { margin-top:6px; }
+#listaAuditoria { max-height:360px; overflow:auto; overscroll-behavior:contain; }
+#listaAuditoria th { position:sticky; top:0; z-index:1; }
+@media(max-width:600px) { #listaAuditoria { max-height:280px; } .admin-navegacion .admin-boton { flex:1; justify-content:center; } }
