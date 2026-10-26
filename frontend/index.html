@@ -107,7 +107,7 @@
     <div class="panel">
       <h3>Ocupación prevista y observada</h3>
       <p class="nota">Compará el pronóstico con lo ocurrido y con el umbral de alerta.</p>
-      <div class="grafico"><canvas id="gProy"></canvas></div>
+      <div class="grafico grafico-vivo"><canvas id="gProy"></canvas></div>
       <details>
   <summary>Cómo leer las líneas</summary>
   <p>Verde: ocupación esperada.
@@ -129,7 +129,7 @@
   Las altas se infieren por balance.
   Los valores proyectados pueden tener decimales porque son estimaciones.
 </p>
-    <div class="grafico "><canvas id="gMovimientos" role="img" aria-label="Ingresos previstos y altas estimadas por día"></canvas></div>
+    <div class="grafico grafico-vivo"><canvas id="gMovimientos" role="img" aria-label="Ingresos previstos y altas estimadas por día"></canvas></div>
     <p class="nota">Verde azulado: ingresos previstos. Azul: altas estimadas por balance. Son movimientos de pacientes, no porcentajes de ocupación.</p>
     <details class="datos-grafico"><summary>Ver el detalle diario completo</summary><div class="scroll"><table id="tDias"></table></div></details>
   </section>
@@ -167,8 +167,8 @@
 
   <section class="panel">
     <h3>Estancia por patología o comorbilidad</h3>
-    <p class="nota">Compará la duración promedio. Pasá sobre una barra o tocala para consultar la mediana y las cantidades.</p>
-<div class="grafico grafico-patologias"><canvas id="gPatologias" role="img" aria-label="Estancia promedio por patología, en días"></canvas></div>
+    <p class="nota">Cada círculo marca la estancia promedio. Pasá sobre un punto o tocá su línea para ver la mediana y las cantidades.</p>
+<div class="grafico grafico-patologias grafico-vivo"><canvas id="gPatologias" role="img" aria-label="Estancia promedio por patología, en días"></canvas></div>
 
     <details class="datos-grafico"><summary>Ver cantidades y valores por patología</summary>
     <div class="scroll">
@@ -185,8 +185,8 @@
 
   <section class="panel">
     <h3>Estancia por grupo de edad</h3>
-    <p class="nota">Barras intensas: promedio. Barras claras: mediana. Cada grupo de edad tiene su propio color.</p>
-<div class="grafico "><canvas id="gEdades" role="img" aria-label="Promedio y mediana de estancia por grupo de edad, en días"></canvas></div>
+    <p class="nota">Columnas de color: promedio. Rombos violetas: mediana. Cada grupo de edad conserva su color.</p>
+<div class="grafico grafico-vivo"><canvas id="gEdades" role="img" aria-label="Promedio y mediana de estancia por grupo de edad, en días"></canvas></div>
 
     <details class="datos-grafico"><summary>Ver cantidades y valores por edad</summary>
     <div class="scroll">
@@ -259,13 +259,13 @@
   <section class="dos">
     <div class="panel">
       <h3>Ingresos reales vs. pronóstico</h3>
-      <div class="grafico"><canvas id="gBack"></canvas></div>
+      <div class="grafico grafico-vivo"><canvas id="gBack"></canvas></div>
       <p class="nota">Gris: ingresos que realmente hubo. Verde: lo que pronosticó el método elegido, entrenado solo con datos anteriores. Amarillo punteado: la referencia más simple (promedio de las últimas 4 semanas).</p>
       <p class="nota" id="notaBack"></p>
     </div>
     <div class="panel">
       <h3>¿Cuánto se acercan los ingresos previstos a los observados?</h3>
-<div class="grafico "><canvas id="gDispersion" role="img" aria-label="Ingresos observados frente a previstos en HDHI"></canvas></div>
+<div class="grafico grafico-vivo"><canvas id="gDispersion" role="img" aria-label="Ingresos observados frente a previstos en HDHI"></canvas></div>
       <p class="nota">Cada punto es un día de HDHI. La diagonal indica coincidencia exacta: cuanto más cerca quede el punto, menor es el error. Por encima, el modelo sobreestima; por debajo, subestima.</p>
     </div>
   </section>
@@ -273,7 +273,7 @@
   <section class="dos">
     <div class="panel">
       <h3>Error del agente según los días de anticipación</h3>
-      <div class="grafico"><canvas id="gHorizonte"></canvas></div>
+      <div class="grafico grafico-vivo"><canvas id="gHorizonte"></canvas></div>
       <p class="nota">Cada barra es el error promedio, en camas, según cuántos días hacia adelante se proyecta (barras más bajas = mejor).
         <b>Agente actual</b>: el que usa el panel (modelo de ocupación).
         <b>Agente anterior</b>: la primera versión, basada en cuánto duran las internaciones.
@@ -307,7 +307,7 @@
   <section id="resultadoSectores" class="tab-panel" hidden>
     <div id="evidenciaSectores" class="sector-aviso"></div>
     <div class="dos" id="tarjetasSectores"></div>
-    <section class="panel"><h3>Dos sectores, una semana</h3><p class="nota">Las líneas muestran demanda esperada respecto de la capacidad de cada sector. Si supera el 100 %, hay demanda teórica sin cama; las camas de general no reemplazan a las de UTI.</p><div class="grafico"><canvas id="gSectores"></canvas></div></section>
+    <section class="panel"><h3>Dos sectores, una semana</h3><p class="nota">Las líneas muestran demanda esperada respecto de la capacidad de cada sector. Si supera el 100 %, hay demanda teórica sin cama; las camas de general no reemplazan a las de UTI.</p><div class="grafico grafico-vivo"><canvas id="gSectores"></canvas></div></section>
     <section class="panel"><h3>Ingresos, traslados y altas</h3><p class="nota">Los ingresos externos se cuentan una sola vez. Los traslados aparecen en ambos sectores y se cancelan en el balance hospitalario. Valores esperados: pueden contener decimales.</p><div class="scroll"><table id="tablaSectores"></table></div></section>
     <section class="panel"><details><summary>Ver parámetros, referencia y límites de este escenario</summary><p id="parametrosUsadosSectores" class="nota"></p><ul id="supuestosSectores"></ul></details></section>
   </section>

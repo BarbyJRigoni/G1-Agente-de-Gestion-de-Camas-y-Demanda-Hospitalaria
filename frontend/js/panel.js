@@ -64,10 +64,139 @@ function grafico(id, cfg) {
     return;
   }
   if (charts[id]) charts[id].destroy();
-  charts[id] = new Chart($(id), cfg);
+  charts[id] = new Chart($(id), estilizarGrafico(id, cfg));
 }
 const opc = extra => ({ maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
   plugins: { legend: { labels: { boxWidth: 14 } } }, ...extra });
+
+// PRESENTACIÓN DE GRÁFICOS. No modifica respuestas, métricas ni pronósticos.
+function degradadoGrafico(inicio, fin) {
+  return contexto => {
+    const grafico = contexto.chart, area = grafico.chartArea;
+    if (!area || !grafico.ctx?.createLinearGradient) return inicio;
+    const gradiente = grafico.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+    gradiente.addColorStop(0, inicio); gradiente.addColorStop(1, fin);
+    return gradiente;
+  };
+}
+
+const etiquetasBarras = {
+  id:'etiquetasBarrasVivas',
+  afterDatasetsDraw(grafico, argumentos, opciones) {
+    const contexto = grafico.ctx;
+    contexto.save(); contexto.font='600 11px system-ui'; contexto.fillStyle='#36566b';
+    contexto.textAlign='left'; contexto.textBaseline='middle';
+    const meta = grafico.getDatasetMeta(0), dataset = grafico.data.datasets[0];
+    meta.data.forEach((barra, indice) => {
+      if (!Number.isFinite(Number(dataset.data[indice]))) return;
+      if (opciones.puntos) {
+        contexto.beginPath();contexto.arc(barra.x,barra.y,6,0,Math.PI*2);
+        contexto.fillStyle=Array.isArray(dataset.backgroundColor)?dataset.backgroundColor[indice]:'#087f83';
+        contexto.fill();contexto.strokeStyle='#fff';contexto.lineWidth=2;contexto.stroke();
+      }
+      contexto.fillStyle='#36566b';
+      contexto.fillText(numeroVisual(dataset.data[indice])+(opciones.sufijo||''),barra.x+11,barra.y);
+    });
+    contexto.restore();
+  }
+};
+
+function estilizarGrafico(id, configuracion) {
+  const opciones = configuracion.options || (configuracion.options = {});
+  const series = configuracion.data.datasets;
+  const reducido = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  opciones.animation = reducido ? false : {duration:350};
+  opciones.plugins = opciones.plugins || {};
+  const leyenda = opciones.plugins.legend || (opciones.plugins.legend = {});
+  if (leyenda.display !== false) {
+    leyenda.position='bottom';
+    leyenda.labels={...leyenda.labels,usePointStyle:true,boxWidth:9,padding:18,color:'#4f667b'};
+  }
+  opciones.plugins.tooltip = {
+    backgroundColor:'#203d50',titleColor:'#fff',bodyColor:'#e5f3f5',padding:13,
+    cornerRadius:11,boxPadding:5,...opciones.plugins.tooltip
+  };
+  if (opciones.scales) Object.entries(opciones.scales).forEach(([nombre,eje]) => {
+    eje.border={display:false,...eje.border};
+    eje.ticks={color:'#62788b',font:{size:11},...eje.ticks};
+    eje.grid={color:'#e8eff4',drawTicks:false,...eje.grid};
+  });
+  if (id==='#gProy' || id==='#gBack') {
+    const elegida=series.find(s=>s.label==='Esperada'||s.label.startsWith('Pronóstico:'));
+    if (elegida) {
+      elegida.backgroundColor=degradadoGrafico('#18aaa947','#18aaa903');elegida.fill=true;
+      elegida.borderWidth=3;elegida.pointBorderColor='#fff';elegida.pointBorderWidth=2;elegida.pointHoverRadius=7;
+    }
+    series.filter(s=>s.label==='Real'||s.label==='Ingresos reales').forEach(s=>{s.borderDash=[3,3];s.borderColor='#7d91a8';});
+  }
+  if (id==='#gMovimientos') {
+    series[0].backgroundColor=degradadoGrafico('#21c3bc','#087f83');
+    series[1].backgroundColor=degradadoGrafico('#a8b6ed','#587bad');
+    series.forEach(s=>{s.borderRadius=8;s.borderSkipped=false;s.maxBarThickness=26;});
+  }
+  if (id==='#gPatologias' || id.startsWith('#gMetodos-')) {
+    const puntos=id==='#gPatologias';
+    series[0].barThickness=puntos?4:18;series[0].borderRadius=12;
+    const maximo=Math.max(0,...series[0].data.filter(v=>typeof v==='number'&&Number.isFinite(v)));
+    opciones.layout={...opciones.layout,padding:{right:42}};
+    opciones.scales.x.suggestedMax=maximo*1.25;
+    configuracion.plugins=[...(configuracion.plugins||[]),etiquetasBarras];
+    opciones.plugins.etiquetasBarrasVivas={puntos,sufijo:puntos?' días':' %'};
+  }
+  if (id==='#gEdades') {
+    series[0].borderRadius=8;series[0].borderSkipped=false;series[0].order=1;
+    series[1]={...series[1],type:'line',order:0,showLine:false,label:'Mediana (rombo)',
+      backgroundColor:'#8a6bbb',borderColor:'#8a6bbb',borderWidth:0,
+      pointStyle:'rectRot',pointRadius:6,pointHoverRadius:8,
+      pointBackgroundColor:'#8a6bbb',pointBorderColor:'#fff',pointBorderWidth:2};
+  }
+  if (id==='#gHorizonte') {
+    series[0].backgroundColor=degradadoGrafico('#23c4bb','#087f83');
+    series[0].borderRadius=7;series[0].maxBarThickness=34;series[0].order=1;
+    series.slice(1).forEach((s,i)=>{
+      s.type='line';s.order=0;s.borderColor=i?'#587bad':'#9272c7';s.backgroundColor=s.borderColor;
+      s.borderWidth=2;s.borderDash=i?[3,4]:[7,4];s.pointRadius=4;s.pointHoverRadius=6;
+      s.pointStyle=i?'rectRot':'circle';s.fill=false;s.tension=.15;
+    });
+  }
+  if (id==='#gSectores') {
+    configuracion.type='bar';
+    series.slice(0,2).forEach((s,i)=>{
+      s.type='bar';s.order=1;s.backgroundColor=i?degradadoGrafico('#28c6bd','#087f83'):degradadoGrafico('#9ec8ef','#4b78b0');
+      s.borderColor=i?'#087f83':'#4b78b0';s.borderWidth=0;s.borderRadius=6;s.maxBarThickness=27;
+    });
+    series[2].type='line';series[2].order=0;series[2].borderWidth=2;series[2].pointRadius=0;
+  }
+  if (id==='#gDispersion') {
+    series[0].backgroundColor='#16b7b080';series[0].borderColor='#087f83';
+    series[0].pointBorderWidth=1.5;series[0].pointRadius=5;series[0].pointHoverRadius=8;
+  }
+  return configuracion;
+}
+
+function dibujarDonaCamas(ocupadas, capacidad, libres, exceso, tasa) {
+  // La dona divide la capacidad en dos partes excluyentes. La demanda que la
+  // supera se informa aparte y nunca se oculta ni se cuenta como cama física.
+  $('#resumenCamas').innerHTML = `
+    <div class="ocupacion-circular">
+      <div class="dona-camas"><canvas id="gDonaCamas" role="img" aria-label="${Math.min(ocupadas,capacidad)} camas de capacidad cubiertas por la demanda y ${libres} libres; ${exceso} camas de exceso de demanda"></canvas>
+        <div class="centro-dona"><strong>${numeroVisual(tasa)}<small>%</small></strong><span>de la capacidad</span></div>
+      </div>
+      <div class="cifras-dona">
+        <div><i class="punto-ocupadas" aria-hidden="true"></i><span>${exceso?'Demanda':'Ocupadas'}<b>${numeroVisual(ocupadas,0)}</b></span></div>
+        <div><i class="punto-libres" aria-hidden="true"></i><span>Libres<b>${numeroVisual(libres,0)}</b></span></div>
+        <p>Capacidad supuesta: <b>${numeroVisual(capacidad,0)} camas</b></p>
+        ${exceso?`<p class="exceso-dona">${numeroVisual(exceso,0)} camas de demanda por encima de la capacidad.</p>`:''}
+      </div>
+    </div>
+    <small>${$('#dia').value==='0'?'Censo histórico reconstruido':'Ocupación esperada, redondeada para esta representación'}.</small>`;
+  grafico('#gDonaCamas',{type:'doughnut',data:{labels:['Capacidad ocupada por la demanda','Libre'],datasets:[{
+    data:[Math.min(ocupadas,capacidad),libres],backgroundColor:contexto=>contexto.dataIndex===0
+      ? (tasa>90?degradadoGrafico('#df6d88','#bd3049'):degradadoGrafico('#26c8bb','#087f83'))(contexto) : '#dcebf0',
+    borderWidth:0,borderRadius:5,spacing:3,hoverOffset:5
+  }]},options:{responsive:true,maintainAspectRatio:false,cutout:'80%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.label+': '+numeroVisual(ctx.raw,0)+' camas'}}}}});
+}
+
 
 // Colores con significado constante: no se usan tortas para grupos que se superponen.
 const COLORES_METODOS = {media_28d:'#c99727',semana_anterior:'#587bad',dia_semana_8sem:'#139d9a',estacional:'#9272c7',regresion:'#087f83'};
@@ -104,7 +233,7 @@ function dibujarComparacionMetodos(modelos) {
     const bloque=document.createElement('section');bloque.className='metodos-fuente';
     const titulo=document.createElement('h4');titulo.textContent=FUENTES_PANEL[modelo.dataset]||modelo.dataset;
     const descripcion=document.createElement('p');descripcion.className='nota';descripcion.textContent='Error relativo diario (WAPE). Menor es mejor. ✓ indica el método seleccionado en esta evaluación.';
-    const marco=document.createElement('div');marco.className='grafico grafico-metodos';
+    const marco=document.createElement('div');marco.className='grafico grafico-metodos grafico-vivo';
     const canvas=document.createElement('canvas');canvas.id='gMetodos-'+modelo.dataset;
     canvas.setAttribute('role','img');canvas.setAttribute('aria-label','Error diario por método en '+titulo.textContent);
     marco.appendChild(canvas);bloque.append(titulo,descripcion,marco);contenedor.appendChild(bloque);
@@ -226,7 +355,7 @@ function dibujarCamas(dia) {
   const libres = Math.max(0, cap - ocup);
   const exceso = Math.max(0, ocup - cap);
   const tasa = 100 * ocup / cap;
-  $("#resumenCamas").innerHTML = `<div class="resumen-texto"><b>${ocup} ocupadas de ${cap}</b><span>${libres} libres${exceso ? ` · ${exceso} por encima de la capacidad` : ""}</span></div><div class="barra-camas ${tasa > 90 ? "alta" : ""}" aria-hidden="true"><span style="width:${Math.min(100, tasa)}%"></span></div><small>${dia === 0 ? "Censo histórico reconstruido" : "Ocupación esperada, redondeada para este mapa"} · ${tasa.toFixed(1)} % de la capacidad supuesta.</small>`;
+  dibujarDonaCamas(ocup, cap, libres, exceso, tasa);
   const total = Math.max(cap, p90);
   const escala = Math.max(1, Math.ceil(total / 2000));
   const bloques = Math.ceil(total / escala);
