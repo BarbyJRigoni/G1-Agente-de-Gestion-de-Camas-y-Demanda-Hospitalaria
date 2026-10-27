@@ -135,20 +135,13 @@ function estilizarGrafico(id, configuracion) {
     series.forEach(s=>{s.borderRadius=8;s.borderSkipped=false;s.maxBarThickness=26;});
   }
   if (id==='#gPatologias' || id.startsWith('#gMetodos-')) {
-    const puntos=id==='#gPatologias';
-    series[0].barThickness=puntos?4:18;series[0].borderRadius=12;
+    const patologia=id==='#gPatologias';
+    series[0].barThickness=18;series[0].borderRadius=7;
     const maximo=Math.max(0,...series[0].data.filter(v=>typeof v==='number'&&Number.isFinite(v)));
-    opciones.layout={...opciones.layout,padding:{right:42}};
-    opciones.scales.x.suggestedMax=maximo*1.25;
+    opciones.layout={...opciones.layout,padding:{right:65}};
+    opciones.scales.x.suggestedMax=Math.max(opciones.scales.x.suggestedMax||0,maximo*1.25);
     configuracion.plugins=[...(configuracion.plugins||[]),etiquetasBarras];
-    opciones.plugins.etiquetasBarrasVivas={puntos,sufijo:puntos?' días':' %'};
-  }
-  if (id==='#gEdades') {
-    series[0].borderRadius=8;series[0].borderSkipped=false;series[0].order=1;
-    series[1]={...series[1],type:'line',order:0,showLine:false,label:'Mediana (rombo)',
-      backgroundColor:'#8a6bbb',borderColor:'#8a6bbb',borderWidth:0,
-      pointStyle:'rectRot',pointRadius:6,pointHoverRadius:8,
-      pointBackgroundColor:'#8a6bbb',pointBorderColor:'#fff',pointBorderWidth:2};
+    opciones.plugins.etiquetasBarrasVivas={puntos:false,sufijo:patologia?' días':' %'};
   }
   if (id==='#gHorizonte') {
     series[0].backgroundColor=degradadoGrafico('#23c4bb','#087f83');
@@ -204,10 +197,23 @@ const COLORES_GRUPOS = ['#087f83','#458ac2','#8a6bbb','#21a69a','#c49a36','#697f
 
 function dibujarEstancias(datos) {
   const patologias = [...datos.patologias].sort((a,b) => b.alos_promedio-a.alos_promedio);
-  grafico('#gPatologias', {type:'bar',data:{
+  const alosGeneral = Number(datos.alos_general_dias);
+  if (!Number.isFinite(alosGeneral) || alosGeneral <= 0) throw new Error('ALOS general inválido.');
+  const referenciaGeneral = {
+    id:'referenciaGeneralEstancias',
+    afterDatasetsDraw(chart) {
+      const x = chart.scales.x.getPixelForValue(alosGeneral);
+      if (x < chart.chartArea.left || x > chart.chartArea.right) return;
+      const ctx = chart.ctx; ctx.save(); ctx.strokeStyle='#6950ad'; ctx.lineWidth=2;
+      ctx.setLineDash([6,5]); ctx.beginPath(); ctx.moveTo(x,chart.chartArea.top);
+      ctx.lineTo(x,chart.chartArea.bottom); ctx.stroke(); ctx.restore();
+    }
+  };
+  $('#referenciaAlosGeneral').textContent = 'Línea violeta: promedio general de '+numeroVisual(alosGeneral,2)+' días.';
+  grafico('#gPatologias', {type:'bar',plugins:[referenciaGeneral],data:{
     labels:patologias.map(p=>p.patologia),
     datasets:[{label:'Estancia promedio (días)',data:patologias.map(p=>p.alos_promedio),
-      backgroundColor:patologias.map((_,i)=>COLORES_GRUPOS[i%COLORES_GRUPOS.length]),borderRadius:7,maxBarThickness:27}]
+      backgroundColor:degradadoGrafico('#36afa9','#448bc2'),borderRadius:7,maxBarThickness:24,borderSkipped:false}]
   },options:opc({indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{
     afterLabel:contexto=>{
       const p=patologias[contexto.dataIndex];
@@ -215,13 +221,37 @@ function dibujarEstancias(datos) {
         'Mediana: '+numeroVisual(p.mediana_dias)+' días',
         'Diagnóstico desconocido: '+(p.cantidad_sin_dato == null ? 'Sin dato' : numeroVisual(p.cantidad_sin_dato,0))];
     }
-  }}},scales:{x:{beginAtZero:true,title:{display:true,text:'Días de estancia promedio'}},y:{grid:{display:false}}}})});
-  const edades=datos.grupos_etarios;
-  const colores=edades.map((_,i)=>COLORES_GRUPOS[i%COLORES_GRUPOS.length]);
-  grafico('#gEdades',{type:'bar',data:{labels:edades.map(g=>g.grupo_etario),datasets:[
-    {label:'Promedio',data:edades.map(g=>g.alos_promedio),backgroundColor:colores,borderRadius:6,maxBarThickness:34},
-    {label:'Mediana',data:edades.map(g=>g.mediana_dias),backgroundColor:colores.map(c=>c+'55'),borderColor:colores,borderWidth:1,borderRadius:6,maxBarThickness:34}
-  ]},options:opc({plugins:{tooltip:{callbacks:{afterLabel:contexto=>'Internaciones del grupo: '+numeroVisual(edades[contexto.dataIndex].cantidad_internaciones,0)}}},scales:{y:{beginAtZero:true,title:{display:true,text:'Días de estancia'}},x:{grid:{display:false},title:{display:true,text:'Grupo de edad (años)'}}}})});
+  }}},scales:{x:{beginAtZero:true,suggestedMax:Math.max(alosGeneral,...patologias.map(p=>p.alos_promedio))*1.2,title:{display:true,text:'Días de estancia promedio'}},y:{grid:{display:false}}}})});
+
+  const total = Number(datos.total_internaciones);
+  const edades = datos.grupos_etarios.map((g,i)=>({nombre:g.grupo_etario,cantidad:Number(g.cantidad_internaciones),color:COLORES_GRUPOS[i%COLORES_GRUPOS.length]}));
+  if (!Number.isSafeInteger(total) || total <= 0 || edades.some(g=>!Number.isSafeInteger(g.cantidad)||g.cantidad<0)) {
+    throw new Error('Las cantidades por edad no son válidas.');
+  }
+  const conocidos = edades.reduce((s,g)=>s+g.cantidad,0);
+  const sinGrupo = datos.cantidad_sin_grupo_etario == null ? total-conocidos : Number(datos.cantidad_sin_grupo_etario);
+  if (!Number.isSafeInteger(sinGrupo) || sinGrupo<0 || conocidos+sinGrupo!==total) {
+    throw new Error('Las cantidades por edad no coinciden con el total de episodios.');
+  }
+  if (sinGrupo>0) edades.push({nombre:'Sin grupo etario',cantidad:sinGrupo,color:'#8796a6'});
+  $('#totalDonaEdades').textContent = numeroVisual(total,0);
+  const porcentaje = cantidad => (100*cantidad/total).toLocaleString('es-AR',{minimumFractionDigits:1,maximumFractionDigits:1});
+  const leyenda = $('#leyendaDonaEdades'); leyenda.replaceChildren();
+  edades.forEach(g=>{
+    const fila=document.createElement('div');fila.className='estancias-fila-edad';
+    const nombre=document.createElement('span');const color=document.createElement('span');
+    color.className='estancias-color-edad';color.style.backgroundColor=g.color;color.setAttribute('aria-hidden','true');
+    nombre.append(color,document.createTextNode(g.nombre));
+    const valor=document.createElement('span');valor.textContent=numeroVisual(g.cantidad,0)+' · '+porcentaje(g.cantidad)+' %';
+    fila.append(nombre,valor);leyenda.appendChild(fila);
+  });
+  $('#gEdades').setAttribute('aria-label','Distribución de '+numeroVisual(total,0)+' episodios por edad: '+edades.map(g=>g.nombre+', '+numeroVisual(g.cantidad,0)+' episodios, '+porcentaje(g.cantidad)+' por ciento').join('; '));
+  grafico('#gEdades',{type:'doughnut',data:{labels:edades.map(g=>g.nombre),datasets:[{
+    label:'Episodios',data:edades.map(g=>g.cantidad),backgroundColor:edades.map(g=>g.color),
+    borderWidth:0,hoverOffset:6,spacing:1
+  }]},options:opc({responsive:true,cutout:'72%',interaction:{mode:'nearest',intersect:true},plugins:{legend:{display:false},tooltip:{callbacks:{
+    label:contexto=>numeroVisual(contexto.raw,0)+' episodios · '+porcentaje(contexto.raw)+' % del total'
+  }}}})});
 }
 
 function dibujarComparacionMetodos(modelos) {
@@ -688,6 +718,7 @@ async function cargarEstadisticasHDHI() {
     $("#tablaPatologias").replaceChildren();
     $("#tablaEdades").replaceChildren();
     ["#gPatologias", "#gEdades"].forEach(id => { if(charts[id]) { charts[id].destroy(); delete charts[id]; } });
+    ["#referenciaAlosGeneral", "#totalDonaEdades", "#leyendaDonaEdades"].forEach(id => $(id)?.replaceChildren());
     estado.className = "error";
     estado.textContent = "No se pudieron cargar los indicadores: " + e.message;
     estadisticasCargadas = false;

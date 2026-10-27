@@ -1854,3 +1854,23 @@ footer {
 #listaAuditoria { max-height:360px; overflow:auto; overscroll-behavior:contain; }
 #listaAuditoria th { position:sticky; top:0; z-index:1; }
 @media(max-width:600px) { #listaAuditoria { max-height:280px; } .admin-navegacion .admin-boton { flex:1; justify-content:center; } }
+
+/* INICIO GRAFICOS ESTANCIAS BARRAS Y DONA */
+#vista-estadisticas .estancias-panel-grafico { width:100%; min-width:0; }
+#vista-estadisticas .estancias-referencia { color:#6950ad; margin:8px 0 14px; }
+#vista-estadisticas .estancias-distribucion { display:grid; grid-template-columns:minmax(230px,1fr) minmax(230px,1fr); align-items:center; gap:30px; padding:20px 12px; }
+#vista-estadisticas .estancias-dona-marco { position:relative; height:300px; width:100%; max-width:380px; justify-self:center; }
+#vista-estadisticas .estancias-dona-centro { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; }
+#vista-estadisticas .estancias-dona-centro b { color:var(--tinta); font-size:clamp(26px,3vw,36px); line-height:1.25; }
+#vista-estadisticas .estancias-dona-centro span { color:var(--suave); font-size:12px; }
+#vista-estadisticas .estancias-leyenda { display:grid; gap:8px; width:100%; max-width:460px; }
+#vista-estadisticas .estancias-fila-edad { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:10px 0; border-bottom:1px solid var(--linea); font-size:13px; }
+#vista-estadisticas .estancias-fila-edad>span:first-child { display:flex; align-items:center; gap:10px; }
+#vista-estadisticas .estancias-fila-edad>span:last-child { text-align:right; font-variant-numeric:tabular-nums; }
+#vista-estadisticas .estancias-color-edad { width:12px; height:12px; border-radius:4px; flex-shrink:0; }
+@media(max-width:650px) {
+  #vista-estadisticas .estancias-distribucion { grid-template-columns:1fr; gap:18px; padding:16px 0; }
+  #vista-estadisticas .estancias-dona-marco { height:260px; max-width:300px; }
+  #vista-estadisticas .estancias-leyenda { justify-self:center; }
+}
+/* FIN GRAFICOS ESTANCIAS BARRAS Y DONA */

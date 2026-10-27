@@ -158,34 +158,31 @@
            aria-label="Resumen de HDHI">
   </section>
 
-  <section class="panel">
-    <h3>Estancia por patología o comorbilidad</h3>
-    <p class="nota">Cada círculo marca la estancia promedio. Pasá sobre un punto o tocá su línea para ver la mediana y las cantidades.</p>
-<div class="grafico grafico-patologias grafico-vivo"><canvas id="gPatologias" role="img" aria-label="Estancia promedio por patología, en días"></canvas></div>
-
+  <section class="panel estancias-panel-grafico">
+    <h3>Estancia promedio por patología</h3>
+    <p class="nota">Las barras comparan la duración promedio de las internaciones con cada condición.</p>
+    <p id="referenciaAlosGeneral" class="nota estancias-referencia" role="status"></p>
+    <div class="grafico grafico-patologias grafico-vivo"><canvas id="gPatologias" role="img" aria-label="Estancia promedio por patología, en días"></canvas></div>
     <details class="datos-grafico"><summary>Ver cantidades y valores por patología</summary>
-    <div class="scroll">
-      <table id="tablaPatologias"></table>
-    </div>
+      <div class="scroll"><table id="tablaPatologias"></table></div>
     </details>
-
-    <p class="nota">
-      Una internación puede tener varias condiciones:
-      las filas no se suman como pacientes únicos.
-      Los datos desconocidos no equivalen a ausencia de enfermedad.
-    </p>
+    <p class="nota">Una internación puede tener varias condiciones. Las cantidades por patología no se suman como pacientes únicos. Los diagnósticos desconocidos no equivalen a ausencia de enfermedad.</p>
   </section>
 
-  <section class="panel">
-    <h3>Estancia por grupo de edad</h3>
-    <p class="nota">Columnas de color: promedio. Rombos violetas: mediana. Cada grupo de edad conserva su color.</p>
-<div class="grafico grafico-vivo"><canvas id="gEdades" role="img" aria-label="Promedio y mediana de estancia por grupo de edad, en días"></canvas></div>
-
-    <details class="datos-grafico"><summary>Ver cantidades y valores por edad</summary>
-    <div class="scroll">
-      <table id="tablaEdades"></table>
+  <section class="panel estancias-panel-grafico">
+    <h3>Internaciones por grupo de edad</h3>
+    <p class="nota">Distribución de episodios: cada porción representa un grupo de edad.</p>
+    <div class="estancias-distribucion">
+      <div class="estancias-dona-marco">
+        <canvas id="gEdades" role="img" aria-label="Distribución de internaciones por grupo de edad"></canvas>
+        <div class="estancias-dona-centro" aria-hidden="true"><b id="totalDonaEdades">—</b><span>episodios analizados</span></div>
+      </div>
+      <div id="leyendaDonaEdades" class="estancias-leyenda" aria-label="Cantidades y porcentajes por edad"></div>
     </div>
+    <details class="datos-grafico"><summary>Ver ALOS, mediana y cantidades por edad</summary>
+      <div class="scroll"><table id="tablaEdades"></table></div>
     </details>
+    <p class="nota">La dona muestra cantidades, no días de estancia. El promedio (ALOS) y la mediana por edad se conservan en la tabla. Los porcentajes se redondean a un decimal.</p>
   </section>
 
   <section class="panel">
