@@ -1874,3 +1874,47 @@ footer {
   #vista-estadisticas .estancias-leyenda { justify-self:center; }
 }
 /* FIN GRAFICOS ESTANCIAS BARRAS Y DONA */
+
+/* Botón "Exportar a Excel" sobre cada tabla */
+.barra-exportar { display:flex; justify-content:flex-end; align-items:center; gap:12px; flex-wrap:wrap; margin:10px 0 8px }
+.boton-exportar-chico { padding:6px 14px; font-size:14px }
+.estado-exportar:empty { display:none }
+
+/* INICIO MENU LATERAL COMPACTO */
+#barraLateral { padding:14px; }
+#barraLateral .lateral-marca { gap:10px; padding-bottom:12px; }
+#barraLateral .lateral-marca>span { width:34px; height:34px; font-size:22px; }
+#barraLateral .lateral-marca strong { font-size:15px; line-height:1.3; }
+#barraLateral .lateral-marca small { font-size:11px; }
+#barraLateral .lateral-etiqueta { margin:12px 0 6px; }
+#barraLateral .solapas { gap:3px; }
+#barraLateral .solapas button { min-height:38px; padding:7px 10px; font-size:13px; gap:9px; }
+#barraLateral .tab-num { width:22px; height:22px; font-size:11px; }
+#barraLateral .lateral-configuracion { margin-top:12px; }
+#barraLateral #controlesProyeccion { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:end; gap:10px; padding-top:12px; }
+#barraLateral #controlesProyeccion>label,
+#barraLateral .campo-fecha-censo,
+#barraLateral #casos { grid-column:1/-1; }
+#barraLateral #controlesProyeccion>label:has(#capacidad) { grid-column:1; }
+#barraLateral #controlesProyeccion>label:has(#horizonte) { grid-column:2; }
+#barraLateral #controlesProyeccion label { margin:0; gap:5px; font-size:12px; line-height:1.4; }
+#barraLateral .campo-fecha-censo>label { display:block; margin-bottom:5px; }
+#barraLateral select,
+#barraLateral input,
+#barraLateral .fecha-compacta { min-height:38px; padding:8px 10px; font-size:13px; line-height:1.4; }
+#barraLateral .fecha-compacta { width:100%; }
+#barraLateral .campo-fecha-censo { width:100%; }
+#barraLateral #casos { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; padding:10px 0 0; margin:0; }
+#barraLateral #casos::before { grid-column:1/-1; margin:0 0 3px; font-size:12px; }
+#barraLateral #casos button { min-height:38px; width:100%; min-width:0; padding:8px 3px; font-size:12px; line-height:1.3; }
+#barraLateral #casos button::before { width:6px; height:6px; flex-shrink:0; }
+#barraLateral .lateral-administracion { padding-top:12px; }
+#barraLateral #tab-administracion { padding:9px 10px; min-height:38px; font-size:13px; }
+#barraLateral .admin-engranaje { font-size:20px; }
+@media(max-width:900px) {
+  #barraLateral .solapas button,
+  #barraLateral #tab-administracion,
+  #barraLateral #casos button { min-height:44px; }
+  #barraLateral select,#barraLateral input,#barraLateral .fecha-compacta { min-height:44px; font-size:16px; }
+}
+/* FIN MENU LATERAL COMPACTO */
