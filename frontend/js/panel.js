@@ -1146,3 +1146,138 @@ $('#exportarExcel').addEventListener('click', () => {
   $('#'+id).addEventListener('input', actualizarDisponibilidadExportacion);
 });
 actualizarDisponibilidadExportacion();
+
+
+// ------------------------------------------------------------------
+// Exportar a Excel cada tabla del panel
+// Agrega un botón "Exportar a Excel" a cada tabla (lista) del panel y lo
+// descarga tal como se ve: mismas filas, mismos filtros y los parámetros
+// elegidos en pantalla. Usa SheetJS, incluido en /vendor (funciona sin internet).
+// Responsable: Bárbara (IA e interfaz)
+// ------------------------------------------------------------------
+(function () {
+  // Tablas del panel: id -> nombre de la hoja y del archivo
+  const TABLAS = {
+    tDias:            { titulo: "Detalle diario de la proyección", archivo: "detalle_diario" },
+    tablaPatologias:  { titulo: "Estancias por patología", archivo: "estancias_por_patologia" },
+    tablaEdades:      { titulo: "Estancias por grupo etario", archivo: "estancias_por_edad" },
+    tMetodos:         { titulo: "Métricas de los métodos de ingresos", archivo: "metricas_metodos_ingresos" },
+    tReglas:          { titulo: "Reglas de alerta evaluadas", archivo: "reglas_de_alerta" },
+    tablaSectores:    { titulo: "Ingresos, traslados y altas (UTI y general)", archivo: "ingresos_traslados_altas", numerosEsAR: true },
+  };
+  const COLUMNAS_SIN_DATOS = ["acciones"];   // botones de la tabla, no se exportan
+
+  const texto = el => (el?.textContent || "").replace(/\s+/g, " ").trim();
+  const valor = id => document.getElementById(id);
+
+  function nombreSeguro(t) {
+    return t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w]+/g, "_").replace(/^_|_$/g, "").toLowerCase();
+  }
+
+  // Título de una tabla sin configuración (por ejemplo, las de Administración)
+  function tituloCercano(tabla) {
+    if (tabla.closest("#detalleAuditoria")) return "Historial de cambios de usuarios";
+    if (tabla.classList.contains("admin-tabla")) return "Usuarios";
+    const contenedor = tabla.closest("details, section, article, div");
+    const encabezado = contenedor?.querySelector("summary, h2, h3, h4");
+    return texto(encabezado) || "Tabla";
+  }
+
+  // Parámetros visibles en pantalla, para que el Excel diga de qué escenario sale
+  function contexto(titulo) {
+    const filas = [["Agente de Gestión de Camas · Grupo 1"], [], ["Tabla", titulo]];
+    const ds = valor("dataset");
+    if (ds) filas.push(["Fuente de datos", ds.selectedOptions[0]?.textContent || ds.value]);
+    if (valor("fecha")?.value) filas.push(["Fecha del censo", valor("fecha").value]);
+    if (valor("capacidad")?.value) filas.push(["Capacidad (camas)", Number(valor("capacidad").value)]);
+    if (valor("horizonte")?.value) filas.push(["Horizonte de la proyección (días)", Number(valor("horizonte").value)]);
+    filas.push([], ["Exportado el", new Date().toLocaleString("es-AR")]);
+    return filas;
+  }
+
+  // Copia de la tabla sin las columnas de botones (por ejemplo, "Acciones").
+  // Si la tabla muestra números en formato argentino ("91,7" o "1.280"), se pasan
+  // a formato numérico para que Excel no confunda la coma decimal con miles.
+  function tablaParaExportar(tabla, numerosEsAR) {
+    const copia = tabla.cloneNode(true);
+    if (numerosEsAR) {
+      copia.querySelectorAll("td").forEach(c => {
+        const t = texto(c);
+        if (/^-?\d{1,3}(\.\d{3})*(,\d+)?\s*%?$/.test(t) || /^-?\d+(,\d+)?\s*%?$/.test(t))
+          c.textContent = t.replace(/\./g, "").replace(",", ".");
+      });
+    }
+    const encabezados = [...(copia.tHead?.rows[0]?.cells || [])];
+    const quitar = encabezados.map((c, i) => COLUMNAS_SIN_DATOS.includes(texto(c).toLowerCase()) ? i : -1)
+                              .filter(i => i >= 0).reverse();
+    if (quitar.length) [...copia.rows].forEach(f => quitar.forEach(i => f.cells[i] && f.deleteCell(i)));
+    copia.querySelectorAll("button, input, select, svg, [aria-hidden='true'], .admin-avatar, .avatar").forEach(n => n.remove());
+    return copia;
+  }
+
+  // Arma la hoja celda por celda: los números quedan como números (los % con formato %)
+  // y el resto como texto (así "mié 5-3" no se convierte en una fecha equivocada).
+  function hojaDesdeTabla(tabla) {
+    const filas = [...tabla.rows].map(f => [...f.cells].map(c => {
+      const t = texto(c);
+      const m = t.match(/^(-?\d+(?:\.\d+)?)\s*(%?)$/);
+      if (!m) return { t: "s", v: t };
+      return m[2] ? { t: "n", v: Number(m[1]) / 100, z: "0.0%" } : { t: "n", v: Number(m[1]) };
+    }));
+    return XLSX.utils.aoa_to_sheet(filas);
+  }
+
+  function exportarTabla(tabla, titulo, archivo, aviso, numerosEsAR) {
+    if (typeof XLSX === "undefined") { aviso("No se cargó la biblioteca de Excel (/vendor/xlsx.mini.min.js)."); return; }
+    if (!tabla.tBodies.length || !tabla.tBodies[0].rows.length) { aviso("La tabla todavía no tiene datos para exportar."); return; }
+    const libro = XLSX.utils.book_new();
+    const hojaDatos = hojaDesdeTabla(tablaParaExportar(tabla, numerosEsAR));
+    const columnas = (tabla.tHead?.rows[0]?.cells.length) || 8;
+    hojaDatos["!cols"] = Array.from({ length: columnas }, () => ({ wch: 18 }));
+    const hojaContexto = XLSX.utils.aoa_to_sheet(contexto(titulo));
+    hojaContexto["!cols"] = [{ wch: 34 }, { wch: 60 }];
+    XLSX.utils.book_append_sheet(libro, hojaDatos, titulo.slice(0, 31));   // Excel admite hasta 31 caracteres
+    XLSX.utils.book_append_sheet(libro, hojaContexto, "Parámetros");
+    const fecha = valor("fecha")?.value ? "_" + valor("fecha").value : "";
+    XLSX.writeFile(libro, `${archivo}${fecha}.xlsx`);
+    aviso("");
+  }
+
+  function agregarBoton(tabla, cfg) {
+    if (tabla.dataset.conExcel) return;
+    tabla.dataset.conExcel = "1";
+    const titulo = cfg?.titulo || tituloCercano(tabla);
+    const archivo = cfg?.archivo || nombreSeguro(titulo);
+    const barra = document.createElement("div");
+    barra.className = "barra-exportar";
+    const estado = document.createElement("span");
+    estado.className = "nota estado-exportar";
+    estado.setAttribute("role", "status");
+    const boton = document.createElement("button");
+    boton.type = "button";
+    boton.className = "boton-exportar boton-exportar-chico";
+    boton.textContent = "Exportar a Excel";
+    boton.title = `Descargar "${titulo}" en Excel, tal como se ve en pantalla`;
+    boton.addEventListener("click", () => {
+      // El detalle diario usa la exportación completa (con resumen de la proyección)
+      if (tabla.id === "tDias" && document.getElementById("exportarExcel") && typeof exportarExcel === "function") {
+        try { exportarExcel(); estado.textContent = ""; }
+        catch (e) { estado.textContent = "No se pudo generar el Excel: " + e.message; }
+        return;
+      }
+      try { exportarTabla(tabla, titulo, archivo, m => { estado.textContent = m; }, cfg?.numerosEsAR); }
+      catch (e) { estado.textContent = "No se pudo generar el Excel: " + e.message; }
+    });
+    barra.append(estado, boton);
+    (tabla.closest(".scroll") || tabla).before(barra);
+  }
+
+  function revisarTablas() {
+    Object.entries(TABLAS).forEach(([id, cfg]) => { const t = valor(id); if (t) agregarBoton(t, cfg); });
+    // Tablas que se crean al vuelo (Administración: usuarios e historial)
+    document.querySelectorAll("table.admin-tabla").forEach(t => agregarBoton(t));
+  }
+
+  revisarTablas();
+  new MutationObserver(revisarTablas).observe(document.body, { childList: true, subtree: true });
+})();

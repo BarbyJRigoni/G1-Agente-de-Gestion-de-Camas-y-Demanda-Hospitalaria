@@ -1854,3 +1854,9 @@ footer {
 #listaAuditoria { max-height:360px; overflow:auto; overscroll-behavior:contain; }
 #listaAuditoria th { position:sticky; top:0; z-index:1; }
 @media(max-width:600px) { #listaAuditoria { max-height:280px; } .admin-navegacion .admin-boton { flex:1; justify-content:center; } }
+
+
+/* Botón "Exportar a Excel" sobre cada tabla */
+.barra-exportar { display:flex; justify-content:flex-end; align-items:center; gap:12px; flex-wrap:wrap; margin:10px 0 8px }
+.boton-exportar-chico { padding:6px 14px; font-size:14px }
+.estado-exportar:empty { display:none }
