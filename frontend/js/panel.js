@@ -1187,6 +1187,8 @@ actualizarDisponibilidadExportacion();
 // Responsable: Bárbara (IA e interfaz)
 // ------------------------------------------------------------------
 (function () {
+  // Cada barra pertenece a una tabla concreta; se retira si esa tabla desaparece.
+  const barrasExcelPorTabla = new Map();
   // Tablas del panel: id -> nombre de la hoja y del archivo
   const TABLAS = {
     tDias:            { titulo: "Detalle diario de la proyección", archivo: "detalle_diario" },
@@ -1275,8 +1277,7 @@ actualizarDisponibilidadExportacion();
   }
 
   function agregarBoton(tabla, cfg) {
-    if (tabla.dataset.conExcel) return;
-    tabla.dataset.conExcel = "1";
+    if (barrasExcelPorTabla.has(tabla)) return;
     const titulo = cfg?.titulo || tituloCercano(tabla);
     const archivo = cfg?.archivo || nombreSeguro(titulo);
     const barra = document.createElement("div");
@@ -1300,10 +1301,17 @@ actualizarDisponibilidadExportacion();
       catch (e) { estado.textContent = "No se pudo generar el Excel: " + e.message; }
     });
     barra.append(estado, boton);
+    barrasExcelPorTabla.set(tabla, barra);
     (tabla.closest(".scroll") || tabla).before(barra);
   }
 
   function revisarTablas() {
+    for (const [tabla, barra] of barrasExcelPorTabla) {
+      if (!tabla.isConnected || !barra.isConnected) {
+        barra.remove();
+        barrasExcelPorTabla.delete(tabla);
+      }
+    }
     Object.entries(TABLAS).forEach(([id, cfg]) => { const t = valor(id); if (t) agregarBoton(t, cfg); });
     // Tablas que se crean al vuelo (Administración: usuarios e historial)
     document.querySelectorAll("table.admin-tabla").forEach(t => agregarBoton(t));
