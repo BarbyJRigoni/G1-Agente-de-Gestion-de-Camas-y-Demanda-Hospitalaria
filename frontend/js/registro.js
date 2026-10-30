@@ -59,6 +59,25 @@ abrirRegistro.addEventListener('click', () => {
     }
 });
 
+// Interpreta validaciones de FastAPI sin mostrar datos sensibles de la solicitud.
+function mensajeErrorRegistro(datos, estado) {
+    if (typeof datos.detail === 'string') return datos.detail;
+    const nombres = { usuario: 'Nombre de usuario', correo: 'Correo electrónico', clave: 'Contraseña' };
+    if (Array.isArray(datos.detail)) {
+        return datos.detail.map(error => {
+            const campo = nombres[error.loc?.at(-1)] || 'Datos del registro';
+            if (error.type === 'string_too_short') return `${campo}: mínimo ${error.ctx?.min_length} caracteres.`;
+            if (error.type === 'string_too_long') return `${campo}: máximo ${error.ctx?.max_length} caracteres.`;
+            if (error.type === 'missing') return `${campo}: completá este campo.`;
+            if (error.type === 'extra_forbidden') return 'La solicitud contiene un campo no permitido.';
+            return `${campo}: revisá el valor ingresado.`;
+        }).join(' ');
+    }
+    return estado >= 500
+        ? 'El servidor no pudo completar el registro. Esperá un momento y volvé a intentar.'
+        : 'No se pudo crear la cuenta. Revisá los datos.';
+}
+
 // Crear una nueva cuenta: se conserva el endpoint y sus datos de entrada.
 formRegistro.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -92,14 +111,10 @@ formRegistro.addEventListener('submit', async (e) => {
             body: JSON.stringify({ usuario, correo, clave })
         });
 
-        const datos = await respuesta.json();
+        const datos = await respuesta.json().catch(() => ({}));
 
         if (!respuesta.ok) {
-            throw new Error(
-                typeof datos.detail === 'string'
-                    ? datos.detail
-                    : 'No se pudo crear la cuenta. Revisá los datos.'
-            );
+            throw new Error(mensajeErrorRegistro(datos, respuesta.status));
         }
 
         formRegistro.reset();
@@ -113,7 +128,9 @@ formRegistro.addEventListener('submit', async (e) => {
         document.querySelector('#clave').focus();
     } catch (error) {
         mensajeRegistro.className = 'error';
-        mensajeRegistro.textContent = error.message;
+        mensajeRegistro.textContent = error instanceof TypeError
+            ? 'No se pudo conectar con el servidor. Revisá la conexión y volvé a intentar.'
+            : error.message;
     } finally {
         guardarRegistro.disabled = false;
         abrirRegistro.disabled = false;

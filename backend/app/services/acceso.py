@@ -8,6 +8,8 @@ import hmac
 import re
 import secrets
 import time
+import json
+from datetime import datetime, timezone
 from services.cuentas_db import conexion, ruta_base, ErrorIntegridad
 
 ITERACIONES = 600_000
@@ -20,7 +22,9 @@ def normalizar_usuario(usuario):
     return usuario.strip().lower()
 
 
-def crear_usuario(usuario, clave, reemplazar=False, correo=None):
+def crear_usuario(usuario, clave, reemplazar=False, correo=None, *, registro_publico=False):
+    if registro_publico and reemplazar:
+        raise ValueError('El registro público no puede reemplazar cuentas.')
     usuario = normalizar_usuario(usuario)
     if correo is not None:
         correo = correo.strip().lower()
@@ -28,8 +32,9 @@ def crear_usuario(usuario, clave, reemplazar=False, correo=None):
             raise ValueError('Ingresa un correo electronico valido.')
     if not re.fullmatch(r'[a-z0-9._-]{3,40}', usuario):
         raise ValueError('Usuario: entre 3 y 40 letras sin tildes, numeros, puntos, guiones o guion bajo.')
-    if not 12 <= len(clave) <= 128:
-        raise ValueError('La contrasena debe tener entre 12 y 128 caracteres.')
+    minimo, maximo = (5, 14) if registro_publico else (12, 128)
+    if not minimo <= len(clave) <= maximo:
+        raise ValueError(f'La contraseña debe tener entre {minimo} y {maximo} caracteres.')
     sal = secrets.token_bytes(32)
     derivada = hashlib.pbkdf2_hmac('sha256', clave.encode(), sal, ITERACIONES).hex()
     with conexion(escritura=True) as db:
@@ -42,8 +47,12 @@ def crear_usuario(usuario, clave, reemplazar=False, correo=None):
             db.execute('UPDATE usuarios SET sal=?, derivada=?, iteraciones=? WHERE usuario=?',
                        (sal.hex(), derivada, ITERACIONES, usuario))
         else:
-            db.execute('INSERT INTO usuarios(usuario,sal,derivada,iteraciones,correo) VALUES (?,?,?,?,?)',
+            db.execute("INSERT INTO usuarios(usuario,sal,derivada,iteraciones,correo,rol,activo) VALUES (?,?,?,?,?,'usuario',1)",
                        (usuario, sal.hex(), derivada, ITERACIONES, correo))
+            if registro_publico:
+                db.execute('INSERT INTO auditoria_usuarios(instante,actor,accion,usuario_afectado,cambios) VALUES (?,?,?,?,?)',
+                           (datetime.now(timezone.utc).isoformat(timespec='seconds'), usuario, 'crear', usuario,
+                            json.dumps({'rol': 'usuario', 'activo': True, 'origen': 'Registro público'}, ensure_ascii=False)))
 
 
 def hay_usuarios():

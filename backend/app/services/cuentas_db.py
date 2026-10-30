@@ -88,6 +88,9 @@ def _esquema(db):
     db.execute(f'''CREATE TABLE IF NOT EXISTS auditoria_usuarios (
         id {identificador}, instante TEXT NOT NULL, actor TEXT NOT NULL,
         accion TEXT NOT NULL, usuario_afectado TEXT NOT NULL, cambios TEXT NOT NULL)''')
+    db.execute('''CREATE TABLE IF NOT EXISTS intentos_registro (
+        ip TEXT NOT NULL, instante DOUBLE PRECISION NOT NULL)''')
+    db.execute('CREATE INDEX IF NOT EXISTS intentos_registro_tiempo ON intentos_registro(instante)')
     db.execute('CREATE INDEX IF NOT EXISTS intentos_tiempo ON intentos(instante)')
     db.execute('CREATE UNIQUE INDEX IF NOT EXISTS usuarios_correo_unico ON usuarios(correo)')
 

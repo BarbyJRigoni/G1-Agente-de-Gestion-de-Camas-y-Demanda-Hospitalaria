@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 
-from services import acceso
+from services import acceso, registro_publico
 
 router = APIRouter(prefix="/auth", tags=["Acceso"])
 
@@ -28,10 +28,10 @@ class Credenciales(BaseModel):
     clave: str = Field(min_length=1, max_length=128)
 
 class Registro(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    usuario: str = Field(min_length=3, max_length=40)
-    correo: str = Field(min_length=5, max_length=254)
-    clave: str = Field(min_length=12, max_length=128)
+    model_config = ConfigDict(extra='forbid')
+    usuario: str = Field(min_length=3, max_length=14)
+    correo: str = Field(min_length=5, max_length=60)
+    clave: str = Field(min_length=5, max_length=14)
 
 @router.get("/sesion")
 def sesion(request: Request):
@@ -62,48 +62,34 @@ def salir(request: Request, response: Response):
 
 @router.post("/registrar", status_code=201)
 def registrar(datos: Registro, request: Request):
-    # Solo permite el registro desde el servidor local.
-    cliente = request.client.host if request.client else ""
-    if cliente not in ("127.0.0.1", "::1"):
-        raise HTTPException(
-            status_code=403,
-            detail="El registro solo esta disponible localmente."
-        )
-
-    # Evita que un sitio externo solicite registros desde el navegador.
-    origen = request.headers.get("origin")
+    # El registro admite visitantes de internet; todos reciben rol de usuario.
+    # Se conserva la verificación de origen, además del control en main.py.
+    origen = request.headers.get('origin')
     if origen:
         from urllib.parse import urlsplit
-
-        origen_url = urlsplit(origen)
-        servidor_url = urlsplit(str(request.base_url))
-
-        if (
-            origen_url.scheme != servidor_url.scheme
-            or origen_url.netloc != servidor_url.netloc
-        ):
-            raise HTTPException(
-                status_code=403,
-                detail="Origen no permitido."
-            )
-
+        try:
+            fuente = urlsplit(origen)
+            servidor = urlsplit(str(request.base_url))
+        except ValueError:
+            raise HTTPException(status_code=403, detail='Origen no permitido.') from None
+        if (fuente.scheme.lower(), fuente.netloc.lower()) != (servidor.scheme.lower(), servidor.netloc.lower()):
+            raise HTTPException(status_code=403, detail='Origen no permitido.')
+    elif request.headers.get('x-requested-with') != 'AgenteCamas':
+        raise HTTPException(status_code=403, detail='Solicitud de origen no permitido.')
+    if request.headers.get('sec-fetch-site') == 'cross-site':
+        raise HTTPException(status_code=403, detail='Origen no permitido.')
     try:
-        acceso.crear_usuario(
-            usuario=datos.usuario,
-            clave=datos.clave,
-            reemplazar=False,
-            correo=datos.correo
+        usuario = registro_publico.registrar(
+            usuario=datos.usuario, clave=datos.clave, correo=datos.correo,
+            ip=request.client.host if request.client else 'sin-direccion',
         )
+    except registro_publico.DemasiadosRegistros as error:
+        raise HTTPException(status_code=429, detail=str(error), headers={'Retry-After': str(error.reintentar_en)}) from None
+    except acceso.ErrorIntegridad:
+        raise HTTPException(status_code=409, detail='El nombre de usuario o el correo ya están registrados.') from None
     except ValueError as error:
-        raise HTTPException(
-            status_code=400,
-            detail=str(error)
-        )
-
-    return {
-        "mensaje": "Usuario registrado correctamente. Ya podes iniciar sesion.",
-        "usuario": acceso.normalizar_usuario(datos.usuario)
-    }
+        raise HTTPException(status_code=400, detail=str(error)) from None
+    return {'mensaje': 'Usuario registrado correctamente. Ya podés iniciar sesión.', 'usuario': usuario}
     
 
 # Las operaciones administrativas tienen su propio módulo.
