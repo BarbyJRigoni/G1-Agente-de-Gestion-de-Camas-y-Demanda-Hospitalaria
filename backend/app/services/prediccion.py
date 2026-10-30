@@ -24,6 +24,7 @@ Usa los datos limpios del equipo (services/analisis.py y el mapa de columnas de
 core/config.py) sin modificarlos.
 """
 from functools import lru_cache
+from services.rendimiento import cache_calculo
 
 import numpy as np
 import pandas as pd
@@ -214,7 +215,7 @@ class ModeloDemanda:
                 "backtest": {k: v for k, v in self.evaluacion.items() if k != "serie"}}
 
 
-@lru_cache(maxsize=None)
+@cache_calculo(maxsize=3)
 def modelo_demanda(dataset: str) -> ModeloDemanda:
     """Entrena y evalúa el modelo de un dataset una sola vez (queda en memoria)."""
     return ModeloDemanda(serie_ingresos(dataset), dataset)
@@ -312,7 +313,7 @@ def evaluar_agente(dataset: str = 'hdhi', cada_dias: int = 7, dias: int = config
 
 
 # CORRECCION_TEMPORAL_HDHI_V1
-@lru_cache(maxsize=128)
+@cache_calculo(maxsize=128)
 def modelo_demanda_hasta(dataset: str, fecha_iso: str) -> ModeloDemanda:
     """Backtesting y modelo calculados solo con ingresos hasta el censo."""
     serie = serie_ingresos(dataset).loc[:pd.Timestamp(fecha_iso)]

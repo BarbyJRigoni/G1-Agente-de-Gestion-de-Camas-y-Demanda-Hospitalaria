@@ -17,6 +17,7 @@ Luego evalua la proyeccion con services/alertas.py (Alerta de Saturacion).
 Usa los datos limpios de Sabrina (services/analisis.py) sin modificarlos.
 """
 from functools import lru_cache
+from services.rendimiento import cache_calculo
 from math import erf, sqrt
 
 import numpy as np
@@ -235,7 +236,7 @@ def _proyectar_camas_base(dataset, fecha=None, dias_internados=None,
     }
 
 
-def proyectar_camas(dataset, fecha=None, dias_internados=None, capacidad=None,
+def _proyectar_camas_sin_cache(dataset, fecha=None, dias_internados=None, capacidad=None,
                     dias=config.DIAS_PROYECCION):
     from services.modelo_ocupacion import aplicar_modelo
     resultado = _proyectar_camas_base(dataset, fecha, dias_internados, capacidad, dias)
@@ -244,6 +245,22 @@ def proyectar_camas(dataset, fecha=None, dias_internados=None, capacidad=None,
     resultado['alerta_ocupacion_censo'] = resultado['camas_ocupadas_hoy'] / resultado['capacidad'] > config.UMBRAL_SATURACION
     return resultado
 
+
+
+@cache_calculo(maxsize=64, copiar=True)
+def _proyectar_camas_guardada(dataset, fecha, capacidad, dias):
+    return _proyectar_camas_sin_cache(dataset, fecha=fecha, capacidad=capacidad, dias=dias)
+
+
+def proyectar_camas(dataset, fecha=None, dias_internados=None, capacidad=None,
+                    dias=config.DIAS_PROYECCION):
+    # Un censo manual siempre se procesa directamente, sin guardar sus pacientes.
+    if dias_internados is not None:
+        return _proyectar_camas_sin_cache(dataset, fecha, dias_internados, capacidad, dias)
+    datos = config.DATASETS.get(dataset, {})
+    fecha = pd.Timestamp(fecha or datos.get("fecha_demo")).isoformat()
+    capacidad = datos.get("capacidad_total") if capacidad is None else capacidad
+    return _proyectar_camas_guardada(dataset, fecha, capacidad, dias)
 
 
 # Prueba rapida: los tres casos de la demo con fechas reales de HDHI.
