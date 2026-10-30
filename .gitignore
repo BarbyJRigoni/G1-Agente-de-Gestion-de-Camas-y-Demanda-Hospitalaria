@@ -6,3 +6,13 @@ __pycache__/
 .ipynb_checkpoints/
 /backend/HDHI Admission data.csv
 entrega/*.tar
+
+# Credenciales y cuentas locales
+.env.*
+**/.env
+**/.env.*
+**/*.sqlite*
+**/*.db
+**/*.db-wal
+**/*.db-shm
+**/*.db-journal

@@ -153,7 +153,7 @@ async def esperar_precalculo(request: Request, siguiente):
 # El frontend y la API se sirven desde el mismo origen; no se habilita CORS abierto.
 @app.middleware("http")
 async def proteger_acceso(request: Request, siguiente):
-    request.state.usuario = acceso.usuario_de_sesion(request.cookies.get(acceso.COOKIE))
+    request.state.usuario = await asyncio.to_thread(acceso.usuario_de_sesion, request.cookies.get(acceso.COOKIE))
     ruta = request.url.path
     
     publica = ruta in {
