@@ -10,6 +10,7 @@ individuales de alta. Censos manuales y otros datasets conservan el agente
 por estancias hasta disponer de validacion especifica.
 """
 from functools import lru_cache
+from services.rendimiento import cache_calculo
 from math import ceil, erf, sqrt
 import numpy as np
 import pandas as pd
@@ -41,7 +42,13 @@ def variables(y, horizonte):
     return X
 
 
-@lru_cache(maxsize=512)
+@cache_calculo(maxsize=30)
+def _variables_guardadas(dataset, horizonte):
+    # Solo retardos/medias hacia atras y calendario, sin egresos ni objetivos futuros.
+    return variables(serie_ocupacion(dataset), horizonte)
+
+
+@cache_calculo(maxsize=512)
 def predecir_ocupacion(dataset, fecha_iso, dias):
     fecha = pd.Timestamp(fecha_iso)
     y = serie_ocupacion(dataset).loc[:fecha]
@@ -49,7 +56,7 @@ def predecir_ocupacion(dataset, fecha_iso, dias):
         raise ValueError('Se requieren al menos 148 dias de ocupacion hasta el censo.')
     predicciones = []
     for h in range(1, dias + 1):
-        X = variables(y, h)
+        X = _variables_guardadas(dataset, h).loc[y.index]
         objetivo = y.shift(-h) - y
         # Excluir cualquier objetivo cuya fecha de observacion sea posterior al censo.
         mascara = ((X.index + pd.Timedelta(days=h) <= fecha)
@@ -81,14 +88,14 @@ def limitar_por_balance(predicciones, resultado):
     return tuple(salida)
 
 
-@lru_cache(maxsize=512)
+@cache_calculo(maxsize=512)
 def _historico(dataset, fecha_iso, dias):
     from agents.inventario_agent import _proyectar_camas_base
     base = _proyectar_camas_base(dataset, fecha=fecha_iso, dias=dias)
     return tuple(round(v, 1) for v in limitar_por_balance(predecir_ocupacion(dataset, fecha_iso, dias), base))
 
 
-@lru_cache(maxsize=256)
+@cache_calculo(maxsize=256)
 def residuos_anteriores(dataset, fecha_iso, dias):
     fecha = pd.Timestamp(fecha_iso)
     real = serie_ocupacion(dataset)
@@ -165,3 +172,5 @@ def aplicar_modelo(resultado, dias_internados=None):
         'nota': 'Limite superior empirico nominal 90 %; no garantiza cobertura futura. '
                 'Excedencia suavizada: (casos + 1) / (muestra + 1). Altas inferidas por balance.'}
     return resultado
+
+# CALIBRACION_Y_CALENDARIO_V2

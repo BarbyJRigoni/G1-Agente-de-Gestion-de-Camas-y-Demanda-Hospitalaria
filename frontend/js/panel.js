@@ -4,6 +4,7 @@ const NOMBRE = { media_28d: "Media 28 días", semana_anterior: "Semana anterior"
 const charts = {};
 let datasets = [], proy = null, real = null;
 let consultaProyeccion = 0;
+let controladorProyeccion = null, proyeccionEnCurso = false, errorProyeccion = "";
 
 const $ = s => document.querySelector(s);
 const fmt = f => new Date(f + "T00:00").toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "numeric" });
@@ -294,6 +295,12 @@ function dibujarDispersionIngresos(backtest) {
 // ---------------- Proyección ----------------
 async function proyectar() {
   const consulta = ++consultaProyeccion;
+  controladorProyeccion?.abort();
+  const control = new AbortController();
+  controladorProyeccion = control;
+  let agotado = false;
+  const espera = setTimeout(() => { agotado = true; control.abort(); }, 180000);
+  proyeccionEnCurso = true; errorProyeccion = "";
   const dataset = $("#dataset").value, fecha = $("#fecha").value;
   const textoCapacidad = $("#capacidad").value.trim();
   const cap = textoCapacidad === "" ? null : Number(textoCapacidad);
@@ -302,6 +309,7 @@ async function proyectar() {
   $("#exportarExcel").disabled = true;
   $("#mensaje").textContent = dias > 7 ? `Calculando proyeccion a ${dias} dias (la primera vez puede tardar unos segundos)...` : "Calculando proyeccion...";
   proy = null; real = null;
+  document.dispatchEvent(new Event("proyeccion-actualizada"));
   $("#resumenCamas").replaceChildren();
   $("#kpis").replaceChildren(); $("#camas").replaceChildren(); $("#tDias").replaceChildren();
   $("#dia").value = 0; $("#diaTxt").textContent = "Calculando...";
@@ -331,23 +339,13 @@ async function proyectar() {
     }
     const [nuevaProy, nuevoReal] = await Promise.all([
       api("/proyeccion-camas", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dataset, fecha, capacidad: cap, dias }) }),
-      api(`/modelo/ocupacion-real?dataset=${dataset}&desde=${fecha}&dias=${dias}`).catch(() => null),
+        body: JSON.stringify({ dataset, fecha, capacidad: cap, dias }), signal: control.signal }),
+      api(`/modelo/ocupacion-real?dataset=${dataset}&desde=${fecha}&dias=${dias}`, {signal: control.signal}).catch(() => null),
     ]);
     if (consulta !== consultaProyeccion) return;
+    if (!Array.isArray(nuevaProy.proyeccion) || !nuevaProy.proyeccion.length)
+      throw new Error("El servidor no devolvio una proyeccion valida.");
     proy = nuevaProy; real = nuevoReal;
-  } catch (e) {
-    if (consulta !== consultaProyeccion) return;
-    proy = null; real = null;
-    $("#kpis").innerHTML = ""; $("#camas").innerHTML = "";
-    $("#tDias").innerHTML = ""; $("#dia").value = 0;
-    $("#diaTxt").textContent = "Sin proyeccion";
-    if (charts["#gProy"]) { charts["#gProy"].destroy(); delete charts["#gProy"]; }
-  if (charts["#gMovimientos"]) { charts["#gMovimientos"].destroy(); delete charts["#gMovimientos"]; }
-    $("#mensaje").className = "alerta";
-    $("#mensaje").innerHTML = `<span class="error">No se pudo proyectar: ${e.message}</span>`;
-    return;
-  }
   const m = $("#mensaje");
   const superaEnCenso = proy.camas_ocupadas_hoy / proy.capacidad > .90;
   m.className = proy.alerta_saturacion || superaEnCenso ? "alerta" : proy.alerta_preventiva ? "preventiva" : "";
@@ -374,6 +372,29 @@ async function proyectar() {
       <td>${d.prob_superar_umbral_pct ?? "–"}%</td><td>${real?.camas_ocupadas[i] ?? "–"}</td>
       <td class="${d.alerta_saturacion ? "si" : ""}">${d.alerta_saturacion ? "Saturación" : "–"}</td></tr>`).join("") + "</tbody>";
   sincronizarFechaVisible();
+  } catch (e) {
+    if (consulta !== consultaProyeccion) return;
+    proy = null; real = null;
+    $("#kpis").innerHTML = ""; $("#camas").innerHTML = "";
+    $("#tDias").innerHTML = ""; $("#dia").value = 0;
+    $("#diaTxt").textContent = "Sin proyeccion";
+    if (charts["#gProy"]) { charts["#gProy"].destroy(); delete charts["#gProy"]; }
+  if (charts["#gMovimientos"]) { charts["#gMovimientos"].destroy(); delete charts["#gMovimientos"]; }
+    $("#mensaje").className = "alerta";
+    errorProyeccion = agotado
+      ? "El servidor no completo el calculo en 3 minutos. Volve a elegir la fecha para reintentar."
+      : e.name === "AbortError" ? "La consulta fue cancelada." : e.message;
+    $("#mensaje").textContent = "No se pudo proyectar: " + errorProyeccion;
+    return;
+  }
+  finally {
+    clearTimeout(espera);
+    if (consulta === consultaProyeccion) {
+      proyeccionEnCurso = false;
+      controladorProyeccion = null;
+      document.dispatchEvent(new Event("proyeccion-actualizada"));
+    }
+  }
 }
 
 function dibujarCamas(dia) {
@@ -1031,15 +1052,15 @@ function sincronizarFechaVisible(){
   boton.title=entrada.title;
 }
 
-// El calendario muestra únicamente la proyección vigente; no genera pronósticos nuevos.
+// El calendario permanece abierto y se actualiza al terminar la proyeccion seleccionada.
 function abrirCalendarioCenso(){
   const entrada=$('#fecha'),min=entrada.min,max=entrada.max;
   if(!min||!max)return;
-  const vigente=proy && proy.dataset===$('#dataset').value && proy.fecha_censo===entrada.value &&
+  let vigente=proy && proy.dataset===$('#dataset').value && proy.fecha_censo===entrada.value &&
     (!$('#capacidad').value.trim() || proy.capacidad===Number($('#capacidad').value));
-  const resultados=vigente?new Map(proy.proyeccion.map(d=>[d.fecha,d])):new Map();
-  const ultimoPronostico=vigente?proy.proyeccion.at(-1)?.fecha:null;
-  const finVisible=ultimoPronostico && ultimoPronostico>max?ultimoPronostico:max;
+  let resultados=vigente?new Map(proy.proyeccion.map(d=>[d.fecha,d])):new Map();
+  let ultimoPronostico=vigente?proy.proyeccion.at(-1)?.fecha:null;
+  let finVisible=ultimoPronostico && ultimoPronostico>max?ultimoPronostico:max;
   $('#calendarioCenso')?.remove();
   const dialogo=document.createElement('dialog');dialogo.id='calendarioCenso';dialogo.className='calendario-censo';
   dialogo.setAttribute('aria-labelledby','tituloCalendarioCenso');
@@ -1052,13 +1073,34 @@ function abrirCalendarioCenso(){
     resumen.textContent=`${fmtLargo(dias[0].fecha)} al ${fmtLargo(dias.at(-1).fecha)} · ${proy.capacidad} camas supuestas · ${alertas} de ${dias.length} días con saturación prevista`;
   } else resumen.textContent='Sin proyección vigente. Elegí una fecha habilitada y esperá el cálculo para ver la ocupación prevista.';
   dialogo.querySelector('.calendario-rango').textContent=`Podés elegir censos del ${fmtLargo(min)} al ${fmtLargo(max)}.`;
-  const [a0,m0]=min.split('-').map(Number),[a1,m1]=finVisible.split('-').map(Number);
+  const [a0,m0]=min.split('-').map(Number);
+  let [a1,m1]=finVisible.split('-').map(Number);
   const inicial=entrada.value>=min&&entrada.value<=max?entrada.value:min;
   let [anio,mes]=inicial.split('-').map(Number);mes--;
   const selMes=dialogo.querySelector('.mes-calendario'),selAnio=dialogo.querySelector('.anio-calendario');
   for(let a=a0;a<=a1;a++){const o=document.createElement('option');o.value=a;o.textContent=a;selAnio.append(o);}
   const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   function dibujar(){
+    vigente=proy && proy.dataset===$('#dataset').value && proy.fecha_censo===entrada.value &&
+      proy.proyeccion.length===(Number($('#horizonte').value)||7) &&
+      (!$('#capacidad').value.trim() || proy.capacidad===Number($('#capacidad').value));
+    resultados=vigente?new Map(proy.proyeccion.map(d=>[d.fecha,d])):new Map();
+    ultimoPronostico=vigente?proy.proyeccion.at(-1)?.fecha:null;
+    finVisible=ultimoPronostico && ultimoPronostico>max?ultimoPronostico:max;
+    [a1,m1]=finVisible.split('-').map(Number);
+    selAnio.replaceChildren();
+    for(let a=a0;a<=a1;a++){const o=document.createElement('option');o.value=a;o.textContent=a;selAnio.append(o);}
+    if (proyeccionEnCurso) {
+      resumen.textContent='Calculando la proyección para el censo del '+fmtLargo(entrada.value)+'…';
+      resumen.setAttribute('aria-busy','true');
+    } else {
+      resumen.removeAttribute('aria-busy');
+      if (errorProyeccion) resumen.textContent='No se pudo proyectar: '+errorProyeccion;
+      else if(vigente) {
+        const dias=proy.proyeccion,alertas=dias.filter(d=>d.alerta_saturacion).length;
+        resumen.textContent=`${fmtLargo(dias[0].fecha)} al ${fmtLargo(dias.at(-1).fecha)} · ${proy.capacidad} camas supuestas · ${alertas} de ${dias.length} días con saturación prevista`;
+      } else resumen.textContent='Elegí una fecha habilitada para calcular su proyección.';
+    }
     selAnio.value=anio;selMes.replaceChildren();
     for(let m=0;m<12;m++){
       const o=document.createElement('option');o.value=m;o.textContent=new Date(anio,m,1).toLocaleDateString('es-AR',{month:'long'});
@@ -1096,7 +1138,7 @@ function abrirCalendarioCenso(){
         b.append(porcentaje,libres,estado);
         b.setAttribute('aria-label',`${titulo}. Ocupación prevista ${numeroVisual(dato.tasa_ocupacion_pct)} por ciento. ${numeroVisual(dato.camas_libres)} camas libres estimadas. ${dato.alerta_saturacion?'Saturación prevista.':'Sin saturación prevista.'}${b.disabled?' Solo pronóstico; fuera del período habilitado para censos.':' Elegir como nuevo censo.'}`);
       }else b.setAttribute('aria-label',titulo+(esCenso?'. Censo elegido.':'. Sin pronóstico para este día.'));
-      if(!b.disabled)b.addEventListener('click',()=>{if(esCenso){dialogo.close();return;}entrada.value=fecha;sincronizarFechaVisible();dialogo.close();entrada.dispatchEvent(new Event('change',{bubbles:true}));});
+      if(!b.disabled)b.addEventListener('click',()=>{if(esCenso && (proyeccionEnCurso || vigente))return;entrada.value=fecha;sincronizarFechaVisible();entrada.dispatchEvent(new Event('change',{bubbles:true}));dibujar();dialogo.querySelector(`[data-fecha="${fecha}"]`)?.focus();});
       b.title=b.getAttribute('aria-label');contenedor.append(b);
     }
   }
@@ -1105,7 +1147,9 @@ function abrirCalendarioCenso(){
   selAnio.addEventListener('change',()=>{anio=Number(selAnio.value);limitarMes();dibujar();});
   for(const [clase,delta] of [['mes-previo',-1],['mes-siguiente',1]])dialogo.querySelector('.'+clase).addEventListener('click',()=>{const f=new Date(anio,mes+delta,1);anio=f.getFullYear();mes=f.getMonth();dibujar();});
   dialogo.querySelector('.cerrar-calendario').addEventListener('click',()=>dialogo.close());
-  dialogo.addEventListener('close',()=>$('#abrirFecha').focus());
+  const actualizarCalendario=()=>{if(dialogo.open)dibujar();};
+  document.addEventListener('proyeccion-actualizada',actualizarCalendario);
+  dialogo.addEventListener('close',()=>{document.removeEventListener('proyeccion-actualizada',actualizarCalendario);$('#abrirFecha').focus();});
   contenedorTeclas();
   function contenedorTeclas(){dialogo.querySelector('.dias-calendario').addEventListener('keydown',e=>{
     if(!e.target.dataset.fecha)return;
@@ -1320,3 +1364,5 @@ actualizarDisponibilidadExportacion();
   revisarTablas();
   new MutationObserver(revisarTablas).observe(document.body, { childList: true, subtree: true });
 })();
+
+// CALIBRACION_Y_CALENDARIO_V2

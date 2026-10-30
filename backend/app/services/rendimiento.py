@@ -10,7 +10,7 @@ from inspect import signature
 from threading import RLock
 
 
-def cache_calculo(maxsize=64, copiar=False):
+def cache_calculo(maxsize=64, copiar=False, clave_funcion=None):
     def decorar(funcion):
         firma = signature(funcion)
         resultados, pendientes = OrderedDict(), {}
@@ -22,7 +22,8 @@ def cache_calculo(maxsize=64, copiar=False):
             nonlocal aciertos, fallos
             parametros = firma.bind(*args, **kwargs)
             parametros.apply_defaults()
-            clave = tuple(parametros.arguments.items())
+            clave = (clave_funcion(*args, **kwargs) if clave_funcion is not None
+                     else tuple(parametros.arguments.items()))
             with candado:
                 if clave in resultados:
                     aciertos += 1
@@ -68,3 +69,5 @@ def cache_calculo(maxsize=64, copiar=False):
         consultar.cache_info = informacion
         return consultar
     return decorar
+
+# CALIBRACION_Y_CALENDARIO_V2

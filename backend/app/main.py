@@ -26,6 +26,10 @@ from routers.acceso import router as router_acceso
 from core import config
 from pathlib import Path
 from services import prediccion
+from threadpoolctl import threadpool_limits
+
+# Matrices pequenas: evitar competir con multiples hilos BLAS por cada ajuste.
+_limites_blas = threadpool_limits(limits=1, user_api="blas")
 from routers.inventario import router as router_camas
 from routers.prediccion import router as router_prediccion   # modelo de demanda (Barbara)
 
@@ -93,6 +97,24 @@ def evaluar_agente_guardada(dataset="hdhi", cada_dias=7, dias=config.DIAS_PROYEC
 
 # El endpoint /modelo/evaluacion-agente usa esta version
 prediccion.evaluar_agente = evaluar_agente_guardada
+
+
+@app.middleware("http")
+async def medir_calculos(request: Request, siguiente):
+    ruta = request.url.path
+    if ruta not in {"/proyeccion-camas", "/modelo/evaluacion-agente", "/modelo/demanda", "/modelo/backtest"}:
+        return await siguiente(request)
+    log = logging.getLogger("uvicorn.error")
+    inicio = time.perf_counter()
+    log.info("Calculo %x iniciado: %s", id(request), ruta)
+    try:
+        respuesta = await siguiente(request)
+        log.info("Calculo %x terminado: %s estado=%s tiempo=%.2f s", id(request), ruta,
+                 respuesta.status_code, time.perf_counter() - inicio)
+        return respuesta
+    except Exception:
+        log.exception("Calculo %x fallo: %s tras %.2f s", id(request), ruta, time.perf_counter() - inicio)
+        raise
 
 
 # El frontend y la API se sirven desde el mismo origen; no se habilita CORS abierto.
@@ -244,3 +266,5 @@ def logo_politecnico():
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
     return Response(status_code=204)
+
+# CALIBRACION_Y_CALENDARIO_V2

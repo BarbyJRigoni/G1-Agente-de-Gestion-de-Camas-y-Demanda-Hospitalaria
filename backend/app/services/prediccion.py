@@ -24,6 +24,7 @@ Usa los datos limpios del equipo (services/analisis.py y el mapa de columnas de
 core/config.py) sin modificarlos.
 """
 from functools import lru_cache
+import hashlib
 from services.rendimiento import cache_calculo
 
 import numpy as np
@@ -83,6 +84,14 @@ def serie_ingresos(dataset: str) -> pd.Series:
 # ======================================================================
 # Modelo de demanda
 # ======================================================================
+def _clave_historia(modelo, hasta, *extra):
+    # El cache comparte ajustes SOLO cuando coincide toda la historia disponible.
+    # La huella incluye fechas y valores hasta el corte; nunca objetivos futuros.
+    historia = modelo.y.loc[:hasta]
+    huella = hashlib.sha256(pd.util.hash_pandas_object(historia, index=True).values.tobytes()).digest()
+    return modelo.nombre, pd.Timestamp(hasta).isoformat(), huella
+
+
 class ModeloDemanda:
     def __init__(self, serie: pd.Series, nombre: str = ""):
         self.nombre = nombre
@@ -111,6 +120,7 @@ class ModeloDemanda:
         y = self.y.reindex(fechas.union(self.y.index))
         return y.shift(7).rolling(28, min_periods=14).mean().reindex(fechas)
 
+    @cache_calculo(maxsize=512, copiar=True, clave_funcion=_clave_historia)
     def _ajustar_regresion(self, hasta: pd.Timestamp):
         """Objetivo = desvío respecto del nivel reciente. Así el modelo se adapta solo a
         cambios de nivel (crecimiento, brotes) y aprende el patrón semanal y anual."""
@@ -159,6 +169,12 @@ class ModeloDemanda:
         return self._pronostico(metodo, hasta, fechas), self.rmse[metodo], metodo
 
     # ---------- evaluación ----------
+    @cache_calculo(maxsize=512, copiar=True, clave_funcion=_clave_historia)
+    def _pronosticos_backtest(self, hasta):
+        fechas = pd.date_range(hasta + pd.Timedelta(days=1), periods=7, freq="D")
+        ajuste = self._ajustar_regresion(hasta)
+        return {m: self._pronostico(m, hasta, fechas, ajuste) for m in METODOS}
+
     def _backtest(self) -> dict:
         """Backtesting con origen móvil: cada 7 días se entrena SOLO con el pasado y se
         pronostican los 7 días siguientes, igual que en el uso real. Se repite 26 semanas."""
@@ -172,9 +188,9 @@ class ModeloDemanda:
             f = pd.date_range(o + pd.Timedelta(days=1), periods=7, freq="D")
             reales.extend(self.y.loc[f])
             fechas.extend(f)
-            ajuste = self._ajustar_regresion(o)
+            pronosticos = self._pronosticos_backtest(o)
             for m in METODOS:
-                preds[m].extend(self._pronostico(m, o, f, ajuste))
+                preds[m].extend(pronosticos[m])
         reales = np.array(reales)
         res = {m: metricas(reales, preds[m]) for m in METODOS}
         semana_real = reales.reshape(-1, 7).sum(axis=1)
@@ -320,3 +336,5 @@ def modelo_demanda_hasta(dataset: str, fecha_iso: str) -> ModeloDemanda:
     if len(serie) < 148:
         raise ValueError("Se necesitan al menos 148 dias de historia hasta el censo.")
     return ModeloDemanda(serie, dataset)
+
+# CALIBRACION_Y_CALENDARIO_V2
