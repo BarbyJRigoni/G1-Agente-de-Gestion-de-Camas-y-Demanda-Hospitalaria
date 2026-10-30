@@ -1918,3 +1918,61 @@ footer {
   #barraLateral select,#barraLateral input,#barraLateral .fecha-compacta { min-height:44px; font-size:16px; }
 }
 /* FIN MENU LATERAL COMPACTO */
+
+/* INICIO AJUSTE ADMINISTRACION MOVIL */
+/* La columna puede reducirse; las tablas anchas se desplazan dentro de su cuadro. */
+#vista-administracion {
+  grid-template-columns:minmax(0,1fr);
+  min-width:0;
+  max-width:100%;
+}
+#vista-administracion > *,
+#adminPanelUsuarios,
+#adminPanelHistorial {
+  min-width:0;
+  max-width:100%;
+}
+#vista-administracion .scroll {
+  min-width:0;
+  max-width:100%;
+  overflow-x:auto;
+}
+@media(max-width:900px) {
+  #contenidoAplicacion > header {
+    width:100%;
+    min-width:0;
+  }
+  #contenidoAplicacion > header > * {
+    min-width:0;
+    max-width:100%;
+  }
+  #contenidoAplicacion > header .sesion-usuario {
+    flex-wrap:wrap;
+    justify-content:flex-end;
+  }
+  #nombreSesion {
+    overflow-wrap:anywhere;
+  }
+  #vista-administracion .admin-identidad {
+    flex:1 1 240px;
+    min-width:0;
+    max-width:100%;
+  }
+  #vista-administracion .admin-identidad > div {
+    min-width:0;
+  }
+  #vista-administracion .admin-presentacion h2,
+  #vista-administracion .admin-presentacion p {
+    overflow-wrap:anywhere;
+  }
+  #vista-administracion .admin-herramientas > label,
+  #vista-administracion .admin-herramientas > button,
+  #vista-administracion .admin-navegacion > button {
+    min-width:0;
+    max-width:100%;
+  }
+  #vista-administracion .admin-navegacion > button {
+    white-space:normal;
+  }
+}
+/* FIN AJUSTE ADMINISTRACION MOVIL */
