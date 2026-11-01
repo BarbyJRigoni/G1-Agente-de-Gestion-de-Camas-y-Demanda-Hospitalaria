@@ -4,7 +4,7 @@
   <img src="frontend/assets/hospital-base.svg" alt="Ilustración de la entrada del hospital" width="100%">
 </p>
 
-Agente inteligente que estima la **ocupación y disponibilidad de camas hospitalarias para los próximos 7 días**, a partir del censo de pacientes internados y de datos históricos de admisiones y estancias. Emite una **Alerta de Saturación** cuando la ocupación proyectada supera el **90 %** de la capacidad, y una **alerta preventiva** cuando la probabilidad de superarlo es significativa.
+Agente inteligente que estima la **ocupación y disponibilidad de camas hospitalarias para los próximos 7 días** (con extensiones a 15 y 30 días), a partir del censo de pacientes internados y de datos históricos de admisiones y estancias. Emite una **Alerta de Saturación** cuando la ocupación proyectada supera el **90 %** de la capacidad, y una **alerta preventiva** cuando la probabilidad de superarlo es significativa.
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white" alt="Python">
@@ -12,12 +12,12 @@ Agente inteligente que estima la **ocupación y disponibilidad de camas hospital
   <img src="https://img.shields.io/badge/pandas-3.0-150458?logo=pandas&logoColor=white" alt="pandas">
   <img src="https://img.shields.io/badge/scikit--learn-1.9-F7931E?logo=scikitlearn&logoColor=white" alt="scikit-learn">
   <img src="https://img.shields.io/badge/Chart.js-local-FF6384?logo=chartdotjs&logoColor=white" alt="Chart.js">
-  <img src="https://img.shields.io/badge/SQLite-acceso-003B57?logo=sqlite&logoColor=white" alt="SQLite">
+  <img src="https://img.shields.io/badge/SQLite%20%7C%20PostgreSQL-cuentas-4169E1?logo=postgresql&logoColor=white" alt="SQLite / PostgreSQL">
+  <img src="https://img.shields.io/badge/Docker-listo-2496ED?logo=docker&logoColor=white" alt="Docker">
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/estado-prototipo%20acad%C3%A9mico-yellow" alt="Status">
-  <img src="https://img.shields.io/badge/versi%C3%B3n-1.0.0-blue" alt="Versión">
   <img src="https://img.shields.io/badge/Grupo%201-Salud-2e7d6b" alt="Grupo 1 Salud">
 </p>
 
@@ -28,6 +28,7 @@ Agente inteligente que estima la **ocupación y disponibilidad de camas hospital
 - [📖 Descripción del proyecto](#-descripción-del-proyecto)
 - [📂 Estructura del repositorio](#-estructura-del-repositorio)
 - [📊 Datasets](#-datasets)
+- [🖥️ El panel](#️-el-panel)
 - [🧠 Cómo funciona el agente](#-cómo-funciona-el-agente)
 - [🔌 API](#-api)
 - [⚙️ Requisitos e instalación](#️-requisitos-e-instalación)
@@ -51,9 +52,9 @@ Este proyecto construye un **agente de planificación** que, dada una **fecha de
 4. Proyecta la **ocupación y las camas libres** día por día, con un escenario pesimista (**P90**).
 5. Emite **alertas** de saturación y preventivas.
 
-> 🎯 **Objetivo:** apoyar la planificación de recursos hospitalarios anticipando situaciones de saturación con un horizonte de 7 días.
+> 🎯 **Objetivo:** apoyar la planificación de recursos hospitalarios anticipando situaciones de saturación con un horizonte de 7 días (el que pide la consigna), con extensiones a 15 y 30 días para planificación de mediano plazo.
 
-La aplicación incluye una **portada con inicio de sesión**, un **panel con cinco solapas** (Proyección, Estancias · HDHI, Evaluación, UTI y general, Administración) y una **API REST** documentada con FastAPI.
+La aplicación incluye una **portada con registro e inicio de sesión**, un **panel con menú lateral** (Proyección, Estancias · HDHI, UTI y general, Evaluación y Administración), **exportación a Excel**, una **API REST** documentada con FastAPI y un **contenedor Docker** para ejecutarla sin instalar Python.
 
 ---
 
@@ -63,24 +64,28 @@ La aplicación incluye una **portada con inicio de sesión**, un **panel con cin
 .
 ├── backend/
 │   ├── app/
-│   │   ├── main.py                 # Aplicación FastAPI (sirve API + frontend)
-│   │   ├── crear_usuario.py        # Alta de cuentas locales
-│   │   ├── crear_admin.py          # Asignación del rol administrador
-│   │   ├── core/config.py          # Rutas, datasets, capacidades y umbral
-│   │   ├── data/                   # Scripts de carga y limpieza
-│   │   ├── services/               # Análisis, predicción, alertas, sectores, acceso
-│   │   ├── agents/                 # Coordinación del agente de camas
-│   │   └── routers/                # Endpoints: inventario, predicción, acceso
+│   │   ├── main.py                     # Aplicación FastAPI (API + panel), precálculo al arrancar
+│   │   ├── crear_usuario.py            # Alta de cuentas por consola
+│   │   ├── crear_admin.py              # Asignación del rol administrador
+│   │   ├── migrar_cuentas_neon.py      # Copia de cuentas de SQLite a PostgreSQL (Neon)
+│   │   ├── core/config.py              # Rutas, datasets, capacidades, umbral y horizontes
+│   │   ├── data/                       # Scripts de carga y limpieza
+│   │   ├── agents/                     # Coordinación del agente de camas
+│   │   ├── routers/                    # inventario · prediccion · acceso · administracion_usuarios
+│   │   └── services/                   # análisis, predicción, alertas, sectores, cuentas, caché
 │   └── data/
-│       ├── *.csv                   # Datasets originales (sin modificar)
-│       └── procesados/             # Datasets limpios y revisión de HDHI
-├── docs/                           # Documentación técnica del proyecto
+│       ├── *.csv                       # Datasets originales (sin modificar)
+│       └── procesados/                 # Datasets limpios y revisión de HDHI
 ├── frontend/
-│   ├── assets/                     # Imagen de portada y logo
-│   ├── css/  js/                   # Estilos y scripts de la portada
-│   ├── vendor/                     # Chart.js local
-│   ├── index.html                  # Panel principal
-│   └── portada.html                # Portada e inicio de sesión
+│   ├── portada.html                    # Portada, registro e inicio de sesión
+│   ├── index.html                      # Panel principal
+│   ├── css/  js/                       # Estilos y lógica (panel.js, administracion.js, ...)
+│   ├── assets/                         # Imagen de portada y logo
+│   └── vendor/                         # Chart.js y SheetJS locales (funciona sin internet)
+├── demo/                               # Panel sin servidor y arranque con doble clic
+├── entrega/                            # Paquete Docker para usuarios sin conocimientos técnicos
+├── docs/                               # Documentación técnica y manual de instalación
+├── Dockerfile · .dockerignore
 ├── requirements.txt
 └── README.md
 ```
@@ -115,6 +120,20 @@ revision_hdhi/episodios/hdhi_episodios_candidatos.csv
 
 ---
 
+## 🖥️ El panel
+
+| Sección | Qué muestra |
+|---|---|
+| **01 Proyección** | Ocupación, camas libres, ingresos y altas para 7, 15 o 30 días; mapa de camas por día, calendario con resumen de demanda, escenarios Normal / Límite / Crítico y alertas |
+| **02 Estancias · HDHI** | Tiempo medio de estancia (ALOS) con barras por patología y dona por grupo etario |
+| **03 UTI y general** | Simulación por sectores con censos, capacidades, estancias y traslados propios |
+| **04 Evaluación** | Comparación de métodos de ingresos, backtesting y error del agente por horizonte |
+| **⚙ Administración** | Solo administradores: alta, edición, roles, activación/desactivación de cuentas, filtros e historial de cambios |
+
+Todas las tablas se pueden **exportar a Excel**. El menú lateral se pliega y el panel se adapta a celulares.
+
+---
+
 ## 🧠 Cómo funciona el agente
 
 ```text
@@ -130,7 +149,7 @@ revision_hdhi/episodios/hdhi_episodios_candidatos.csv
                       │ (curva de estancia)
                       └────────┬─────────┘
                                ▼
-              Ocupación proyectada D+1 … D+7  (+ P90)
+         Ocupación proyectada D+1 … D+7 / 15 / 30  (+ P90)
                                │
                                ▼
         🔴 Saturación (> 90 %)   🟠 Preventiva (prob. ≥ 30 %)
@@ -147,19 +166,45 @@ revision_hdhi/episodios/hdhi_episodios_candidatos.csv
 
 ## 🔌 API
 
+**Datos y agente**
+
 | Método | Ruta | Función |
 |---|---|---|
 | `GET` | `/salud` | Estado del servidor |
 | `GET` | `/datasets` | Fuentes disponibles |
 | `GET` | `/estadisticas` | Indicadores históricos (ALOS, mediana, P90, ingresos/día) |
 | `GET` | `/censo` | Ocupación en una fecha |
-| `POST` | `/proyeccion-camas` | **Proyección a 7 días y alertas** |
+| `POST` | `/proyeccion-camas` | **Proyección y alertas** (`dias` de 1 a 30; por defecto 7) |
 | `GET` | `/escenarios` | Escenarios Normal / Límite / Crítico |
+| `GET` | `/sectores/parametros` | Auditoría histórica para la simulación UTI y general |
+
+**Modelo de predicción**
+
+| Método | Ruta | Función |
+|---|---|---|
 | `GET` | `/modelo/demanda` | Método de ingresos elegido y métricas |
 | `GET` | `/modelo/backtest` | Ingresos reales vs. pronosticados |
-| `GET` | `/modelo/evaluacion-agente` | Desempeño del agente contra la ocupación real |
-| `POST` | `/auth/ingresar` · `/auth/registrar` · `/auth/salir` | Acceso de usuarios |
-| `GET` | `/auth/admin/usuarios` | Listado de usuarios (solo administradores) |
+| `GET` | `/modelo/evaluacion-agente` | Error del agente contra la ocupación real (`dias=7\|15\|30`) |
+| `GET` | `/modelo/ocupacion-real` | Camas realmente ocupadas después de una fecha |
+
+**Acceso y administración**
+
+| Método | Ruta | Función |
+|---|---|---|
+| `GET` | `/auth/sesion` | Sesión actual |
+| `POST` | `/auth/ingresar` · `/auth/salir` | Inicio y cierre de sesión |
+| `POST` | `/auth/registrar` | Registro web de usuarios comunes |
+| `GET` · `POST` | `/auth/admin/usuarios` | Listar y crear cuentas |
+| `PATCH` | `/auth/admin/usuarios/{usuario}` | Editar nombre, correo y rol |
+| `PATCH` | `/auth/admin/usuarios/{usuario}/estado` | Activar o desactivar una cuenta |
+| `GET` | `/auth/admin/auditoria` | Historial de cambios |
+
+Ejemplo:
+
+```json
+POST /proyeccion-camas
+{ "dataset": "hdhi", "fecha": "2019-03-01", "dias": 7 }
+```
 
 La documentación interactiva está en **`/docs`** (requiere sesión iniciada).
 
@@ -167,47 +212,97 @@ La documentación interactiva está en **`/docs`** (requiere sesión iniciada).
 
 ## ⚙️ Requisitos e instalación
 
-**Requisitos**
+Hay cuatro formas de usar el sistema:
 
-- Windows con PowerShell (probado con Python 3.11)
-- fastapi · uvicorn · pydantic · pandas · numpy · scikit-learn · scipy
+| Opción | Para quién | Necesita |
+|---|---|---|
+| 🅰️ **Entorno local** | Desarrollo | Python 3.11 o superior |
+| 🐳 **Docker** | Probar sin instalar Python | Docker Desktop |
+| 📦 [**Paquete de entrega**](#-paquete-de-entrega-sin-conocimientos-técnicos) (`entrega/`) | Usuarios sin conocimientos técnicos | Docker Desktop, doble clic en `iniciar.bat` |
+| 🧪 **Demo sin servidor** (`demo/panel_sin_servidor.html`) | Respaldo para la exposición | Solo un navegador |
 
-**Instalación**
+### 🅰️ Entorno local (Windows · PowerShell)
 
 ```powershell
 git clone https://github.com/BarbyJRigoni/G1-Agente-de-Gestion-de-Camas-y-Demanda-Hospitalaria.git
 cd G1-Agente-de-Gestion-de-Camas-y-Demanda-Hospitalaria
-git switch sabrina                       # rama con la versión funcional
 
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
+
+python backend/app/crear_usuario.py      # primera cuenta (clave de 12 a 128 caracteres)
+python backend/app/crear_admin.py        # opcional: rol administrador
+
+python -m uvicorn main:app --app-dir backend/app --reload
 ```
 
-**Crear una cuenta** (no existen credenciales predeterminadas; contraseña de 12 a 128 caracteres):
+> 💡 Si PowerShell bloquea `Activate.ps1`, usar `.\.venv\Scripts\python.exe -m uvicorn main:app --app-dir backend/app --reload`.
+
+### 🐳 Docker
 
 ```powershell
-python backend/app/crear_usuario.py
-python backend/app/crear_admin.py        # opcional: rol administrador
+docker build -t agente-camas .
+docker run -d --name agente-camas -p 8000:8000 -v agente-camas-datos:/datos agente-camas
+docker exec -it agente-camas python crear_usuario.py
+docker exec -it agente-camas python crear_admin.py      # opcional
 ```
+
+Las cuentas se guardan en el volumen `agente-camas-datos` y se conservan al recrear el contenedor.
+
+### 📦 Paquete de entrega (sin conocimientos técnicos)
+
+Pensado para que cualquier persona use el sistema **sin instalar Python ni ver el código**. Solo necesita Windows 10/11 y [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+
+| Archivo | Qué hace |
+|---|---|
+| ▶️ `iniciar.bat` | Doble clic: instala la app la primera vez, pide crear el usuario administrador, la enciende y abre el navegador |
+| ⏹️ `detener.bat` | Apaga la app. Usuarios y datos quedan guardados |
+| 👤 `crear_usuario.bat` | Agrega otro usuario (con la app encendida) |
+| 🔄 `actualizar.bat` | Instala una versión nueva conservando los usuarios |
+| 📄 `LEEME.txt` | Instrucciones en lenguaje simple |
+| 🛠️ `preparar_paquete.bat` | **Uso interno del grupo:** construye la imagen y la guarda en `entrega/agente-camas.tar` |
+
+**Para el usuario:**
+
+1. Abrir Docker Desktop y esperar a que diga *Engine running*.
+2. Doble clic en `iniciar.bat`. La primera vez tarda unos minutos y pide usuario y contraseña.
+3. Se abre el navegador: ingresar con ese usuario.
+
+**Para armar el paquete (grupo):**
+
+1. Con Docker Desktop abierto, doble clic en `entrega\preparar_paquete.bat`.
+2. Comprimir la carpeta `entrega` **sin** `preparar_paquete.bat`.
+3. Compartirla por Drive o pendrive.
+
+> [!NOTE]
+> `agente-camas.tar` pesa varios cientos de MB y **no se sube a Git** (está en `.gitignore`).
+
+### 🗄️ Cuentas en PostgreSQL (opcional)
+
+Por defecto las cuentas se guardan en SQLite local. Si se define la variable de entorno `DATABASE_URL` con una dirección PostgreSQL (por ejemplo, Neon), el sistema la usa en su lugar. Para pasar las cuentas existentes:
+
+```powershell
+python backend/app/migrar_cuentas_neon.py
+```
+
+El script pide la dirección sin mostrarla y no la guarda.
+
+Más detalle en [`docs/Manual_de_instalacion.md`](docs/Manual_de_instalacion.md) y [`docs/docker_y_entrega.md`](docs/docker_y_entrega.md).
 
 ---
 
 ## 🚀 Uso
 
-```powershell
-python -m uvicorn main:app --app-dir backend/app --reload
-```
-
 | Recurso | URL |
 |---|---|
-| 🏠 Portada e inicio de sesión | http://127.0.0.1:8000 |
+| 🏠 Portada, registro e inicio de sesión | http://127.0.0.1:8000 |
 | ❤️ Estado del servidor | http://127.0.0.1:8000/salud |
 | 📘 Documentación de la API | http://127.0.0.1:8000/docs |
 
-FastAPI sirve la interfaz y la API desde el mismo origen: no hace falta levantar un servidor aparte para el frontend. Para detenerlo, **Ctrl + C**.
+Los cálculos se hacen **a pedido** y se reutilizan: la primera proyección de cada fuente tarda unos segundos y después responde al instante; la evaluación del agente tarda alrededor de un minuto la primera vez y luego se lee de un archivo en menos de 1 s, aun después de reiniciar.
 
-> 💡 Si PowerShell bloquea `Activate.ps1`, usar directamente `.\.venv\Scripts\python.exe -m uvicorn main:app --app-dir backend/app --reload`.
+FastAPI sirve la interfaz y la API desde el mismo origen: no hace falta levantar un servidor aparte para el frontend. Para detenerlo, **Ctrl + C**.
 
 ---
 
@@ -241,6 +336,16 @@ FastAPI sirve la interfaz y la API desde el mismo origen: no hace falta levantar
 
 El error crece con la anticipación, como es esperable. Tras la corrección del agente, el límite superior P90 cubrió el **93,6 %** de las ocupaciones observadas en 497 predicciones comparables.
 
+### Proyección a 7, 15 y 30 días (HDHI)
+
+| Horizonte | Fechas evaluadas | Error promedio del agente | Error de "mantener el censo" | Cobertura del P90 |
+|---|---|---|---|---|
+| 7 días | 83 | 10,1 camas | 11,0 camas | 93,6 % |
+| 15 días | 41 | 13,5 camas | 15,2 camas | 88,4 % |
+| 30 días | 40 | 15,3 camas | 18,3 camas | 88,9 % |
+
+> ℹ️ El error se estabiliza en torno a 16 camas (≈ 8 % de 190) y, cuanto más lejos se proyecta, **más le gana el agente a la referencia simple**. A 15 y 30 días sirve para planificar (personal, cirugías programadas), no para decisiones de un día puntual.
+
 ---
 
 ## 🧪 Notas metodológicas y limitaciones
@@ -251,7 +356,11 @@ El error crece con la anticipación, como es esperable. Tras la corrección del 
 - ⏳ **Validación temporal:** la evaluación usa solo información anterior a cada censo; alterar internaciones posteriores no cambia la predicción.
 - 🏥 **UTI y general:** simulación con parámetros ingresados explícitamente; no se dispone de movimientos fechados para validarla.
 - 🔢 Los valores proyectados pueden tener decimales porque representan **cantidades esperadas**.
-- 🔒 **Acceso local:** contraseñas con derivación criptográfica y sal en SQLite; publicar el sistema requiere HTTPS y un despliegue específico.
+- 🔒 **Cuentas:** contraseñas con derivación criptográfica (PBKDF2) y sal, en SQLite o PostgreSQL. Los cambios de cuentas quedan registrados en un historial de auditoría.
+- 🚦 **Registro web:** asigna siempre el rol usuario y tiene límites contra abusos (5 registros cada 15 minutos por conexión y 50 por hora en total).
+- ⚡ **Rendimiento:** los cálculos repetidos se guardan en una caché en memoria y la evaluación del agente en un archivo, sin cambiar los resultados.
+- 🌐 **Despliegue:** publicar el sistema en internet requiere HTTPS y una configuración específica.
+- 📆 **UTI y general** sigue proyectando a 7 días.
 - ⚠️ **Prototipo académico:** no es un sistema clínico validado ni determina altas o derivaciones.
 
 ---
@@ -260,6 +369,9 @@ El error crece con la anticipación, como es esperable. Tras la corrección del 
 
 **Documentación del proyecto** (`docs/`)
 
+- `Manual_de_instalacion.md` — instalación paso a paso
+- `docker_y_entrega.md` — Docker, paquete de entrega y tiempos de carga
+- `proyeccion_15_30_dias.md` — extensión del horizonte y su confiabilidad
 - `limpieza_datasets.md` — limpieza y preparación de las fuentes
 - `analisis_estadistico.md` — análisis con Pandas
 - `calculo_capacidad_camas.md` — supuestos de capacidad
@@ -267,6 +379,7 @@ El error crece con la anticipación, como es esperable. Tras la corrección del 
 - `correccion_agente_verificada.md` — correcciones y verificaciones
 - `sectores_uti_general.md` — simulación UTI y general
 - `acceso_y_portada.md` — portada, cuentas y acceso
+- `diseno_panel.md` — diseño del panel
 - `guia_demo.md` — guion de la demostración
 
 **Fuentes de datos**
@@ -274,7 +387,7 @@ El error crece con la anticipación, como es esperable. Tras la corrección del 
 - [HDHI Admission Data – Hero DMC Heart Institute (Kaggle)](https://www.kaggle.com/datasets/ashishsahani/hospital-admissions-data)
 - [Hospital Length of Stay – Microsoft (GitHub)](https://github.com/microsoft/r-server-hospital-length-of-stay)
 - [Healthcare Dataset – prasad22 (Kaggle)](https://www.kaggle.com/datasets/prasad22/healthcare-dataset)
-- [FastAPI](https://fastapi.tiangolo.com/) · [pandas](https://pandas.pydata.org/) · [scikit-learn](https://scikit-learn.org/) · [Chart.js](https://www.chartjs.org/)
+- [FastAPI](https://fastapi.tiangolo.com/) · [pandas](https://pandas.pydata.org/) · [scikit-learn](https://scikit-learn.org/) · [Chart.js](https://www.chartjs.org/) · [SheetJS](https://sheetjs.com/) · [Docker](https://www.docker.com/) · [Neon](https://neon.tech/)
 
 ---
 
@@ -286,7 +399,7 @@ El error crece con la anticipación, como es esperable. Tras la corrección del 
 |---|---|
 | **Sabrina Villegas** | Datos: limpieza y análisis |
 | **Bárbara Rigoni** | IA y predicción, agente e interfaz |
-| **Darío Martínez** | Backend y API (FastAPI) |
+| **Darío Martínez** | Backend y API (FastAPI), Docker y documentación |
 
 Estudiantes de la Tecnicatura Superior en Ciencias de Datos e Inteligencia Artificial — Centro Politécnico Superior Malvinas Argentinas.
 
