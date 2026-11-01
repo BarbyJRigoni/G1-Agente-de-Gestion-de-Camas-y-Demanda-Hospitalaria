@@ -218,7 +218,14 @@ Los cálculos se hacen **a pedido** y se guardan para reutilizarlos:
 
 ## 7 · 🐳 Instalación con Docker
 
-Con **Docker Desktop abierto** (*Engine running*), desde la raíz del proyecto:
+Esta opción arma la imagen a partir del código, así que primero hay que **descargar el proyecto** como se explica en la [sección 2](#2--descargar-el-proyecto):
+
+```powershell
+git clone https://github.com/BarbyJRigoni/G1-Agente-de-Gestion-de-Camas-y-Demanda-Hospitalaria.git
+cd G1-Agente-de-Gestion-de-Camas-y-Demanda-Hospitalaria
+```
+
+No hace falta Python ni el `.venv` (secciones 3 a 5). Con **Docker Desktop abierto** (*Engine running*), desde esa carpeta:
 
 ```powershell
 docker build -t agente-camas .
@@ -239,6 +246,23 @@ Abrir http://localhost:8000.
 | **Imagen** (`agente-camas`) | La app ya instalada con Linux, Python 3.13 y sus librerías |
 | **Contenedor** | La imagen funcionando |
 | **Volumen** (`agente-camas-datos`) | Carpeta fuera del contenedor donde quedan las cuentas. No se pierde al reiniciar ni al actualizar |
+
+### 📄 El `Dockerfile`
+
+`docker build` lee el archivo **`Dockerfile`**, en la raíz del proyecto. Es la receta para armar la imagen. No hace falta modificarlo para instalar ni para actualizar.
+
+| Instrucción | Qué hace |
+|---|---|
+| `FROM python:3.13-slim` | Parte de un Linux mínimo con Python 3.13 |
+| `ENV ... CAMAS_AUTH_DB=/datos/acceso.sqlite3` | Guarda la base de cuentas en `/datos` y evita archivos `.pyc` |
+| `COPY requirements.txt .` + `RUN pip install ...` | Instala las librerías. Va antes del código para que, si solo cambia el código, la reconstrucción tarde segundos |
+| `COPY backend/` y `COPY frontend/` | Copia la app con la misma estructura del repo |
+| `WORKDIR /app/backend/app` | Equivale a `cd backend\app` |
+| `EXPOSE 8000` | La app escucha en el puerto 8000 |
+| `VOLUME /datos` | Deja las cuentas fuera de la imagen para que no se pierdan |
+| `CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]` | Arranca el servidor aceptando conexiones desde fuera del contenedor |
+
+El archivo **`.dockerignore`** deja afuera de la imagen lo que no hace falta: `.git`, `.venv`, `docs`, cachés y los CSV originales (la app usa solo `backend/data/procesados`).
 
 **Comandos útiles**
 
