@@ -5,7 +5,6 @@ __pycache__/
 .vscode/
 .ipynb_checkpoints/
 /backend/HDHI Admission data.csv
-entrega/*.tar
 
 # Credenciales y cuentas locales
 .env.*
