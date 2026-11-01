@@ -83,7 +83,6 @@ La aplicación incluye una **portada con registro e inicio de sesión**, un **pa
 │   ├── assets/                         # Imagen de portada y logo
 │   └── vendor/                         # Chart.js y SheetJS locales (funciona sin internet)
 ├── demo/                               # Panel sin servidor y arranque con doble clic
-├── entrega/                            # Paquete Docker para usuarios sin conocimientos técnicos
 ├── docs/                               # Documentación técnica y manual de instalación
 ├── Dockerfile · .dockerignore
 ├── requirements.txt
@@ -212,13 +211,12 @@ La documentación interactiva está en **`/docs`** (requiere sesión iniciada).
 
 ## ⚙️ Requisitos e instalación
 
-Hay cuatro formas de usar el sistema:
+Hay tres formas de usar el sistema:
 
 | Opción | Para quién | Necesita |
 |---|---|---|
 | 🅰️ **Entorno local** | Desarrollo | Python 3.11 o superior |
 | 🐳 **Docker** | Probar sin instalar Python | Docker Desktop |
-| 📦 [**Paquete de entrega**](#-paquete-de-entrega-sin-conocimientos-técnicos) (`entrega/`) | Usuarios sin conocimientos técnicos | Docker Desktop, doble clic en `iniciar.bat` |
 | 🧪 **Demo sin servidor** (`demo/panel_sin_servidor.html`) | Respaldo para la exposición | Solo un navegador |
 
 ### 🅰️ Entorno local (Windows · PowerShell)
@@ -249,34 +247,6 @@ docker exec -it agente-camas python crear_admin.py      # opcional
 ```
 
 Las cuentas se guardan en el volumen `agente-camas-datos` y se conservan al recrear el contenedor.
-
-### 📦 Paquete de entrega (sin conocimientos técnicos)
-
-Pensado para que cualquier persona use el sistema **sin instalar Python ni ver el código**. Solo necesita Windows 10/11 y [Docker Desktop](https://www.docker.com/products/docker-desktop/).
-
-| Archivo | Qué hace |
-|---|---|
-| ▶️ `iniciar.bat` | Doble clic: instala la app la primera vez, pide crear el usuario administrador, la enciende y abre el navegador |
-| ⏹️ `detener.bat` | Apaga la app. Usuarios y datos quedan guardados |
-| 👤 `crear_usuario.bat` | Agrega otro usuario (con la app encendida) |
-| 🔄 `actualizar.bat` | Instala una versión nueva conservando los usuarios |
-| 📄 `LEEME.txt` | Instrucciones en lenguaje simple |
-| 🛠️ `preparar_paquete.bat` | **Uso interno del grupo:** construye la imagen y la guarda en `entrega/agente-camas.tar` |
-
-**Para el usuario:**
-
-1. Abrir Docker Desktop y esperar a que diga *Engine running*.
-2. Doble clic en `iniciar.bat`. La primera vez tarda unos minutos y pide usuario y contraseña.
-3. Se abre el navegador: ingresar con ese usuario.
-
-**Para armar el paquete (grupo):**
-
-1. Con Docker Desktop abierto, doble clic en `entrega\preparar_paquete.bat`.
-2. Comprimir la carpeta `entrega` **sin** `preparar_paquete.bat`.
-3. Compartirla por Drive o pendrive.
-
-> [!NOTE]
-> `agente-camas.tar` pesa varios cientos de MB y **no se sube a Git** (está en `.gitignore`).
 
 ### 🗄️ Cuentas en PostgreSQL (opcional)
 
@@ -370,7 +340,7 @@ El error crece con la anticipación, como es esperable. Tras la corrección del 
 **Documentación del proyecto** (`docs/`)
 
 - `Manual_de_instalacion.md` — instalación paso a paso
-- `docker_y_entrega.md` — Docker, paquete de entrega y tiempos de carga
+- `docker_y_entrega.md` — Docker y tiempos de carga
 - `proyeccion_15_30_dias.md` — extensión del horizonte y su confiabilidad
 - `limpieza_datasets.md` — limpieza y preparación de las fuentes
 - `analisis_estadistico.md` — análisis con Pandas

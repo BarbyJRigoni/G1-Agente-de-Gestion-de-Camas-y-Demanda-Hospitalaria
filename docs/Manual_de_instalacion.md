@@ -16,7 +16,7 @@
   <img src="https://img.shields.io/badge/Docker-opcional-2496ED?logo=docker&logoColor=white" alt="Docker">
 </p>
 
-Este manual explica cómo instalar y poner en marcha el sistema en una PC con Windows. Cubre las cuatro formas de usarlo, la creación de cuentas, las comprobaciones de funcionamiento y cómo resolver los errores más comunes.
+Este manual explica cómo instalar y poner en marcha el sistema en una PC con Windows. Cubre las tres formas de usarlo, la creación de cuentas, las comprobaciones de funcionamiento y cómo resolver los errores más comunes.
 
 ---
 
@@ -25,9 +25,8 @@ Este manual explica cómo instalar y poner en marcha el sistema en una PC con Wi
 | Opción | Para quién | Necesita | Sección |
 |---|---|---|---|
 | 🅰️ **Entorno local** | Desarrollo y exposición | Python 3.11 o superior | [3 a 6](#3--crear-el-entorno-e-instalar-dependencias) |
-| 🐳 **Docker** | Probar sin instalar Python | Docker Desktop | [7](#7--instalación-con-docker) |
-| 📦 **Paquete de entrega** | Personas sin conocimientos técnicos | Docker Desktop | [8](#8--paquete-de-entrega-doble-clic) |
-| 🧪 **Demo sin servidor** | Respaldo si falla la PC en la exposición | Solo un navegador | [9](#9--demo-sin-servidor) |
+| 🐳 **Docker** | Probar sin instalar Python o publicar en la nube | Docker Desktop | [7](#7--instalación-con-docker) |
+| 🧪 **Demo sin servidor** | Respaldo si falla la PC en la exposición | Solo un navegador | [9](#8--demo-sin-servidor) |
 
 > [!TIP]
 > **¿Apurado?** Ver el [⚡ resumen rápido](#-resumen-rápido) al final.
@@ -43,12 +42,11 @@ Este manual explica cómo instalar y poner en marcha el sistema en una PC con Wi
 5. [🚀 Iniciar la aplicación](#5--iniciar-la-aplicación)
 6. [✅ Comprobar el funcionamiento](#6--comprobar-el-funcionamiento)
 7. [🐳 Instalación con Docker](#7--instalación-con-docker)
-8. [📦 Paquete de entrega (doble clic)](#8--paquete-de-entrega-doble-clic)
-9. [🧪 Demo sin servidor](#9--demo-sin-servidor)
-10. [🗄️ Cuentas en PostgreSQL (Neon)](#10-️-cuentas-en-postgresql-neon)
-11. [🔁 Iniciar de nuevo y detener](#11--iniciar-de-nuevo-y-detener)
-12. [🩺 Resolver problemas](#12--resolver-problemas)
-13. [💾 Conservación de datos y alcance](#13--conservación-de-datos-y-alcance)
+8. [🧪 Demo sin servidor](#8--demo-sin-servidor)
+9. [🗄️ Cuentas en PostgreSQL (Neon)](#9-️-cuentas-en-postgresql-neon)
+10. [🔁 Iniciar de nuevo y detener](#10--iniciar-de-nuevo-y-detener)
+11. [🩺 Resolver problemas](#11--resolver-problemas)
+12. [💾 Conservación de datos y alcance](#12--conservación-de-datos-y-alcance)
 
 ---
 
@@ -58,7 +56,7 @@ Este manual explica cómo instalar y poner en marcha el sistema en una PC con Wi
 |---|---|
 | 🪟 **Windows 10 u 11** | Con terminal **PowerShell** |
 | 🐍 **Python 3.11 o superior** | Comando `python` accesible (solo para la instalación local) |
-| 🐳 **Docker Desktop** | Solo para las opciones Docker y paquete de entrega |
+| 🐳 **Docker Desktop** | Solo para la opción Docker |
 | 🌐 **Navegador** | Cualquiera actualizado |
 | 🔌 **Conexión a internet** | Para descargar el proyecto y las dependencias |
 | 🌿 **Git** | Para descargar desde el repositorio (también se puede bajar como ZIP) |
@@ -82,7 +80,7 @@ Comprobar que estén:
 
 - [ ] `requirements.txt` y `Dockerfile`
 - [ ] `backend/` y `frontend/`
-- [ ] `demo/` y `entrega/`
+- [ ] `demo/`
 
 Y dentro de `backend/data/procesados/`:
 
@@ -286,39 +284,7 @@ docker run -d --name agente-camas -p 8000:8000 -v agente-camas-datos:/datos agen
 
 ---
 
-## 8 · 📦 Paquete de entrega (doble clic)
-
-Para que cualquier persona use el sistema **sin instalar Python ni ver el código**. Solo necesita Docker Desktop.
-
-### Para el usuario
-
-1. Abrir **Docker Desktop** y esperar a que diga *Engine running*.
-2. Doble clic en **`iniciar.bat`**:
-   - La primera vez instala la app (tarda unos minutos).
-   - Pide crear un usuario y contraseña, y luego confirmarlo como administrador escribiendo `si`.
-   - Abre el navegador solo.
-3. Ingresar con ese usuario.
-
-| Archivo | Qué hace |
-|---|---|
-| ▶️ `iniciar.bat` | Instala (la primera vez), enciende y abre el navegador |
-| ⏹️ `detener.bat` | Apaga el sistema. Las cuentas quedan guardadas |
-| 👤 `crear_usuario.bat` | Agrega otro usuario (con el sistema encendido) |
-| 🔄 `actualizar.bat` | Instala una versión nueva conservando las cuentas |
-| 📄 `LEEME.txt` | Instrucciones en lenguaje simple |
-
-### Para el grupo: armar el paquete
-
-1. Con Docker Desktop abierto, doble clic en **`entrega\preparar_paquete.bat`**. Construye la imagen y la guarda en `entrega\agente-camas.tar`.
-2. Comprimir la carpeta `entrega` **sin** `preparar_paquete.bat`.
-3. Compartirla por Drive o pendrive.
-
-> [!NOTE]
-> `agente-camas.tar` pesa varios cientos de MB y **no se sube a Git** (está en `.gitignore`).
-
----
-
-## 9 · 🧪 Demo sin servidor
+## 8 · 🧪 Demo sin servidor
 
 La carpeta `demo/` tiene dos opciones de respaldo para la exposición:
 
@@ -332,7 +298,7 @@ La carpeta `demo/` tiene dos opciones de respaldo para la exposición:
 
 ---
 
-## 10 · 🗄️ Cuentas en PostgreSQL (Neon)
+## 9 · 🗄️ Cuentas en PostgreSQL (Neon)
 
 *Opcional.* Por defecto las cuentas se guardan en **SQLite**, en la propia computadora. Para compartir las mismas cuentas entre varias instalaciones o publicar el sistema, se puede usar una base **PostgreSQL** gratuita, por ejemplo en [Neon](https://neon.tech/).
 
@@ -363,19 +329,18 @@ python backend/app/migrar_cuentas_neon.py
 
 ---
 
-## 11 · 🔁 Iniciar de nuevo y detener
+## 10 · 🔁 Iniciar de nuevo y detener
 
 | Forma | Encender | Apagar |
 |---|---|---|
 | 🅰️ Local | `.\.venv\Scripts\Activate.ps1` y luego `python -m uvicorn main:app --app-dir backend/app --reload` | <kbd>Ctrl</kbd> + <kbd>C</kbd> y luego `deactivate` |
 | 🐳 Docker | `docker start agente-camas` | `docker stop agente-camas` |
-| 📦 Paquete | Doble clic en `iniciar.bat` | Doble clic en `detener.bat` |
 
 > Cerrar el navegador **no** apaga el servidor.
 
 ---
 
-## 12 · 🩺 Resolver problemas
+## 11 · 🩺 Resolver problemas
 
 <details>
 <summary><b>🚫 PowerShell bloquea <code>Activate.ps1</code></b></summary>
@@ -433,7 +398,7 @@ Abrir http://127.0.0.1:8001 y usar ese puerto para `/salud` y `/docs`. Con Docke
 
 <br>
 
-Abrir Docker Desktop, esperar *Engine running* y volver a ejecutar el comando o el `.bat`.
+Abrir Docker Desktop, esperar *Engine running* y volver a ejecutar el comando.
 
 </details>
 
@@ -481,7 +446,7 @@ Revisar que `DATABASE_URL` empiece con `postgresql://` y que la base de Neon est
 
 ---
 
-## 13 · 💾 Conservación de datos y alcance
+## 12 · 💾 Conservación de datos y alcance
 
 | Tema | Detalle |
 |---|---|
@@ -522,8 +487,6 @@ docker exec -it agente-camas python crear_usuario.py
 docker exec -it agente-camas python crear_admin.py
 # Abrir http://localhost:8000
 ```
-
-**Paquete de entrega:** abrir Docker Desktop → doble clic en `iniciar.bat`.
 
 ---
 
