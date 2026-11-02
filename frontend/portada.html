@@ -24,7 +24,7 @@
 <main><section class="hero"><h1>Más información.<br><em>Mejores decisiones.</em></h1><p class="intro">Anticipá la demanda hospitalaria y optimizá la disponibilidad de camas. </p><p class="nota-demo"></p></section>
 
 <section class="acceso" aria-labelledby="tituloAcceso">
-    <span class="paso">Acceso al agente</span>
+    <span class="paso">Gestión de camas</span>
 
     <div class="logo-agente" aria-hidden="true">
         <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2">
@@ -36,10 +36,28 @@
         </svg>
     </div>
 
-    <h2 id="tituloAcceso">Bienvenido al sistema</h2><p>Ingresá con tu cuenta</p><form id="formAcceso"><label for="usuario">Usuario</label><input id="usuario" name="username" autocomplete="username" maxlength="40" required autofocus placeholder="Nombre de usuario"><label for="clave">Contraseña</label><div class="clave"><input id="clave" name="password" type="password" autocomplete="current-password" maxlength="128" required placeholder="Contraseña"><button id="mostrarClave" class="mostrar" type="button" aria-controls="clave" aria-pressed="false">Mostrar</button></div><button id="entrar" class="entrar" type="submit">Ingresar</button><p id="mensajeAcceso" role="status" aria-live="polite"></p></form>
-<button id="abrirRegistro" class="registro-boton" type="button">
-    Registrarse
+    <h2 id="tituloAcceso">Ingresá a tu cuenta</h2><p>Accedé al panel de demanda hospitalaria</p><form id="formAcceso"><label for="usuario">Usuario</label><input id="usuario" name="username" autocomplete="username" maxlength="40" required autofocus placeholder="Nombre de usuario"><label for="clave">Contraseña</label><div class="clave"><input id="clave" name="password" type="password" autocomplete="current-password" maxlength="128" required placeholder="Contraseña"><button
+    id="mostrarClave"
+    class="mostrar"
+    type="button"
+    aria-controls="clave"
+    aria-pressed="false"
+    aria-label="Mostrar u ocultar contraseña"
+>Mostrar</button>
+</div>
+
+<button id="entrar" class="entrar" type="submit">
+    Ingresar
 </button>
+
+<p id="mensajeAcceso" role="status" aria-live="polite"></p>
+</form>
+<div class="registro-invitacion">
+    <span>¿Todavía no tenés cuenta?</span>
+    <button id="abrirRegistro" class="registro-boton" type="button">
+        Registrarse
+    </button>
+</div>
 
 <form id="formRegistro" hidden>
     <h3>Crear una cuenta</h3>
@@ -77,7 +95,7 @@
         autocomplete="new-password"
         aria-describedby="ayudaClaveRegistro"
         required
-        placeholder="Elegí tu contraseña"
+        placeholder="Entre 5 y 14 caracteres"
     >
     <button
         class="mostrar"
@@ -87,10 +105,6 @@
         aria-pressed="false"
     >Mostrar</button>
 </div>
-
-<p id="ayudaClaveRegistro" class="ayuda-clave">
-    Entre 5 y 14 caracteres.
-</p>
 
 <label for="confirmarClave">Confirmar contraseña</label>
 <div class="clave">

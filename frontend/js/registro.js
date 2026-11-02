@@ -11,9 +11,11 @@ const tituloInternoRegistro = formRegistro.querySelector('h3');
 const textoTituloIngreso = tituloAcceso?.textContent;
 const textoDescripcionIngreso = descripcionAcceso?.textContent;
 
-// El mismo botón sirve para abrir el registro y para volver al ingreso.
-// Se coloca después del formulario, sin crear otro botón ni otro evento.
-formRegistro.after(abrirRegistro);
+// Mover el contenedor completo conserva la pregunta junto al botón.
+const invitacionRegistro = abrirRegistro.closest('.registro-invitacion');
+const preguntaRegistro = invitacionRegistro.querySelector('span');
+
+formRegistro.after(invitacionRegistro);
 abrirRegistro.setAttribute('aria-controls', 'formRegistro');
 
 function mostrarRegistro(mostrar) {

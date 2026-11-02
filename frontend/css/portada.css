@@ -1,92 +1,172 @@
-:root{color-scheme:light;--teal:#087e82;--ink:#1e3447;--muted:#536878}*{box-sizing:border-box}body{margin:0;min-height:100vh;font:15px/1.6 system-ui,"Segoe UI",sans-serif;color:white;background:#123e51}body:before{content:"";position:fixed;inset:0;background:linear-gradient(90deg,rgba(7,31,47,.94),rgba(9,46,61,.77) 48%,rgba(20,53,67,.42)),url('/portada/hospital') center/cover no-repeat;z-index:-1}
-header{max-width:1440px;margin:auto;padding:30px 5vw;display:flex;align-items:center;justify-content:space-between;gap:20px}.marca{display:flex;align-items:center;gap:13px}.icono{display:grid;place-items:center;width:46px;height:46px;background:#ffffff15;border:1px solid #ffffff36;border-radius:14px;color:#98ebd8}.icono svg{width:28px;height:28px}.marca b{display:block;line-height:1.2;font-size:17px;letter-spacing:-.02em}.marca small{font-size:10px;letter-spacing:.15em;color:#c7e5e9}.grupo{font-size:11px;border:1px solid #ffffff3b;border-radius:25px;padding:6px 13px;color:#d9eaed}
-main{max-width:1440px;min-height:calc(100vh - 180px);margin:auto;padding:36px 5vw 58px;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(330px,.8fr);gap:clamp(8px,3vw,30px);align-items:center}.etiqueta{display:inline-flex;gap:8px;align-items:center;background:#0b86843b;border:1px solid #73cec058;color:#b4eee2;font-size:11px;font-weight:650;letter-spacing:.08em;text-transform:uppercase;padding:7px 13px;border-radius:25px}.etiqueta:before{content:"";width:7px;height:7px;border-radius:50%;background:#82dac0}h1{font-size:clamp(38px,5vw,68px);line-height:1.08;letter-spacing:-.055em;margin:23px 0;max-width:12ch;font-weight:750}h1 em{font-style:normal;color:#a1e7d6}.intro{font-size:16px;line-height:1.8;color:#d3e2e8;max-width:47ch}.capacidades{display:flex;gap:22px;flex-wrap:wrap;margin-top:34px}.capacidades div{border-left:2px solid #8acdc9;padding-left:13px}.capacidades b{display:block;font-size:16px;color:#fff}.capacidades span{font-size:11px;color:#c4dce2}.nota-demo{margin-top:32px;font-size:11px;color:#bdd5de;max-width:62ch}
-.acceso{background:#fff;color:var(--ink);padding:clamp(26px,3vw,42px);border-radius:24px;box-shadow:0 25px 90px #041e3b45;width:100%;max-width:445px;justify-self:end}.paso{display: block;text-align: center;font-size:10px;color:#087e82;font-weight:800;text-transform:uppercase;letter-spacing:.15em}.acceso h2{font-size:28px;letter-spacing:-.035em;margin:8px 0}.acceso>p{color:var(--muted);font-size:13px;margin:0 0 25px}label{display:grid;font-size:12px;font-weight:650;gap:7px;margin:16px 0 7px}.clave{position:relative}input{width:100%;padding:13px 14px;font:inherit;font-size:14px;color:var(--ink);border:1px solid #cad8e0;border-radius:10px;background:#f9fbfc;min-height:47px}#clave{padding-right:70px}.mostrar{position:absolute;right:8px;top:8px;padding:6px 8px;border:0;background:transparent;color:#387285;font:inherit;font-size:11px;cursor:pointer}.entrar{display:flex;align-items:center;justify-content:center;gap:12px;border:0;border-radius:11px;background:#087e82;color:#fff;width:100%;padding:13px;font:inherit;font-weight:700;margin-top:23px;cursor:pointer;box-shadow:0 5px 14px #087e8220}.entrar:hover{background:#086c71}.entrar:disabled{opacity:.6;cursor:wait}.flecha{font-size:20px;line-height:1}button:focus-visible,input:focus-visible{outline:3px solid #b389da;outline-offset:3px}#mensajeAcceso{font-size:12px;color:#526c78;margin:15px 0 0;min-height:20px}#mensajeAcceso.error{color:#b12b43;background:#fff0f2;border-radius:8px;padding:10px}.ayuda{border-top:1px solid #e2eaf0;margin-top:23px;padding-top:17px;font-size:11px;color:#657a89}.ayuda p{margin:4px 0}.privacidad{display:flex;gap:7px;align-items:center;color:#477774;font-size:11px;margin-top:15px}footer{max-width:1440px;margin:0 auto;padding:0 5vw 22px;font-size:10px;color:#b7d2dc;display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap}
-@media(max-width:850px){header{padding:24px}.grupo{display:none}main{grid-template-columns:1fr;padding:25px 24px 45px;gap:30px}.hero{max-width:640px}.acceso{justify-self:start;max-width:530px;width:100%}h1{font-size:44px;max-width:18ch;margin:18px 0}.intro{font-size:14px}.capacidades{margin-top:22px}.nota-demo{margin-top:20px}footer{padding:0 24px 22px}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
-
-/* Centrar el mensaje de ayuda */
-.ayuda {
-    text-align: center;
+:root {
+    color-scheme: light;
+    --teal: #087e82;
+    --ink: #16364a;
+    --muted: #355165;
 }
 
-/* Registro de nuevos usuarios */
-.registro-boton {
-    display: block;
-    width: 100%;
-    margin-top: 0;
-    padding: 12px;
-    border: 1px solid #087e82;
-    border-radius: 11px;
-    background: white;
-    color: #087e82;
-    font: inherit;
-    font-weight: 700;
-    cursor: pointer;
+* {
+    box-sizing: border-box;
 }
 
-.registro-boton:hover {
-    background: #eef8f7;
+body {
+    margin: 0;
+    min-height: 100vh;
+    font: 15px/1.6 system-ui, "Segoe UI", sans-serif;
+    color: white;
+    background: #073b50;
+    isolation: isolate;
 }
 
-.registro-boton:disabled {
-    opacity: .6;
-    cursor: wait;
+/* Fondo del hospital */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+    linear-gradient(
+        90deg,
+        rgba(5, 43, 59, 0.68) 0%,
+        rgba(5, 43, 59, 0.67) 42%,
+        rgba(5, 43, 59, 0.82) 70%,
+        rgba(5, 43, 59, 0.90) 100%
+    ),
+    url("/portada/hospital") center / cover no-repeat;
 }
 
-#formRegistro {
-    margin-top: 18px;
-    padding-top: 15px;
-    border-top: 1px solid #e2eaf0;
+/* Encabezado institucional */
+header {
+    max-width: 1440px;
+    margin: auto;
+    padding: 20px 5vw;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
 }
 
-#formRegistro[hidden] {
-    display: none;
+.marca {
+    display: flex;
+    align-items: center;
+    gap: 13px;
 }
 
-#formRegistro h3 {
-    margin: 0 0 8px;
-    font-size: 19px;
-}
-
-#mensajeRegistro {
-    font-size: 12px;
-    margin-top: 12px;
-    color: #526c78;
-}
-
-#mensajeRegistro.error {
-    color: #b12b43;
-}
-
-#mensajeRegistro.exito {
-    color: #087e82;
-}
-
-#formAcceso[hidden] {
-    display: none;
-}
-
-/* Logo del Politécnico en el encabezado */
 .logo-politecnico {
+    display: block;
     width: 58px;
     height: 58px;
     max-width: 58px;
     object-fit: cover;
     border-radius: 50%;
     flex-shrink: 0;
-    display: block;
 }
 
-/* Ícono del agente centrado dentro del formulario */
+.marca b {
+    display: block;
+    font-size: 17px;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+}
+
+.marca small {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: #c7e5e9;
+}
+
+.grupo {
+    padding: 6px 13px;
+    border: 1px solid #ffffff3b;
+    border-radius: 25px;
+    color: #d9eaed;
+    font-size: 11px;
+}
+
+/* Distribución principal */
+main {
+    max-width: 1440px;
+    min-height: calc(100vh - 180px);
+    margin: auto;
+    padding: 24px 5vw 36px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(330px, 0.8fr);
+    gap: clamp(8px, 3vw, 30px);
+    align-items: center;
+}
+
+h1 {
+    max-width: 12ch;
+    margin: 23px 0;
+    font-size: clamp(34px, 4vw, 54px);
+    font-weight: 750;
+    line-height: 1.08;
+    letter-spacing: -0.055em;
+}
+
+h1 em {
+    font-style: normal;
+    color: #a1e7d6;
+}
+
+.intro {
+    max-width: 47ch;
+    font-size: 16px;
+    line-height: 1.8;
+    color: #d3e2e8;
+}
+
+.nota-demo {
+    max-width: 62ch;
+    margin-top: 32px;
+    font-size: 11px;
+    color: #bdd5de;
+}
+
+/* Formulario con vidrio claro */
+.acceso {
+    width: 100%;
+    max-width: 420px;
+    min-width: 0;
+    justify-self: end;
+    padding: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.78);
+    border-radius: 30px;
+    color: var(--ink);
+    background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.73),
+        rgba(239, 243, 247, 0.57)
+    );
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    box-shadow:
+        0 24px 60px rgba(0, 20, 35, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.paso {
+    display: block;
+    text-align: center;
+    color: #19394d;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+}
+
 .logo-agente {
     display: grid;
     place-items: center;
     width: 54px;
     height: 54px;
     margin: 14px auto 12px;
-    background: #e7f6f3;
-    color: #087e82;
-    border-radius: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.66);
+    color: #17394e;
+    box-shadow: 0 5px 15px rgba(10, 35, 50, 0.06);
 }
 
 .logo-agente svg {
@@ -95,51 +175,404 @@ main{max-width:1440px;min-height:calc(100vh - 180px);margin:auto;padding:36px 5v
 }
 
 #tituloAcceso {
+    margin: 12px 0 8px;
     text-align: center;
-    margin: 10px 0;
+    color: #123248;
+    font-size: 26px;
+    font-weight: 750;
+    line-height: 1.2;
+    letter-spacing: -0.04em;
 }
 
 .acceso > p {
+    margin: 0 0 26px;
     text-align: center;
-}
-
-/* Footer centrado en una sola línea */
-.footer-portada {
-    display: block;
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-    margin: 0;
-    padding: 15px 20px;
-    text-align: center;
-    font-size: 11px;
-    color: #b7d2dc;
-    white-space: normal;
-    overflow-wrap: anywhere;
+    color: #244357;
+    font-size: clamp(10px, 1.1vw, 14px);
     line-height: 1.6;
+    white-space: nowrap;
 }
 
-#mensajeAcceso:empty {
+/* Campos */
+.acceso label {
     display: block;
-    min-height: 8px;
-    margin: 8px 0 0;
+    margin: 16px 0 7px;
+    text-align: left;
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 700;
 }
 
+.acceso input {
+    width: 100%;
+    min-height: 49px;
+    padding: 13px 15px;
+    border: 1px solid rgba(255, 255, 255, 0.68);
+    border-radius: 13px;
+    background-color: rgba(255, 255, 255, 0.52);
+    color: var(--ink);
+    font: inherit;
+    font-size: 14px;
+    text-align: left;
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.18);
+    transition:
+        background-color 0.18s ease,
+        border-color 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+.acceso input::placeholder {
+    color: #425968;
+    opacity: 1;
+}
+
+.acceso input:hover {
+    background-color: rgba(255, 255, 255, 0.64);
+}
+
+.acceso input:focus {
+    border-color: var(--teal);
+    background-color: rgba(255, 255, 255, 0.82);
+    box-shadow: 0 0 0 3px rgba(8, 126, 130, 0.13);
+}
+
+/* Persona en el campo Usuario */
+#usuario {
+    padding-left: 44px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2316364a' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='4'/%3E%3Cpath d='M4 21v-2a8 8 0 0 1 16 0v2'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 14px center;
+    background-size: 20px 20px;
+}
+
+/* Candado en el campo Contraseña */
+#clave {
+    padding-left: 44px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2316364a' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='10' width='14' height='11' rx='2'/%3E%3Cpath d='M8 10V7a4 4 0 0 1 8 0v3'/%3E%3Ccircle cx='12' cy='15' r='1'/%3E%3Cpath d='M12 16v2'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 14px center;
+    background-size: 20px 20px;
+}
+
+.clave {
+    position: relative;
+}
+
+#clave,
 #nuevaClave,
 #confirmarClave {
     padding-right: 80px;
 }
 
-.ayuda-clave {
-    margin: 8px 0 0;
-    font-size: 12px;
-    line-height: 1.5;
-    color: var(--muted);
+.mostrar {
+    position: absolute;
+    top: 50%;
+    right: 9px;
+    transform: translateY(-50%);
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 44px;
+    padding: 8px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: #244b60;
+    font-size: 0;
+    cursor: pointer;
 }
 
-/* Acercar la frase al formulario en computadora */
+.mostrar::before {
+    content: "";
+    width: 21px;
+    height: 21px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23244b60' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.mostrar:hover {
+    background: rgba(255, 255, 255, 0.38);
+}
+
+/* Botones principales */
+.entrar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 49px;
+    margin-top: 21px;
+    padding: 13px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 13px;
+    background: linear-gradient(135deg, #069b99, #087e82);
+    color: white;
+    font: inherit;
+    font-weight: 750;
+    cursor: pointer;
+    box-shadow: 0 7px 17px rgba(3, 84, 89, 0.2);
+    transition: box-shadow 0.18s ease;
+}
+
+.entrar:hover {
+    background: linear-gradient(135deg, #078b89, #066d73);
+    box-shadow: 0 9px 20px rgba(3, 84, 89, 0.26);
+}
+
+.entrar:disabled,
+.registro-boton:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+/* Pregunta y enlace juntos en una línea */
+.registro-invitacion {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 8px;
+    width: 100%;
+    margin-top: 12px;
+    color: #244357;
+    font-size: 13px;
+    text-align: center;
+}
+
+.registro-invitacion > span {
+    white-space: nowrap;
+}
+
+.registro-boton {
+    display: inline-block;
+    flex: 0 0 auto;
+    width: auto;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: #066e73;
+    font: inherit;
+    font-weight: 750;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.registro-boton:hover {
+    color: #044e55;
+}
+
+/* Formulario de registro */
+#formRegistro {
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(255, 255, 255, 0.55);
+}
+
+#formRegistro h3 {
+    margin: 0 0 8px;
+    color: #153247;
+    font-size: 19px;
+    text-align: center;
+}
+
+.ayuda-clave {
+    margin: 8px 0 0;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+/* Mensajes */
+#mensajeAcceso,
+#mensajeRegistro {
+    margin: 12px 0 0;
+    color: #29485c;
+    font-size: 12px;
+}
+
+#mensajeAcceso:empty,
+#mensajeRegistro:empty {
+    min-height: 0;
+    margin: 0;
+}
+
+#mensajeAcceso.error,
+#mensajeRegistro.error {
+    padding: 10px 12px;
+    border-radius: 9px;
+    background: #fff0f2;
+    color: #a1223b;
+}
+
+#mensajeRegistro.exito {
+    padding: 10px 12px;
+    border-radius: 9px;
+    background: #e9f8f2;
+    color: #09634f;
+}
+
+/* Estado controlado por JavaScript */
+#formAcceso[hidden],
+#formRegistro[hidden] {
+    display: none;
+}
+
+.acceso button:focus-visible,
+.acceso input:focus-visible {
+    outline: 3px solid var(--teal);
+    outline-offset: 3px;
+}
+
+/* Pie de página */
+.footer-portada {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 15px 20px;
+    text-align: center;
+    color: #b7d2dc;
+    font-size: 11px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+
+/* Computadoras */
 @media (min-width: 1000px) {
     .hero {
         transform: translateX(75px);
+    }
+}
+
+/* Tablets y celulares */
+@media (max-width: 850px) {
+    body::before {
+        background-position: center, left top;
+    }
+
+    header {
+        padding: 18px 16px;
+    }
+
+    .marca {
+        gap: 10px;
+        min-width: 0;
+    }
+
+    .logo-politecnico {
+        width: 44px;
+        height: 44px;
+        max-width: 44px;
+    }
+
+    .marca b {
+        font-size: 14px;
+        line-height: 1.3;
+    }
+
+    .marca small {
+        display: block;
+        margin-top: 4px;
+        font-size: 8px;
+        letter-spacing: 0.12em;
+    }
+
+    .grupo {
+        display: none;
+    }
+
+    main {
+        min-height: auto;
+        grid-template-columns: minmax(0, 1fr);
+        padding: 20px 16px 30px;
+        gap: 24px;
+    }
+
+    .hero {
+        min-width: 0;
+        max-width: 100%;
+        transform: none;
+    }
+
+    h1 {
+        max-width: 100%;
+        margin: 0 0 14px;
+        font-size: clamp(30px, 7.5vw, 42px);
+        line-height: 1.12;
+        letter-spacing: -0.04em;
+    }
+
+    .intro {
+        max-width: 42ch;
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    .nota-demo:empty {
+        display: none;
+    }
+
+    .acceso {
+        justify-self: center;
+        width: 100%;
+        max-width: 470px;
+        padding: 24px 20px;
+        border-radius: 24px;
+    }
+
+    #tituloAcceso {
+        font-size: 25px;
+    }
+
+    .acceso > p {
+        margin-bottom: 20px;
+        font-size: clamp(10px, 2.7vw, 14px);
+    }
+
+    .registro-invitacion {
+        gap: 6px;
+        font-size: 12px;
+    }
+
+    .footer-portada {
+        padding: 12px 16px 20px;
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 420px) {
+    .acceso {
+        padding: 24px 18px;
+        border-radius: 24px;
+    }
+
+    #tituloAcceso {
+        font-size: 25px;
+    }
+
+    .registro-invitacion {
+        font-size: 12px;
+        gap: 6px;
+    }
+}
+
+@media (max-width: 380px) {
+    .registro-invitacion {
+        font-size: 11px;
+        gap: 5px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        scroll-behavior: auto !important;
+    }
+
+    .acceso input,
+    .entrar {
+        transition: none;
     }
 }

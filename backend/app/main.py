@@ -267,4 +267,4 @@ def logo_politecnico():
 def favicon():
     return Response(status_code=204)
 
-# CALIBRACION_Y_CALENDARIO_V2
+
