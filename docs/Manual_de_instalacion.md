@@ -10,30 +10,43 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/versi%C3%B3n-1.0.0-blue" alt="Versión 1.0.0">
-  <img src="https://img.shields.io/badge/actualizado-18%2F10%2F2026-lightgrey" alt="18/10/2026">
+  <img src="https://img.shields.io/badge/actualizado-01%2F11%2F2026-lightgrey" alt="01/11/2026">
   <img src="https://img.shields.io/badge/Windows-PowerShell-0078D6?logo=windows&logoColor=white" alt="Windows PowerShell">
-  <img src="https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white" alt="Python 3.11">
+  <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python 3.11+">
+  <img src="https://img.shields.io/badge/Docker-opcional-2496ED?logo=docker&logoColor=white" alt="Docker">
 </p>
 
-Este manual explica cómo instalar y poner en marcha el sistema **en una PC local con Windows y PowerShell**. Incluye la creación de cuentas, las comprobaciones de funcionamiento y cómo resolver los errores de arranque más comunes.
+Este manual explica cómo instalar y poner en marcha el sistema en una PC con Windows. Cubre las tres formas de usarlo, la creación de cuentas, las comprobaciones de funcionamiento y cómo resolver los errores más comunes.
+
+---
+
+## 🧭 ¿Qué forma de instalación elijo?
+
+| Opción | Para quién | Necesita | Sección |
+|---|---|---|---|
+| 🅰️ **Entorno local** | Desarrollo y exposición | Python 3.11 o superior | [3 a 6](#3--crear-el-entorno-e-instalar-dependencias) |
+| 🐳 **Docker** | Probar sin instalar Python o publicar en la nube | Docker Desktop | [7](#7--instalación-con-docker) |
+| 🧪 **Demo sin servidor** | Respaldo si falla la PC en la exposición | Solo un navegador | [9](#8--demo-sin-servidor) |
+
+> [!TIP]
+> **¿Apurado?** Ver el [⚡ resumen rápido](#-resumen-rápido) al final.
 
 ---
 
 ## 📑 Contenido
 
 1. [📋 Requisitos previos](#1--requisitos-previos)
-2. [📁 Comprobar la carpeta del proyecto](#2--comprobar-la-carpeta-del-proyecto)
+2. [📥 Descargar el proyecto](#2--descargar-el-proyecto)
 3. [🐍 Crear el entorno e instalar dependencias](#3--crear-el-entorno-e-instalar-dependencias)
-4. [👤 Configurar cuentas locales](#4--configurar-cuentas-locales)
+4. [👤 Configurar cuentas](#4--configurar-cuentas)
 5. [🚀 Iniciar la aplicación](#5--iniciar-la-aplicación)
 6. [✅ Comprobar el funcionamiento](#6--comprobar-el-funcionamiento)
-7. [🔁 Iniciar de nuevo y detener](#7--iniciar-de-nuevo-y-detener)
-8. [🩺 Resolver problemas de instalación](#8--resolver-problemas-de-instalación)
-9. [💾 Conservación de datos y alcance local](#9--conservación-de-datos-y-alcance-local)
-
-> [!TIP]
-> **¿Apurado?** Ver el [⚡ resumen rápido](#-resumen-rápido) al final.
+7. [🐳 Instalación con Docker](#7--instalación-con-docker)
+8. [🧪 Demo sin servidor](#8--demo-sin-servidor)
+9. [🗄️ Cuentas en PostgreSQL (Neon)](#9-️-cuentas-en-postgresql-neon)
+10. [🔁 Iniciar de nuevo y detener](#10--iniciar-de-nuevo-y-detener)
+11. [🩺 Resolver problemas](#11--resolver-problemas)
+12. [💾 Conservación de datos y alcance](#12--conservación-de-datos-y-alcance)
 
 ---
 
@@ -41,33 +54,33 @@ Este manual explica cómo instalar y poner en marcha el sistema **en una PC loca
 
 | Necesario | Detalle |
 |---|---|
-| 🪟 **Windows** | Con terminal **PowerShell** |
-| 🐍 **Python** | Comando `python` accesible. En el equipo de referencia se usó **Python 3.11** |
+| 🪟 **Windows 10 u 11** | Con terminal **PowerShell** |
+| 🐍 **Python 3.11 o superior** | Comando `python` accesible (solo para la instalación local) |
+| 🐳 **Docker Desktop** | Solo para la opción Docker |
 | 🌐 **Navegador** | Cualquiera actualizado |
-| 🔌 **Conexión a internet** | Para descargar las dependencias |
-| 🌿 **Git** | Solo si el proyecto se descarga desde el repositorio |
+| 🔌 **Conexión a internet** | Para descargar el proyecto y las dependencias |
+| 🌿 **Git** | Para descargar desde el repositorio (también se puede bajar como ZIP) |
 | 📝 **VS Code** | Opcional |
-
-- El archivo `requirements.txt` fija las versiones de las dependencias. Su instalación en un entorno nuevo **debe completarse sin errores** antes de continuar.
-- Hace falta una **copia completa del proyecto y de sus datos procesados**.
 
 ---
 
-## 2 · 📁 Comprobar la carpeta del proyecto
+## 2 · 📥 Descargar el proyecto
+
+La versión integrada se descarga desde la rama **`main`**:
 
 ```powershell
-cd "C:\Users\LENOVO\Documents\G1-Agente-de-Gestion-de-Camas-y-Demanda-Hospitalaria"
-python --version
+git clone https://github.com/BarbyJRigoni/G1-Agente-de-Gestion-de-Camas-y-Demanda-Hospitalaria.git
+cd G1-Agente-de-Gestion-de-Camas-y-Demanda-Hospitalaria
 ```
 
 > [!NOTE]
-> Esta ruta es la del equipo de referencia. **Adaptarla** si el proyecto está guardado en otra ubicación. Si se recibió un **ZIP**, extraerlo antes de ejecutar los comandos.
+> **Sin Git:** en GitHub, botón **Code → Download ZIP**, extraer el ZIP y abrir PowerShell dentro de la carpeta.
 
-En esa carpeta deben estar:
+Comprobar que estén:
 
-- [ ] `requirements.txt`
-- [ ] `backend/`
-- [ ] `frontend/`
+- [ ] `requirements.txt` y `Dockerfile`
+- [ ] `backend/` y `frontend/`
+- [ ] `demo/`
 
 Y dentro de `backend/data/procesados/`:
 
@@ -75,15 +88,8 @@ Y dentro de `backend/data/procesados/`:
 - [ ] `lengthofstay_limpio.csv`
 - [ ] `revision_hdhi/episodios/hdhi_episodios_candidatos.csv`
 
-| Carpeta | Contiene |
-|---|---|
-| `backend/app/data/` | Scripts de limpieza |
-| `backend/data/` | Archivos de datos |
-
 > [!WARNING]
 > Si faltan archivos procesados, **pedir la copia completa al equipo** y consultar `docs/limpieza_datasets.md` antes de regenerarlos.
-
-Si ya se tiene la versión funcional en la PC, no hace falta cambiar de rama ni reemplazar trabajo.
 
 ---
 
@@ -99,17 +105,27 @@ python -m pip install -r requirements.txt
 
 ✔️ La terminal debe mostrar el prefijo **`(.venv)`**.
 
-> [!TIP]
-> Si ya existe un entorno funcional, basta con **activarlo**.
+`requirements.txt` fija las versiones de FastAPI, Uvicorn, Pydantic, pandas, NumPy, scikit-learn, SciPy y psycopg (este último solo se usa si las cuentas van a PostgreSQL).
 
 > [!CAUTION]
 > No reinstalar mientras otra terminal esté modificando ese mismo entorno.
 
 ---
 
-## 4 · 👤 Configurar cuentas locales
+## 4 · 👤 Configurar cuentas
 
-### Crear la primera cuenta
+> [!IMPORTANT]
+> **No existen credenciales predeterminadas.** Hay tres formas de crear cuentas:
+
+| Forma | Quién | Usuario | Contraseña | Rol |
+|---|---|---|---|---|
+| 💻 **Consola** (`crear_usuario.py`) | Quien instala | 3 a 40 caracteres | 12 a 128 caracteres | Usuario |
+| 🌐 **Registrarse** en la portada | Cualquier visitante | 3 a 14 caracteres | 5 a 14 caracteres | Usuario |
+| ⚙️ **Administración** en el panel | Un administrador | 3 a 40 caracteres | 12 a 128 caracteres | Usuario o administrador |
+
+El usuario admite letras minúsculas, números, punto, guion y guion bajo.
+
+### Crear la primera cuenta por consola
 
 Desde la raíz y con el entorno activo:
 
@@ -117,20 +133,22 @@ Desde la raíz y con el entorno activo:
 python backend/app/crear_usuario.py
 ```
 
-- Ingresar un **nombre de usuario**.
-- Escribir **dos veces** una contraseña de **12 a 128 caracteres**.
-- 🔒 La contraseña **no se ve** mientras se escribe.
+Escribir el usuario y **dos veces** la contraseña. 🔒 La contraseña **no se ve** mientras se escribe.
 
-> [!IMPORTANT]
-> **No existen credenciales predeterminadas.** También se puede crear una cuenta desde **Registrarse** en la portada, con el servidor iniciado.
-
-### Asignar el rol administrador *(opcional)*
+### Convertirla en administrador
 
 ```powershell
 python backend/app/crear_admin.py
 ```
 
-Indicar la cuenta y confirmar con **`si`** cuando el programa lo pida. Esa cuenta podrá consultar usuarios, correos y roles desde la solapa **Administración**.
+Indicar la cuenta y confirmar con **`si`**. Un administrador puede crear, editar, activar y desactivar cuentas, cambiar roles y ver el historial de cambios desde **⚙ Administración**.
+
+> [!TIP]
+> Conviene crear al menos **un administrador por consola**. Después, el resto de las cuentas se pueden manejar desde el panel.
+
+### Registro desde la portada
+
+El formulario **Registrarse** pide usuario, correo (hasta 60 caracteres) y contraseña. Siempre asigna el rol **usuario** y tiene límites contra abusos: **5 registros cada 15 minutos** por conexión y **50 por hora** en total.
 
 ---
 
@@ -158,9 +176,22 @@ python -m uvicorn main:app --reload
 </details>
 
 > [!WARNING]
-> Usar **solo uno** de los dos comandos, según la carpeta en la que esté la terminal. En esta versión, ejecutar `app.main:app` desde `backend` provoca errores de importación con `services`, `routers` y `core`.
+> Usar **solo uno** de los dos comandos, según la carpeta en la que esté la terminal. Ejecutar `app.main:app` desde `backend` provoca errores de importación con `services`, `routers` y `core`.
 
-💡 La opción `--reload` es para desarrollo local: reinicia el servidor cada vez que cambia el código.
+💡 La opción `--reload` es para desarrollo: reinicia el servidor cada vez que cambia el código. Para la exposición se puede omitir.
+
+### Tiempos de la primera vez
+
+Los cálculos se hacen **a pedido** y se guardan para reutilizarlos:
+
+| Acción | Primera vez | Siguientes |
+|---|---|---|
+| Primera proyección de cada fuente | Unos segundos | Inmediato (queda en memoria) |
+| Proyección a 15 o 30 días | Unos segundos más (calibra el margen de error) | Inmediato |
+| Solapa **04 Evaluación** | Alrededor de 1 minuto | Menos de 1 s, aun después de reiniciar (se guarda en un archivo) |
+
+> [!TIP]
+> **Antes de la exposición:** abrir una vez cada fuente, los horizontes de 15 y 30 días y la solapa Evaluación. Así, durante la demo todo responde al instante.
 
 ---
 
@@ -170,41 +201,153 @@ python -m uvicorn main:app --reload
 |:-:|---|---|
 | 1 | Abrir http://127.0.0.1:8000/salud | ❤️ El servidor responde |
 | 2 | Abrir http://127.0.0.1:8000 e iniciar sesión | 🏠 Se accede al panel |
-| 3 | Ir a **Proyección** | 📊 Carga HDHI con una fecha de demostración. Esperar la primera proyección |
-| 4 | Probar **Normal**, **Límite** y **Crítico** | 🔄 Cambia la capacidad y se actualizan los resultados |
-| 5 | Abrir las otras solapas y http://127.0.0.1:8000/docs | 📘 Documentación técnica de la API (requiere sesión) |
+| 3 | **01 Proyección** | 📊 Carga HDHI con una fecha de demostración |
+| 4 | Probar **Normal**, **Límite** y **Crítico** | 🔄 Cambia la capacidad y aparecen las alertas |
+| 5 | Cambiar **Proyección** a 15 y 30 días | 📈 La tabla, el mapa de camas y el gráfico se adaptan |
+| 6 | **Exportar a Excel** | 📥 Se descarga la tabla visible |
+| 7 | Abrir **02 Estancias**, **03 UTI y general** y **04 Evaluación** | 🗂️ Cada sección carga sus gráficos |
+| 8 | Con una cuenta administradora, **⚙ Administración** | 👥 Lista de usuarios e historial |
+| 9 | Abrir http://127.0.0.1:8000/docs | 📘 Documentación de la API (requiere sesión) |
 
 > [!NOTE]
-> **No hace falta** iniciar un servidor aparte para el frontend: FastAPI sirve la interfaz y la API desde el mismo origen.
+> **No hace falta** un servidor aparte para el frontend: FastAPI sirve la interfaz y la API desde el mismo origen. Chart.js y SheetJS están incluidos en el proyecto, así que el panel funciona sin internet.
 
 ---
 
-## 7 · 🔁 Iniciar de nuevo y detener
+## 7 · 🐳 Instalación con Docker
 
-**▶️ En usos posteriores**, abrir PowerShell en la raíz y ejecutar:
+Esta opción arma la imagen a partir del código, así que primero hay que **descargar el proyecto** como se explica en la [sección 2](#2--descargar-el-proyecto):
 
 ```powershell
-.\.venv\Scripts\Activate.ps1
+git clone https://github.com/BarbyJRigoni/G1-Agente-de-Gestion-de-Camas-y-Demanda-Hospitalaria.git
+cd G1-Agente-de-Gestion-de-Camas-y-Demanda-Hospitalaria
+```
+
+No hace falta Python ni el `.venv` (secciones 3 a 5). Con **Docker Desktop abierto** (*Engine running*), desde esa carpeta:
+
+```powershell
+docker build -t agente-camas .
+docker run -d --name agente-camas -p 8000:8000 -v agente-camas-datos:/datos agente-camas
+```
+
+Crear las cuentas **dentro del contenedor**:
+
+```powershell
+docker exec -it agente-camas python crear_usuario.py
+docker exec -it agente-camas python crear_admin.py
+```
+
+Abrir http://localhost:8000.
+
+| Concepto | Qué es |
+|---|---|
+| **Imagen** (`agente-camas`) | La app ya instalada con Linux, Python 3.13 y sus librerías |
+| **Contenedor** | La imagen funcionando |
+| **Volumen** (`agente-camas-datos`) | Carpeta fuera del contenedor donde quedan las cuentas. No se pierde al reiniciar ni al actualizar |
+
+### 📄 El `Dockerfile`
+
+`docker build` lee el archivo **`Dockerfile`**, en la raíz del proyecto. Es la receta para armar la imagen. No hace falta modificarlo para instalar ni para actualizar.
+
+| Instrucción | Qué hace |
+|---|---|
+| `FROM python:3.13-slim` | Parte de un Linux mínimo con Python 3.13 |
+| `ENV ... CAMAS_AUTH_DB=/datos/acceso.sqlite3` | Guarda la base de cuentas en `/datos` y evita archivos `.pyc` |
+| `COPY requirements.txt .` + `RUN pip install ...` | Instala las librerías. Va antes del código para que, si solo cambia el código, la reconstrucción tarde segundos |
+| `COPY backend/` y `COPY frontend/` | Copia la app con la misma estructura del repo |
+| `WORKDIR /app/backend/app` | Equivale a `cd backend\app` |
+| `EXPOSE 8000` | La app escucha en el puerto 8000 |
+| `VOLUME /datos` | Deja las cuentas fuera de la imagen para que no se pierdan |
+| `CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]` | Arranca el servidor aceptando conexiones desde fuera del contenedor |
+
+El archivo **`.dockerignore`** deja afuera de la imagen lo que no hace falta: `.git`, `.venv`, `docs`, cachés y los CSV originales (la app usa solo `backend/data/procesados`).
+
+**Comandos útiles**
+
+| Comando | Para qué |
+|---|---|
+| `docker stop agente-camas` | Apagar |
+| `docker start agente-camas` | Encender |
+| `docker logs -f agente-camas` | Ver la terminal del servidor (salir con <kbd>Ctrl</kbd> + <kbd>C</kbd>) |
+| `docker rm -f agente-camas` | Borrar el contenedor (las cuentas se conservan) |
+| `docker volume rm agente-camas-datos` | ⚠️ Borrar las cuentas |
+
+### Si cambia el código
+
+Reconstruir la imagen y recrear el contenedor. Las cuentas se conservan:
+
+```powershell
+docker build -t agente-camas .
+docker rm -f agente-camas
+docker run -d --name agente-camas -p 8000:8000 -v agente-camas-datos:/datos agente-camas
+```
+
+---
+
+## 8 · 🧪 Demo sin servidor
+
+La carpeta `demo/` tiene dos opciones de respaldo para la exposición:
+
+| Archivo | Qué hace |
+|---|---|
+| 🌐 `panel_sin_servidor.html` | Doble clic y se abre en el navegador. **No necesita Python, internet ni sesión.** Muestra resultados reales grabados de la API para los tres datasets y los escenarios Normal, Límite y Crítico |
+| ▶️ `iniciar_demo.bat` | Levanta el sistema completo con el `.venv` del proyecto y abre el navegador. Si faltan librerías, las instala. Se cierra cerrando la ventana negra |
+
+> [!WARNING]
+> `panel_sin_servidor.html` solo muestra los casos grabados. Si se cambia la fecha o la capacidad a mano, avisa que ese caso no está disponible. Si cambia el modelo o los datos, conviene regenerarlo.
+
+---
+
+## 9 · 🗄️ Cuentas en PostgreSQL (Neon)
+
+*Opcional.* Por defecto las cuentas se guardan en **SQLite**, en la propia computadora. Para compartir las mismas cuentas entre varias instalaciones o publicar el sistema, se puede usar una base **PostgreSQL** gratuita, por ejemplo en [Neon](https://neon.tech/).
+
+### Usar PostgreSQL
+
+Definir la variable `DATABASE_URL` antes de iniciar el servidor, en la misma terminal:
+
+```powershell
+$env:DATABASE_URL = "postgresql://usuario:clave@servidor/base?sslmode=require"
 python -m uvicorn main:app --app-dir backend/app --reload
 ```
 
-**⏹️ Para detener:**
+Si `DATABASE_URL` no está definida, el sistema vuelve a usar SQLite.
 
-| Acción | Cómo |
-|---|---|
-| Detener el servidor | <kbd>Ctrl</kbd> + <kbd>C</kbd> en la terminal |
-| Salir del entorno virtual | `deactivate` (después de detener el servidor) |
+> [!CAUTION]
+> La dirección de la base incluye la contraseña. **No escribirla en el código ni subirla a GitHub.**
+
+### Pasar las cuentas existentes de SQLite a Neon
+
+```powershell
+python backend/app/migrar_cuentas_neon.py
+```
+
+- Pide la dirección de Neon **sin mostrarla** y no la guarda.
+- Pide confirmar escribiendo **`COPIAR`**.
+- Copia cuentas, roles, estados e historial. Las contraseñas se conservan sin conocerlas.
+- La base de Neon **debe estar vacía**. La base local queda intacta.
 
 ---
 
-## 8 · 🩺 Resolver problemas de instalación
+## 10 · 🔁 Iniciar de nuevo y detener
+
+| Forma | Encender | Apagar |
+|---|---|---|
+| 🅰️ Local | `.\.venv\Scripts\Activate.ps1` y luego `python -m uvicorn main:app --app-dir backend/app --reload` | <kbd>Ctrl</kbd> + <kbd>C</kbd> y luego `deactivate` |
+| 🐳 Docker | `docker start agente-camas` | `docker stop agente-camas` |
+
+> Cerrar el navegador **no** apaga el servidor.
+
+---
+
+## 11 · 🩺 Resolver problemas
 
 <details>
 <summary><b>🚫 PowerShell bloquea <code>Activate.ps1</code></b></summary>
 
 <br>
 
-Se puede usar el Python del entorno directamente, **sin activarlo ni cambiar políticas**:
+Usar el Python del entorno directamente, **sin activarlo ni cambiar políticas**:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
@@ -220,12 +363,12 @@ Se puede usar el Python del entorno directamente, **sin activarlo ni cambiar pol
 
 Detener con <kbd>Ctrl</kbd> + <kbd>C</kbd> y usar el comando de la [sección 5](#5--iniciar-la-aplicación) desde la raíz, o entrar a `backend/app` y ejecutar `main:app`.
 
-> El problema es la **ruta de importación**, no una biblioteca que falte instalar con pip.
+> El problema es la **ruta de importación**, no una biblioteca que falte instalar.
 
 </details>
 
 <details>
-<summary><b>📦 <code>No module named uvicorn</code> u otra dependencia</b></summary>
+<summary><b>📦 <code>No module named uvicorn</code>, <code>psycopg</code> u otra dependencia</b></summary>
 
 <br>
 
@@ -246,7 +389,25 @@ Detener el servidor anterior o iniciar otro en un puerto distinto:
 python -m uvicorn main:app --app-dir backend/app --reload --port 8001
 ```
 
-Luego abrir http://127.0.0.1:8001 y usar ese mismo puerto para `/salud` y `/docs`.
+Abrir http://127.0.0.1:8001 y usar ese puerto para `/salud` y `/docs`. Con Docker, cerrar el programa que use el puerto 8000 o reiniciar la PC.
+
+</details>
+
+<details>
+<summary><b>🐳 "Docker Desktop no está abierto"</b></summary>
+
+<br>
+
+Abrir Docker Desktop, esperar *Engine running* y volver a ejecutar el comando.
+
+</details>
+
+<details>
+<summary><b>⏳ La solapa Evaluación o el horizonte de 30 días tardan</b></summary>
+
+<br>
+
+Es normal la primera vez (ver [Tiempos de la primera vez](#tiempos-de-la-primera-vez)). Esperar el resultado. Si falla, guardar el mensaje completo.
 
 </details>
 
@@ -255,59 +416,76 @@ Luego abrir http://127.0.0.1:8001 y usar ese mismo puerto para `/salud` y `/docs
 
 <br>
 
-Desde la raíz, con el entorno activo:
+Un administrador puede gestionarlo desde **⚙ Administración**. Por consola, desde la raíz con el entorno activo:
 
 ```powershell
 python backend/app/crear_usuario.py --usuario NOMBRE --cambiar-clave
 ```
 
-Reemplazar `NOMBRE` por la cuenta existente. El cambio **cierra todas las sesiones** de esa cuenta.
+Reemplazar `NOMBRE` por la cuenta. El cambio **cierra todas las sesiones** de esa cuenta.
 
 </details>
 
 <details>
-<summary><b>📉 Faltan datos</b></summary>
+<summary><b>🚦 "Se alcanzó el límite de registros"</b></summary>
 
 <br>
 
-Reponer los archivos procesados (ver [sección 2](#2--comprobar-la-carpeta-del-proyecto)) y reiniciar el servidor.
+El registro desde la portada permite 5 registros cada 15 minutos por conexión. Esperar o crear la cuenta por consola o desde Administración.
+
+</details>
+
+<details>
+<summary><b>🗄️ No conecta con PostgreSQL</b></summary>
+
+<br>
+
+Revisar que `DATABASE_URL` empiece con `postgresql://` y que la base de Neon esté activa. Para volver a SQLite, cerrar la terminal (la variable se borra) y abrir una nueva.
 
 </details>
 
 ---
 
-## 9 · 💾 Conservación de datos y alcance local
+## 12 · 💾 Conservación de datos y alcance
 
 | Tema | Detalle |
 |---|---|
-| 🗄️ **Base de cuentas** | `acceso.sqlite3` en `%LOCALAPPDATA%\AgenteCamas`, dentro de una subcarpeta según la ruta del proyecto |
-| ⚙️ **Otra ubicación** | Definir la variable de entorno `CAMAS_AUTH_DB` |
-| 📦 **Mover el proyecto** | Puede hacer que use **otra base de cuentas** |
-| 🛟 **Respaldo** | Detener el servidor y copiar la base, junto con los datos y el código |
+| 🗄️ **Cuentas (local)** | `acceso.sqlite3` en `%LOCALAPPDATA%\AgenteCamas`, en una subcarpeta según la ruta del proyecto. `CAMAS_AUTH_DB` permite otra ubicación |
+| 🐳 **Cuentas (Docker)** | Volumen `agente-camas-datos` |
+| ☁️ **Cuentas (PostgreSQL)** | La base indicada en `DATABASE_URL` |
+| 📊 **Evaluación guardada** | Carpeta temporal del sistema (`AgenteCamas\evaluaciones`). Se recalcula sola si cambian los datos o el código |
+| 📦 **Mover el proyecto** | Con SQLite local, puede hacer que use **otra base de cuentas** |
+| 🛟 **Respaldo** | Detener el servidor y copiar la base de cuentas, junto con los datos y el código |
 
 > [!IMPORTANT]
-> Este manual cubre el **uso local en `127.0.0.1`**. Publicar el sistema en red requiere un procedimiento de despliegue específico.
+> Este manual cubre el uso en una PC (`127.0.0.1` / `localhost`). Publicar el sistema en internet requiere HTTPS y una configuración de despliegue específica.
 
 ---
 
 ## ⚡ Resumen rápido
 
-```powershell
-# 1. Ir a la carpeta del proyecto
-cd "RUTA\G1-Agente-de-Gestion-de-Camas-y-Demanda-Hospitalaria"
+**Local**
 
-# 2. Entorno y dependencias (solo la primera vez)
+```powershell
+git clone https://github.com/BarbyJRigoni/G1-Agente-de-Gestion-de-Camas-y-Demanda-Hospitalaria.git
+cd G1-Agente-de-Gestion-de-Camas-y-Demanda-Hospitalaria
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
-
-# 3. Crear cuenta (solo la primera vez)
 python backend/app/crear_usuario.py
-
-# 4. Iniciar
+python backend/app/crear_admin.py
 python -m uvicorn main:app --app-dir backend/app --reload
+# Abrir http://127.0.0.1:8000   ·   Detener con Ctrl + C
+```
 
-# 5. Abrir http://127.0.0.1:8000   ·   Detener con Ctrl + C
+**Docker**
+
+```powershell
+docker build -t agente-camas .
+docker run -d --name agente-camas -p 8000:8000 -v agente-camas-datos:/datos agente-camas
+docker exec -it agente-camas python crear_usuario.py
+docker exec -it agente-camas python crear_admin.py
+# Abrir http://localhost:8000
 ```
 
 ---
