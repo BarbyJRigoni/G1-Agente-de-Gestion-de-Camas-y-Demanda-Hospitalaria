@@ -212,7 +212,7 @@ La documentación interactiva está en **`/docs`** (requiere sesión iniciada).
 **Acceso desde la nube**
 La aplicación está publicada en Render y se puede utilizar desde un navegador, sin instalar Python, Docker ni ejecutar el servidor en la computadora de quien ingresa.
 
-Enlace de acceso: https://chatgpt.com/g/g-p-6ace4e57c5e08191aed422a6eda93804-agente-degestion-de-camas-y-demanda-hospitalaria/c/6ace4e95-31ec-83e9-ab7e-acfe7218e1c0#acceso-desde-la-nube
+Enlace de acceso: (https://g1-agente-de-gestion-de-camas-y-demanda.onrender.com/panel)
 
 **Cómo ingresar**
 1. Abrir el enlace con conexión a internet.
