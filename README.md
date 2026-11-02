@@ -31,8 +31,7 @@ Agente inteligente que estima la **ocupación y disponibilidad de camas hospital
 - [🖥️ El panel](#️-el-panel)
 - [🧠 Cómo funciona el agente](#-cómo-funciona-el-agente)
 - [🔌 API](#-api)
--  Acceso a la nube https://chatgpt.com/g/g-p-6ace4e57c5e08191aed422a6eda93804-agente-degestion-de-camas-y-demanda-hospitalaria/c/6ace4e95-31ec-83e9-ab7e-acfe7218e1c0#acceso-desde-la-nube
-- [⚙️ Requisitos e instalación](#️-requisitos-e-instalación)
+-  Acceso a la nube https://g1-agente-de-gestion-de-camas-y-demanda.onrender.com/panel 
 - [🚀 Uso](#-uso)
 - [📈 Resultados](#-resultados)
 - [🧪 Notas metodológicas y limitaciones](#-notas-metodológicas-y-limitaciones)
