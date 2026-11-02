@@ -212,7 +212,7 @@ La documentación interactiva está en **`/docs`** (requiere sesión iniciada).
 **Acceso desde la nube**
 La aplicación está publicada en Render y se puede utilizar desde un navegador, sin instalar Python, Docker ni ejecutar el servidor en la computadora de quien ingresa.
 
-Enlace de acceso: (https://g1-agente-de-gestion-de-camas-y-demanda.onrender.com/panel)
+Enlace de acceso: [Acceder al agente](https://g1-agente-de-gestion-de-camas-y-demanda.onrender.com/panel)
 
 **Cómo ingresar**
 1. Abrir el enlace con conexión a internet.
