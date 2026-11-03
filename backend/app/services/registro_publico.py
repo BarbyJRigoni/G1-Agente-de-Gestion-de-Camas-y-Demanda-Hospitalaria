@@ -1,8 +1,6 @@
 """Registro autónomo de usuarios comunes con límite compartido de solicitudes.
-
 El límite se guarda en la misma base de cuentas (SQLite o PostgreSQL), para
-que no se reinicie con cada proceso web. No interviene en las altas del admin.
-"""
+que no se reinicie con cada proceso web. No interviene en las altas del admin."""
 import time
 from services import acceso
 
@@ -11,18 +9,15 @@ MAXIMO_IP = 5
 VENTANA_GLOBAL = 60 * 60
 MAXIMO_GLOBAL = 50
 
-
 class DemasiadosRegistros(ValueError):
     def __init__(self, mensaje, reintentar_en=900):
         super().__init__(mensaje)
         self.reintentar_en = reintentar_en
 
-
 def registrar(usuario, clave, correo, ip):
     ahora = time.time()
     ip = ip or 'sin-direccion'
-    # Cada solicitud reserva su lugar antes del cálculo de PBKDF2.
-    # El bloqueo de escritura conserva el límite con solicitudes simultáneas.
+    # Cada solicitud reserva su lugar antes del cálculo de PBKDF2. El bloqueo de escritura conserva el límite con solicitudes simultáneas.
     with acceso.conexion(escritura=True) as db:
         db.execute('DELETE FROM intentos_registro WHERE instante<?', (ahora - VENTANA_GLOBAL,))
         total = db.execute('SELECT COUNT(*) FROM intentos_registro').fetchone()[0]

@@ -1,14 +1,11 @@
-"""Cache acotada por proceso: un solo calculo simultaneo por combinacion.
+"""Cache acotada por proceso: un solo calculo simultaneo por combinacion.No persiste datos ni errores. Cada reinicio descarta los resultados."""
 
-No persiste datos ni errores. Cada reinicio descarta los resultados.
-"""
 from collections import OrderedDict, namedtuple
 from concurrent.futures import Future
 from copy import deepcopy
 from functools import wraps
 from inspect import signature
 from threading import RLock
-
 
 def cache_calculo(maxsize=64, copiar=False, clave_funcion=None):
     def decorar(funcion):
@@ -69,5 +66,3 @@ def cache_calculo(maxsize=64, copiar=False, clave_funcion=None):
         consultar.cache_info = informacion
         return consultar
     return decorar
-
-# CALIBRACION_Y_CALENDARIO_V2

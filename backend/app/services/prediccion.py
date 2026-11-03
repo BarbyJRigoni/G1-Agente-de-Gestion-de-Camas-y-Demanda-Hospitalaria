@@ -1,11 +1,6 @@
-"""
-services/prediccion.py — Modelo de predicción de demanda hospitalaria y su evaluación.
-
-Responsable: Bárbara (Inteligencia artificial e interfaz)
-
+"""services/prediccion.py — Modelo de predicción de demanda hospitalaria y su evaluación.
 Qué predice: cuántos pacientes INGRESAN por día en los próximos días. Es el dato
-que el agente (agents/inventario_agent.py) necesita para saber cuántas camas se
-van a ocupar.
+que el agente (agents/inventario_agent.py) necesita para saber cuántas camas sevan a ocupar.
 
 Compiten cinco métodos y se elige el mejor con backtesting:
   - media_28d       promedio de los últimos 28 días (referencia mínima)
@@ -19,10 +14,8 @@ Compiten cinco métodos y se elige el mejor con backtesting:
 
 Además evalúa al AGENTE completo: proyecta desde fechas pasadas y compara con la
 ocupación que realmente hubo (error en camas y precisión / recall de las alertas).
+Usa los datos limpios del equipo (services/analisis.py y el mapa de columnas de core/config.py) sin modificarlos."""
 
-Usa los datos limpios del equipo (services/analisis.py y el mapa de columnas de
-core/config.py) sin modificarlos.
-"""
 from functools import lru_cache
 import hashlib
 from services.rendimiento import cache_calculo
@@ -44,16 +37,12 @@ NOMBRES = {"media_28d": "Media 28 días", "semana_anterior": "Semana anterior",
            "dia_semana_8sem": "Día de semana (8 semanas)", "estacional": "Estacional (mes × día)",
            "regresion": "Regresión Ridge"}
 
-
-# ======================================================================
 # Utilidades
-# ======================================================================
 def ridge(X: np.ndarray, y: np.ndarray, lam: float = RIDGE_LAMBDA) -> np.ndarray:
     """Regresión Ridge con solución cerrada: (X'X + λI)^-1 X'y. No penaliza el intercepto."""
     P = lam * np.eye(X.shape[1])
     P[0, 0] = 0
     return np.linalg.solve(X.T @ X + P, X.T @ y)
-
 
 def metricas(y, yhat) -> dict:
     """MAE, RMSE, WAPE, R² y sesgo.
@@ -67,7 +56,6 @@ def metricas(y, yhat) -> dict:
             "r2": round(float(1 - (e ** 2).sum() / sst), 3) if sst > 0 else 0.0,
             "sesgo": round(float(-e.mean()), 3)}          # > 0: el modelo sobreestima
 
-
 @lru_cache(maxsize=None)
 def serie_ingresos(dataset: str) -> pd.Series:
     """Ingresos por día del dataset (días sin ingresos = 0). Mismo criterio que el agente:
@@ -80,17 +68,13 @@ def serie_ingresos(dataset: str) -> pd.Series:
     s = fechas.value_counts().sort_index()
     return s.reindex(pd.date_range(s.index.min(), s.index.max(), freq="D"), fill_value=0).astype(float)
 
-
-# ======================================================================
 # Modelo de demanda
-# ======================================================================
 def _clave_historia(modelo, hasta, *extra):
     # El cache comparte ajustes SOLO cuando coincide toda la historia disponible.
     # La huella incluye fechas y valores hasta el corte; nunca objetivos futuros.
     historia = modelo.y.loc[:hasta]
     huella = hashlib.sha256(pd.util.hash_pandas_object(historia, index=True).values.tobytes()).digest()
     return modelo.nombre, pd.Timestamp(hasta).isoformat(), huella
-
 
 class ModeloDemanda:
     def __init__(self, serie: pd.Series, nombre: str = ""):
@@ -230,22 +214,17 @@ class ModeloDemanda:
                 "mejora_vs_media_pct": round(100 * (base - mejor) / base, 1) if base else 0.0,
                 "backtest": {k: v for k, v in self.evaluacion.items() if k != "serie"}}
 
-
 @cache_calculo(maxsize=3)
 def modelo_demanda(dataset: str) -> ModeloDemanda:
     """Entrena y evalúa el modelo de un dataset una sola vez (queda en memoria)."""
     return ModeloDemanda(serie_ingresos(dataset), dataset)
-
 
 def predecir_ingresos(dataset: str, fecha, dias: int, metodo: str = "auto"):
     fecha = pd.Timestamp(fecha).normalize()
     modelo = modelo_demanda_hasta(dataset, fecha.date().isoformat())
     return modelo.predecir(fecha, dias, metodo)
 
-
-# ======================================================================
 # Evaluación del agente completo
-# ======================================================================
 def ocupacion_real(internaciones: pd.DataFrame) -> pd.Series:
     """Camas ocupadas cada noche (mismo criterio que agente.censo_en_fecha):
     ingreso <= noche < egreso. Se calcula con eventos +1 / -1 y suma acumulada."""
@@ -253,7 +232,6 @@ def ocupacion_real(internaciones: pd.DataFrame) -> pd.Series:
     entra = internaciones["ingreso"].value_counts().reindex(idx, fill_value=0)
     sale = internaciones["egreso"].value_counts().reindex(idx, fill_value=0)
     return (entra - sale).cumsum()
-
 
 @lru_cache(maxsize=None)
 def evaluar_agente(dataset: str = 'hdhi', cada_dias: int = 7, dias: int = config.DIAS_PROYECCION) -> dict:
@@ -327,7 +305,6 @@ def evaluar_agente(dataset: str = 'hdhi', cada_dias: int = 7, dias: int = config
                 'nota': 'Parametros elegidos con el periodo anterior; cada ajuste usa solo el pasado.'}
     return resultado
 
-
 # CORRECCION_TEMPORAL_HDHI_V1
 @cache_calculo(maxsize=128)
 def modelo_demanda_hasta(dataset: str, fecha_iso: str) -> ModeloDemanda:
@@ -336,5 +313,3 @@ def modelo_demanda_hasta(dataset: str, fecha_iso: str) -> ModeloDemanda:
     if len(serie) < 148:
         raise ValueError("Se necesitan al menos 148 dias de historia hasta el censo.")
     return ModeloDemanda(serie, dataset)
-
-# CALIBRACION_Y_CALENDARIO_V2

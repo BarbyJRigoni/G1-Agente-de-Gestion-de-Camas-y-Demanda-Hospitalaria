@@ -2,7 +2,6 @@ from pathlib import Path
 import pandas as pd
 
 # Configuracion/ rutas
-
 CARPETA_DATOS = Path(__file__).resolve().parents[2] / "data"
 RUTA_CSV = CARPETA_DATOS / "HDHI Admission data.csv"
 
@@ -13,16 +12,11 @@ COLUMNAS_CLINICAS = [
 
 FORMATOS_FECHA = ["%m/%d/%Y", "%d/%m/%Y"]
 
-
 # validacion de fechas
-
 def validar_fechas(df):
     
-    """
-    Busca parejas de fechas coherentes con la duracion
-    registrada, contando el dia de ingreso. No inventa fechas cuando no existe una solucion unica.
-    """
-
+    """Busca parejas de fechas coherentes con la duracion registrada, contando el dia de ingreso. No inventa fechas cuando no existe una solucion unica."""
+    
     df = df.copy()
 
     df["fecha_ingreso_original"] = df["d_o_a"]
@@ -153,7 +147,6 @@ def limpiar_hdhi():
 
     return df_limpio
 
-
 # Ejecucion
 
 if __name__ == "__main__":
@@ -172,4 +165,3 @@ if __name__ == "__main__":
 
     print("\nDataset limpio guardado en:")
     print(ruta_salida)
-    

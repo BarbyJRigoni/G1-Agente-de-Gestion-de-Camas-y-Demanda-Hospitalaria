@@ -1,4 +1,3 @@
-
 from pathlib import Path
 import pandas as pd
 
@@ -12,7 +11,6 @@ datasets = {
     "Healthcare": pd.read_csv(CARPETA_DATOS / "healthcare_dataset.csv")
 }
 
-
 # Explora la estructura y calidad de cada dataset.
 def explorar_dataset(nombre, df):
     print(f"\n===== {nombre.upper()} =====")
@@ -23,12 +21,10 @@ def explorar_dataset(nombre, df):
     print("\nFilas duplicadas:", df.duplicated().sum())
     print("\nTipos de datos:\n", df.dtypes.to_string())
 
-
 # Ejecuta la exploracion general de los tres archivos.
 for nombre, df in datasets.items():
     explorar_dataset(nombre, df)
-
-
+    
 # Revisa aspectos particulares del dataset HDHI.
 df_hdhi = datasets["HDHI Admission"]
 

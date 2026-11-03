@@ -3,8 +3,7 @@
 Se supone UTI -> general -> egreso, sin reingreso a UTI ni bloqueo de traslados.
 Los tiempos de cada sector siguen una distribucion geometrica (sin memoria).
 Los parametros por sector deben ingresarse explicitamente; no se deducen del uso UTI registrado.
-Son supuestos de escenario, no trayectorias observadas ni un modelo validado por sector.
-"""
+Son supuestos de escenario, no trayectorias observadas ni un modelo validado por sector."""
 from datetime import date, timedelta
 from functools import lru_cache
 from typing import Literal
@@ -17,7 +16,6 @@ from core import config
 from services.analisis import cargar_datos
 from services.prediccion import predecir_ingresos, serie_ingresos
 
-
 class CensoSector(BaseModel):
     model_config = ConfigDict(extra="forbid")
     ocupadas: int = Field(ge=0, strict=True)
@@ -29,7 +27,6 @@ class CensoSector(BaseModel):
             raise ValueError("El censo de camas ocupadas no puede superar las camas habilitadas del sector. Registre capacidad adicional si corresponde; la demanda futura sin cama se informa por separado.")
         return self
 
-
 class EscenarioSectores(BaseModel):
     model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
     uti: CensoSector
@@ -39,7 +36,6 @@ class EscenarioSectores(BaseModel):
     estancia_media_general: float = Field(ge=1, le=365)
     fraccion_salidas_uti_a_general: float = Field(ge=0, le=1)
     origen_parametros: Literal["supuestos_usuario", "ejemplo_ficticio"] = "supuestos_usuario"
-
 
 @lru_cache(maxsize=64)
 def parametros_historicos(fecha_iso):
@@ -67,7 +63,6 @@ def parametros_historicos(fecha_iso):
         "origen": "Auditoria de disponibilidad HDHI anterior al censo. No se infieren tasas de ingreso UTI, medias operativas ni traslados.",
     }
 
-
 def _estado(ocupadas, capacidad):
     if not np.isfinite(ocupadas) or ocupadas < 0 or capacidad <= 0:
         raise ValueError("Ocupacion no finita, negativa o capacidad no positiva.")
@@ -76,7 +71,6 @@ def _estado(ocupadas, capacidad):
             "demanda_sin_cama": round(max(ocupadas - capacidad, 0), 4),
             "tasa_ocupacion_pct": round(100 * ocupadas / capacidad, 2),
             "alerta_saturacion": bool(ocupadas / capacidad > config.UMBRAL_SATURACION)}
-
 
 def proyectar_sectores(fecha, sectores, dias=7):
     fecha = date.fromisoformat(str(fecha or config.DATASETS["hdhi"]["fecha_demo"]))

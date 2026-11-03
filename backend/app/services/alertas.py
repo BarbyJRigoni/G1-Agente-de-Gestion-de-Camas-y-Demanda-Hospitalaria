@@ -1,19 +1,15 @@
-"""
-Logica de alertas de ocupacion de camas.
-
+"""Logica de alertas de ocupacion de camas.
 Compara la ocupacion proyectada con la capacidad del hospital y emite la
 "Alerta de Saturacion" cuando se supera el umbral definido en config.py (90 %).
-Solo trabaja con numeros: no lee archivos ni depende de otros modulos del equipo.
-"""
-from core import config
+Solo trabaja con numeros: no lee archivos ni depende de otros modulos del equipo."""
 
+from core import config
 
 # Calcula la Tasa de Ocupacion (KPI de la consigna), en porcentaje.
 def calcular_tasa_ocupacion(camas_ocupadas, capacidad):
     if capacidad <= 0:
         raise ValueError("La capacidad debe ser mayor a cero.")
     return round(camas_ocupadas / capacidad * 100, 1)
-
 
 # Evalua un dia: tasa de ocupacion, camas libres y si corresponde la alerta.
 def evaluar_dia(fecha, camas_ocupadas, capacidad):
@@ -31,7 +27,6 @@ def evaluar_dia(fecha, camas_ocupadas, capacidad):
         "tasa_ocupacion_pct": tasa,
         "alerta_saturacion": supera_umbral,
     }
-
 
 # Evalua la proyeccion completa (una lista de dias) y arma el resumen.
 # Cada dia de la lista debe tener las claves "fecha" y "camas_ocupadas".
@@ -71,7 +66,6 @@ def evaluar_proyeccion(proyeccion, capacidad):
         "dias_en_saturacion": dias_saturados,
         "dias": dias,
     }
-
 
 # Prueba rapida con los tres casos de la demo: normal, limite y critico.
 if __name__ == "__main__":

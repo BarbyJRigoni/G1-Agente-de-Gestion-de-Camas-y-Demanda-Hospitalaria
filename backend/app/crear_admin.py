@@ -1,8 +1,6 @@
-
 """Asigna el rol administrador a una cuenta existente."""
 
 from services import acceso
-
 
 def main():
     usuario = input("Usuario que sera administrador: ").strip()
@@ -26,7 +24,6 @@ def main():
         return
 
     print(f"El usuario '{usuario}' ahora es administrador.")
-
 
 if __name__ == "__main__":
     main()

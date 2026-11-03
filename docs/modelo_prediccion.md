@@ -1,14 +1,9 @@
 # Modelo de predicción de demanda, evaluación e interfaz
-
-**Responsable:** Bárbara Rigoni, Inteligencia artificial e interfaz
 **Archivos:** `services/prediccion.py`, `agents/inventario_agent.py`, `routers/prediccion.py` y `frontend/index.html`
 
 Todo se construyó sobre los datos limpios de Sabrina (`data/procesados/`, `services/analisis.py`) y el backend de Darío (`core/config.py`, `routers/inventario.py`, `services/alertas.py`), sin modificar la limpieza.
 
----
-
 ## 1. Qué hace el modelo y por qué hace falta
-
 Para proyectar camas, el agente necesita dos cosas:
 
 - **Cuántas camas se liberan:** sale de los pacientes internados hoy y de cuánto duraron las internaciones pasadas. Esa parte ya la resolvía el agente.

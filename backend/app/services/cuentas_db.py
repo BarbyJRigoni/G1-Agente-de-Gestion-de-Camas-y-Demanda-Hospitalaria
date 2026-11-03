@@ -1,9 +1,7 @@
 """Persistencia de cuentas: SQLite local o PostgreSQL mediante DATABASE_URL.
 
-El SQL de cuentas usa ? para sus parámetros. Únicamente este módulo lo adapta
-al marcador %s de psycopg; los valores siempre se envían separados del SQL.
-No contiene credenciales ni modifica los datasets hospitalarios.
-"""
+El SQL de cuentas usa ? para sus parámetros. Únicamente este módulo lo adapta l marcador %s de psycopg; los valores siempre se envían separados del SQL.
+No contiene credenciales ni modifica los datasets hospitalarios."""
 from contextlib import contextmanager
 import hashlib
 import os
@@ -18,7 +16,6 @@ _inicializadas = set()
 BLOQUEO_ESQUEMA = 831640701
 BLOQUEO_CUENTAS = 831640702
 
-
 def ruta_base():
     especifica = os.environ.get('CAMAS_AUTH_DB')
     if especifica:
@@ -28,10 +25,8 @@ def ruta_base():
     carpeta = Path(os.environ.get('LOCALAPPDATA', str(Path.home() / '.local' / 'share')))
     return carpeta / 'AgenteCamas' / identificador / 'acceso.sqlite3'
 
-
 def usa_postgres():
     return bool(os.environ.get('DATABASE_URL', '').strip())
-
 
 class ConexionCuentas:
     def __init__(self, base, postgres=False):
@@ -47,7 +42,6 @@ class ConexionCuentas:
                 # Mantiene compatibilidad con módulos que capturan sqlite3.IntegrityError.
                 raise ErrorIntegridad('Restricción de integridad de cuentas.') from None
         return self.base.execute(sql, parametros)
-
 
 def _esquema(db):
     if db.postgres:
@@ -93,7 +87,6 @@ def _esquema(db):
     db.execute('CREATE INDEX IF NOT EXISTS intentos_registro_tiempo ON intentos_registro(instante)')
     db.execute('CREATE INDEX IF NOT EXISTS intentos_tiempo ON intentos(instante)')
     db.execute('CREATE UNIQUE INDEX IF NOT EXISTS usuarios_correo_unico ON usuarios(correo)')
-
 
 @contextmanager
 def conexion(escritura=False):

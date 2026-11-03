@@ -1,9 +1,6 @@
 """Copia cuentas y auditoría de SQLite a una PostgreSQL vacía, sin sesiones.
-
 Se ejecuta en la computadora que ya tiene las cuentas. Pide la dirección de
-Neon sin mostrarla y no la guarda. Conserva los hashes existentes: no necesita
-conocer, pedir ni cambiar las contraseñas de los usuarios.
-"""
+Neon sin mostrarla y no la guarda. Conserva los hashes existentes: no necesita conocer, pedir ni cambiar las contraseñas de los usuarios."""
 import argparse
 from getpass import getpass
 import os
@@ -13,7 +10,6 @@ from services import acceso
 from services.cuentas_db import usa_postgres
 
 CAMPOS = ('usuario', 'sal', 'derivada', 'iteraciones', 'correo', 'rol', 'nombre_completo', 'activo')
-
 
 def migrar(origen):
     if not usa_postgres():
@@ -47,7 +43,6 @@ def migrar(origen):
             db.execute('''INSERT INTO auditoria_usuarios(instante,actor,accion,usuario_afectado,cambios)
                           VALUES (?,?,?,?,?)''', tuple(e[c] for c in ('instante', 'actor', 'accion', 'usuario_afectado', 'cambios')))
     return len(usuarios), len(eventos)
-
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -83,7 +78,6 @@ def main():
             os.environ.pop('DATABASE_URL', None)
         else:
             os.environ['DATABASE_URL'] = url_anterior
-
 
 if __name__ == '__main__':
     main()

@@ -1,17 +1,13 @@
 # Docker, paquete de entrega y tiempos de carga
 
 **Responsable:** Darío (API y documentación) · **Rama:** `dario`
-
 Este documento explica tres cosas que se agregaron al proyecto **sin modificar el código de la app** (agente, modelos, datos ni panel):
 
 1. Los tiempos de carga del panel (`backend/app/main.py`).
 2. El contenedor Docker (`Dockerfile` y `.dockerignore`).
 3. El paquete para que cualquier persona use la app con doble clic (carpeta `entrega/`).
 
----
-
 ## 1. Tiempos de carga
-
 ### El problema
 La primera proyección y la evaluación del agente se calculaban **recién cuando alguien entraba al panel**:
 
@@ -21,7 +17,6 @@ La primera proyección y la evaluación del agente se calculaban **recién cuand
 | Abrir la solapa 04 Evaluación | 40 s o más |
 
 ### Qué se agregó (solo en `main.py`)
-
 | Mejora | Qué hace |
 |---|---|
 | **Precálculo al arrancar** | Al levantar el servidor, calcula en segundo plano la fecha de demo de los 3 datasets y la evaluación del agente. |
@@ -31,7 +26,6 @@ La primera proyección y la evaluación del agente se calculaban **recién cuand
 Los cálculos son **exactamente los mismos**: solo cambió **cuándo** se hacen.
 
 ### Resultado
-
 | Acción | Antes | Ahora |
 |---|---|---|
 | Entrar al panel | 13,5 s | 0,2 s |
@@ -43,24 +37,16 @@ Precalculo del panel listo en ... s
 Precalculo completo en ... s
 Evaluacion leida del archivo en 0.0 s     (desde el segundo arranque)
 ```
-
 > **Para la demo:** levantar el servidor y esperar `Precalculo completo` antes de entrar.
 > Si se elige una **fecha nueva**, esa proyección se calcula en el momento y tarda unos segundos (por eso suma el indicador de carga de Barby).
 
----
-
 ## 2. Docker
-
 ### Conceptos
-
-| Concepto | Qué es |
-|---|---|
 | **Imagen** | Una "caja" con Linux, Python, las librerías y la app ya instaladas. Se arma con `docker build`. |
 | **Contenedor** | La imagen funcionando. Se crea con `docker run`. |
 | **Volumen** | Una carpeta que vive fuera del contenedor. Lo que se guarda ahí (los usuarios) no se pierde al reiniciar. |
 
 ### Archivos (en la raíz del repo)
-
 **`Dockerfile`**, paso a paso:
 
 | Línea | Qué hace |
@@ -76,7 +62,6 @@ Evaluacion leida del archivo en 0.0 s     (desde el segundo arranque)
 **`.dockerignore`**: como el `.gitignore`, pero para Docker. Deja afuera `.git`, `.venv`, `docs`, `__pycache__` y los CSV originales (la app solo usa `backend/data/procesados`).
 
 ### Cómo usarlo (con Docker Desktop abierto, desde la raíz del repo)
-
 ```powershell
 docker build -t agente-camas .
 docker run -d --name agente-camas -p 8000:8000 -v agente-camas-datos:/datos agente-camas
@@ -111,10 +96,7 @@ docker run -d --name agente-camas -p 8000:8000 -v agente-camas-datos:/datos agen
 | `docker rm -f agente-camas` | Borrar el contenedor (no borra usuarios) |
 | `docker volume rm agente-camas-datos` | Borrar los usuarios |
 
----
-
 ## 3. Paquete de entrega (para alguien sin conocimientos de código)
-
 La persona **solo necesita Docker Desktop instalado**. No instala Python ni ve el código.
 
 ### Contenido de la carpeta `entrega/`
@@ -141,8 +123,6 @@ La persona **solo necesita Docker Desktop instalado**. No instala Python ni ve e
 1. Con Docker Desktop abierto, doble clic en `entrega\preparar_paquete.bat`.
 2. Comprimir la carpeta `entrega` **sin** `preparar_paquete.bat`.
 3. Pasarla por Drive o pendrive.
-
----
 
 ## Archivos agregados o modificados
 

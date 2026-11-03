@@ -5,9 +5,6 @@
 La consigna pide mostrar el sistema funcionando en `http://localhost:8000/docs`, probar al menos 2 o 3 endpoints con un **ejemplo normal**, un **ejemplo límite** y un **ejemplo crítico**, y explicar qué datos se envían, qué responde el agente y cómo se interpreta el resultado.
 
 Duración estimada: **7 minutos**.
-
----
-
 ## 0. Antes de la exposición
 
 Desde la raíz del repositorio:
@@ -17,7 +14,6 @@ Desde la raíz del repositorio:
 cd backend\app
 uvicorn main:app --reload
 ```
-
 Tiene que aparecer `Application startup complete.`
 
 Dejar abiertas en el navegador:
@@ -25,8 +21,6 @@ Dejar abiertas en el navegador:
 - `http://localhost:8000/docs`
 
 > Si algo falla, revisar la sección **Problemas frecuentes** al final.
-
----
 
 ## 1. El sistema está funcionando (30 segundos)
 
@@ -38,9 +32,7 @@ Dejar abiertas en el navegador:
 ```
 
 **Qué decir:**
-> "La API está levantada y encontró los datos limpios. Trabaja con tres datasets; el principal es HDHI, un hospital real con estacionalidad."
-
----
+> "La API está levantada y encontró los datos limpios. Trabaja con tres datasets; el principal es HDHI, un hospital con estacionalidad."
 
 ## 2. La documentación automática (30 segundos)
 
@@ -59,8 +51,6 @@ Dejar abiertas en el navegador:
 **Qué decir:**
 > "FastAPI genera esta documentación sola a partir de los modelos Pydantic. Tenemos cuatro GET para consultar datos y un POST, que es el endpoint central de la consigna."
 
----
-
 ## 3. KPI: tiempo medio de estancia (1 minuto)
 
 **Endpoint:** `GET /estadisticas` → **Try it out** → `dataset = hdhi` → **Execute**
@@ -76,8 +66,6 @@ Dejar abiertas en el navegador:
 
 **Qué decir:**
 > "Este es el primer KPI de la consigna: el ALOS. En HDHI, un paciente queda internado 6,5 días en promedio, y entran unos 21 pacientes por día."
-
----
 
 ## 4. Caso NORMAL (1 minuto)
 
@@ -106,8 +94,6 @@ Dejar abiertas en el navegador:
 ```
 > "Para el 2 de enero se esperan 25 ingresos y 23 altas; quedarían unas 127 camas ocupadas y 63 libres."
 
----
-
 ## 5. Caso LÍMITE (1 minuto)
 
 **Examples** → **"Caso limite"** → **Execute**
@@ -126,8 +112,6 @@ Dejar abiertas en el navegador:
 
 **Qué decir:**
 > "Acá el hospital está muy cerca del límite: la proyección llega a 89,1 %. La consigna dice que la alerta se emite cuando la ocupación **supera** el 90 %, así que todavía no corresponde. Es el caso límite."
-
----
 
 ## 6. Caso CRÍTICO (1 minuto)
 
@@ -150,8 +134,6 @@ Dejar abiertas en el navegador:
 **Qué decir:**
 > "9 de enero de 2018, pleno invierno: el hospital está completo. El agente proyecta que va a seguir por encima del 90 % durante dos días, con un pico de 94 % al día siguiente, y emite la **Alerta de Saturación**. Después la ocupación baja porque las altas superan a los ingresos."
 
----
-
 ## 7. Extra: ¿qué pasa si el hospital pierde camas? (30 segundos)
 
 **Examples** → **"Menos camas"** → **Execute**
@@ -166,8 +148,6 @@ Dejar abiertas en el navegador:
 **Qué decir:**
 > "Es el mismo día que el caso normal, pero con 140 camas en lugar de 190, por ejemplo si se cierra un sector. La misma demanda ahora genera alerta. El censo puede traer la capacidad real del hospital."
 
----
-
 ## 8. Extra: otro hospital (30 segundos)
 
 Borrar el cuerpo (`Ctrl + A`), pegar y ejecutar:
@@ -180,8 +160,6 @@ Borrar el cuerpo (`Ctrl + A`), pegar y ejecutar:
 
 **Qué decir:**
 > "Con el mismo código, solo cambiando el dataset, el agente proyecta otro hospital mucho más grande. La solución es general."
-
----
 
 ## 9. Validación de datos (30 segundos)
 
@@ -204,8 +182,6 @@ Otros ejemplos, si hay tiempo:
 | `{"dias": 20}` | 422 – máximo 14 días |
 | `{"fecha": "2030-01-01"}` | 400 – fecha fuera de rango, con el rango válido |
 
----
-
 ## Resumen de resultados esperados
 
 | # | Prueba | Resultado |
@@ -218,8 +194,6 @@ Otros ejemplos, si hay tiempo:
 | 6 | Menos camas (140) | Máx. 92,7 % – **alerta** |
 | 7 | LengthOfStay | Máx. 85,2 % – sin alerta |
 | 8 | Capacidad 0 | Error 422 |
-
----
 
 ## Problemas frecuentes
 

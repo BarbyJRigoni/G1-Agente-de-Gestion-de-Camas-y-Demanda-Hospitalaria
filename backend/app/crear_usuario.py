@@ -1,10 +1,8 @@
 """Ejecutar desde la raiz: python backend/app/crear_usuario.py
-La clave se solicita con getpass: no aparece en pantalla ni en el historial.
-"""
+La clave se solicita con getpass: no aparece en pantalla ni en el historial."""
 import argparse
 from getpass import getpass
 from services.acceso import crear_usuario
-
 
 def main():
     parser = argparse.ArgumentParser(description="Configurar acceso local al agente de camas")
@@ -17,7 +15,6 @@ def main():
         raise ValueError("Las contrasenas no coinciden. No se realizaron cambios.")
     crear_usuario(usuario, clave, reemplazar=args.cambiar_clave)
     print("Acceso configurado. Inicia el servidor y entra con tu usuario y contrasena.")
-
 
 if __name__ == "__main__":
     try:

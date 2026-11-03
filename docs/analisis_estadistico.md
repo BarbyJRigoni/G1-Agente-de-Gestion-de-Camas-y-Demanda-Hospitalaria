@@ -1,9 +1,7 @@
 # Análisis estadístico con Pandas
-
 Analizar los datos históricos de internaciones hospitalarias con Pandas para obtener indicadores que ayuden a desarrollar el agente inteligente de predicción de demanda y disponibilidad de camas.
 
 ## 2. Datasets utilizados
-
 Se trabajó con tres datasets previamente limpiados:
 
 | Dataset | Registros | Estancia promedio |
@@ -17,7 +15,6 @@ Los tres archivos se procesan por separado porque no comparten un identificador 
 **Importante:** Los análisis estadísticos más completos se realizaron con Healthcare.
 
 ## 3. Análisis realizados
-
 Se desarrollaron los siguientes cálculos:
 
 - **ALOS por patología:** duración promedio de internación según enfermedad.
@@ -66,31 +63,23 @@ Para ejecutar el análisis desde la carpeta principal del proyecto:
 
 python backend/app/services/analisis.py
 
-
 ## 5. Utilidad para el agente inteligente
 
 **Para Darío (agente y predicción):**
-
 Puede utilizar los indicadores históricos de ingresos, egresos y duración de internación para desarrollar la proyección de demanda de los próximos **7 días**.
-
 La proyección de ocupación requiere además un censo actual y la capacidad hospitalaria.
 
 **Para Bárbara (FastAPI):**
-
 Puede importar las funciones de `analisis.py` para crear los endpoints que permitan consultar los indicadores y conectar el agente con la API.
-
 Uno de los endpoints solicitados es `/proyeccion-camas`, que debe recibir el censo hospitalario y devolver la proyección semanal.
 
 ## 6. Limitaciones y aclaraciones
-
 - Los tres datasets se analizaron individualmente; no se unificaron sus registros.
 - Los indicadores avanzados corresponden principalmente a Healthcare.
 - No se dispone de capacidad real de camas ni de un censo hospitalario actual.
 - El balance acumulado no representa la ocupación real de camas.
-- Para generar alertas de saturación superiores al **90 %** y diferenciar camas generales y UCI, se necesitan datos adicionales o una simulación autorizada por el profesor.
+- Para generar alertas de saturación superiores al **90 %** y diferenciar camas generales y UCI, se necesitan datos adicionales o una simulación.
 
 ## 7. Conclusión
-
 Se completó el procesamiento y análisis de los tres datasets, obteniendo indicadores históricos de internación.
-
 Estos resultados quedan disponibles para que el equipo continúe con la predicción de demanda, la lógica del agente inteligente y su integración con FastAPI.

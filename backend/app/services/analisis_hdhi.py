@@ -3,17 +3,13 @@
 Ubicacion en el proyecto: backend/app/services/analisis_hdhi.py
 Ejecutar desde la raiz: python backend/app/services/analisis_hdhi.py
 
-Usa el CSV limpio a traves de cargar_datos(), del analisis de Sabrina.
-Trabaja con duration_of_stay tal como esta registrada en HDHI. No convierte
-la estancia a noches. La carga comun selecciona los episodios revisados.
-Los indicadores admiten 0 (ausencia), 1 (presencia) y faltantes (desconocidos).
-Una internacion puede estar incluida en varias patologias/comorbilidades.
-Los resultados cuentan internaciones, no pacientes unicos.
+Usa el CSV limpio a traves de cargar_datos(). Trabaja con duration_of_stay tal como esta registrada en HDHI. No convierte
+la estancia a noches. La carga comun selecciona los episodios revisados. Los indicadores admiten 0 (ausencia), 1 (presencia) y faltantes (desconocidos).
+Una internacion puede estar incluida en varias patologias/comorbilidades. Los resultados cuentan internaciones, no pacientes unicos.
 Descripcion original de las variables: https://pmc.ncbi.nlm.nih.gov/articles/PMC8871182/
 
 indice_estancia = ALOS del grupo / ALOS general de este mismo dataset.
-Un indice mayor que 1 indica mayor estancia promedio; no es un score clinico.
-"""
+Un indice mayor que 1 indica mayor estancia promedio; no es un score clinico."""
 
 import json
 from math import isfinite
@@ -75,7 +71,6 @@ def _resumir_estancia(dias, alos_general):
         "percentil_90_dias": round(float(dias.quantile(0.90)), 2),
         "indice_estancia": round(alos / alos_general, 3),
     }  
-
 
 def calcular_alos_hdhi_por_patologia(df=None):
     """Cada indicador desconocido se informa aparte y nunca se interpreta como 0."""

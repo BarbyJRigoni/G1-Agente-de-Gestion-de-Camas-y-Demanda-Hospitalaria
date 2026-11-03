@@ -1,7 +1,4 @@
-"""
-Agente de gestion de camas.
-
-Proyecta la ocupacion de camas de los proximos dias a partir del censo
+"""Agente de gestion de camas. Proyecta la ocupacion de camas de los proximos dias a partir del censo
 actual (pacientes internados) y de la historia del hospital:
 
   - ALTAS: de los pacientes que hoy estan internados, cuantos seguiran
@@ -9,13 +6,11 @@ actual (pacientes internados) y de la historia del hospital:
   - INGRESOS: cuantos pacientes nuevos llegaran cada dia, segun el modelo de
     demanda de services/prediccion.py (Barbara). El modelo compara cinco metodos
     con backtesting y usa el que menos se equivoca en cada dataset.
-  - INCERTIDUMBRE: ademas del valor esperado calcula un escenario pesimista
-    (percentil 90) y la probabilidad de superar el umbral. Con eso emite una
+  - INCERTIDUMBRE: ademas del valor esperado calcula un escenario pesimista (percentil 90) y la probabilidad de superar el umbral. Con eso emite una
     alerta preventiva cuando la probabilidad es del 30 % o mas.
 
-Luego evalua la proyeccion con services/alertas.py (Alerta de Saturacion).
-Usa los datos limpios de Sabrina (services/analisis.py) sin modificarlos.
-"""
+Luego evalua la proyeccion con services/alertas.py (Alerta de Saturacion). Usa los datos limpios de Sabrina (services/analisis.py) sin modificarlos."""
+
 from functools import lru_cache
 from services.rendimiento import cache_calculo
 from math import erf, sqrt
@@ -30,20 +25,15 @@ from services.prediccion import Z_80, modelo_demanda_hasta, predecir_ingresos
 
 PROB_ALERTA_PREVENTIVA = 0.30   # elegido evaluando precision / recall (ver docs/modelo_prediccion.md)
 
-
-
-# ------------------------------------------------------------
 # 1. Datos
-# ------------------------------------------------------------
-
 # Carga un dataset limpio y deja solo fecha de ingreso, egreso y noches de
 # internacion, con los mismos nombres para los tres datasets (mapa de config.py).
 # Se usan NOCHES (egreso - ingreso) porque cada dataset cuenta la duracion
 # distinto: HDHI incluye el dia de alta y los otros dos no.
+
 def cargar_internaciones(dataset):
     # Se lee el CSV una sola vez por dataset y se devuelve una copia en cada llamada
     return _cargar_internaciones(dataset).copy()
-
 
 @lru_cache(maxsize=None)
 def _cargar_internaciones(dataset):
@@ -60,8 +50,7 @@ def _cargar_internaciones(dataset):
     })
     internaciones["noches"] = (internaciones["egreso"] - internaciones["ingreso"]).dt.days
 
-    # Se descartan registros sin fechas confirmadas (por ejemplo, las
-    # fechas "ambiguas" o "sin coincidencia" que marco la limpieza de HDHI).
+    # Se descartan registros sin fechas confirmadas (por ejemplo, las fechas "ambiguas" o "sin coincidencia" que marco la limpieza de HDHI).
     if internaciones.empty or internaciones.isna().any().any():
         raise ValueError(f"{dataset}: faltan internaciones con fechas y duraciones validas.")
     if not np.isfinite(internaciones['duracion']).all() or (internaciones['noches'] < 0).any():
@@ -71,9 +60,7 @@ def _cargar_internaciones(dataset):
         raise ValueError(f"{dataset}: la duracion no coincide con ingreso y egreso.")
     return internaciones.reset_index(drop=True)
 
-
-# Censo de una fecha: pacientes que ocupan cama esa noche (ingresaron ese dia
-# o antes y todavia no se fueron) y cuantas noches llevan, contando esa noche.
+# Censo de una fecha: pacientes que ocupan cama esa noche (ingresaron ese dia o antes y todavia no se fueron) y cuantas noches llevan, contando esa noche.
 def censo_en_fecha(internaciones, fecha):
     fecha = pd.Timestamp(fecha)
     internados = internaciones[
@@ -82,10 +69,7 @@ def censo_en_fecha(internaciones, fecha):
     return ((fecha - internados["ingreso"]).dt.days + 1).tolist()
 
 
-# ------------------------------------------------------------
 # 2. Historia: cuanto duran las internaciones y cuantos ingresan
-# ------------------------------------------------------------
-
 # Probabilidad de que una internacion dure MAS de t noches, para t = 0, 1, 2...
 # Ejemplo: prob_seguir[3] = 0.60 -> el 60 % de las internaciones dura mas de 3 noches.
 def calcular_prob_seguir(duraciones, dias_max):
@@ -94,14 +78,10 @@ def calcular_prob_seguir(duraciones, dias_max):
         raise ValueError("No hay duraciones historicas validas para estimar altas.")
     return np.array([(duraciones > t).mean() for t in range(dias_max + 1)])
 
-
 # Ingresos esperados por dia de la semana (0 = lunes ... 6 = domingo),
 # promediando las ultimas semanas anteriores a la fecha del censo.
 
-
-# ------------------------------------------------------------
 # 3. Proyeccion
-# ------------------------------------------------------------
 
 def _proyectar_camas_base(dataset, fecha=None, dias_internados=None,
                     capacidad=None, dias=config.DIAS_PROYECCION):
@@ -143,8 +123,10 @@ def _proyectar_camas_base(dataset, fecha=None, dias_internados=None,
         raise ValueError("El censo manual incluye estancias mayores al soporte historico; no se pueden estimar sus altas.")
     dias_max = max_historia + dias + 1
     prob_seguir = calcular_prob_seguir(pasado["noches"], dias_max)
+    
     # Ingresos esperados de cada dia: modelo de demanda (services/prediccion.py)
     ingresos_modelo, rmse_ingresos, metodo_ingresos = predecir_ingresos(dataset, fecha, dias)
+    
     # Sobredispersion: cuanto mas varian los ingresos reales que una Poisson pura
     phi = max(1.0, rmse_ingresos ** 2 / max(modelo_demanda_hasta(dataset, fecha.date().isoformat()).y.mean(), 1.0))
     umbral_camas = config.UMBRAL_SATURACION * capacidad
@@ -235,7 +217,6 @@ def _proyectar_camas_base(dataset, fecha=None, dias_internados=None,
         "proyeccion": proyeccion,
     }
 
-
 def _proyectar_camas_sin_cache(dataset, fecha=None, dias_internados=None, capacidad=None,
                     dias=config.DIAS_PROYECCION):
     from services.modelo_ocupacion import aplicar_modelo
@@ -245,12 +226,9 @@ def _proyectar_camas_sin_cache(dataset, fecha=None, dias_internados=None, capaci
     resultado['alerta_ocupacion_censo'] = resultado['camas_ocupadas_hoy'] / resultado['capacidad'] > config.UMBRAL_SATURACION
     return resultado
 
-
-
 @cache_calculo(maxsize=64, copiar=True)
 def _proyectar_camas_guardada(dataset, fecha, capacidad, dias):
     return _proyectar_camas_sin_cache(dataset, fecha=fecha, capacidad=capacidad, dias=dias)
-
 
 def proyectar_camas(dataset, fecha=None, dias_internados=None, capacidad=None,
                     dias=config.DIAS_PROYECCION):
@@ -261,7 +239,6 @@ def proyectar_camas(dataset, fecha=None, dias_internados=None, capacidad=None,
     fecha = pd.Timestamp(fecha or datos.get("fecha_demo")).isoformat()
     capacidad = datos.get("capacidad_total") if capacidad is None else capacidad
     return _proyectar_camas_guardada(dataset, fecha, capacidad, dias)
-
 
 # Prueba rapida: los tres casos de la demo con fechas reales de HDHI.
 if __name__ == "__main__":
@@ -278,4 +255,3 @@ if __name__ == "__main__":
               f"({r['tasa_ocupacion_hoy_pct']} %) ===")
         print(pd.DataFrame(r["proyeccion"]).to_string(index=False))
         print(r["mensaje"])
-# MODELO_OCUPACION_HDHI_V2

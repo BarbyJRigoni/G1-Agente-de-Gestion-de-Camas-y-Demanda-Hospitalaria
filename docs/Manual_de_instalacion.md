@@ -18,8 +18,6 @@
 
 Este manual explica cómo instalar y poner en marcha el sistema en una PC con Windows. Cubre las tres formas de usarlo, la creación de cuentas, las comprobaciones de funcionamiento y cómo resolver los errores más comunes.
 
----
-
 ## 🧭 ¿Qué forma de instalación elijo?
 
 | Opción | Para quién | Necesita | Sección |
@@ -31,10 +29,7 @@ Este manual explica cómo instalar y poner en marcha el sistema en una PC con Wi
 > [!TIP]
 > **¿Apurado?** Ver el [⚡ resumen rápido](#-resumen-rápido) al final.
 
----
-
 ## 📑 Contenido
-
 1. [📋 Requisitos previos](#1--requisitos-previos)
 2. [📥 Descargar el proyecto](#2--descargar-el-proyecto)
 3. [🐍 Crear el entorno e instalar dependencias](#3--crear-el-entorno-e-instalar-dependencias)
@@ -48,8 +43,6 @@ Este manual explica cómo instalar y poner en marcha el sistema en una PC con Wi
 11. [🩺 Resolver problemas](#11--resolver-problemas)
 12. [💾 Conservación de datos y alcance](#12--conservación-de-datos-y-alcance)
 
----
-
 ## 1 · 📋 Requisitos previos
 
 | Necesario | Detalle |
@@ -62,10 +55,7 @@ Este manual explica cómo instalar y poner en marcha el sistema en una PC con Wi
 | 🌿 **Git** | Para descargar desde el repositorio (también se puede bajar como ZIP) |
 | 📝 **VS Code** | Opcional |
 
----
-
 ## 2 · 📥 Descargar el proyecto
-
 La versión integrada se descarga desde la rama **`main`**:
 
 ```powershell
@@ -77,21 +67,17 @@ cd G1-Agente-de-Gestion-de-Camas-y-Demanda-Hospitalaria
 > **Sin Git:** en GitHub, botón **Code → Download ZIP**, extraer el ZIP y abrir PowerShell dentro de la carpeta.
 
 Comprobar que estén:
-
 - [ ] `requirements.txt` y `Dockerfile`
 - [ ] `backend/` y `frontend/`
 - [ ] `demo/`
 
 Y dentro de `backend/data/procesados/`:
-
 - [ ] `healthcare_limpio.csv`
 - [ ] `lengthofstay_limpio.csv`
 - [ ] `revision_hdhi/episodios/hdhi_episodios_candidatos.csv`
 
 > [!WARNING]
 > Si faltan archivos procesados, **pedir la copia completa al equipo** y consultar `docs/limpieza_datasets.md` antes de regenerarlos.
-
----
 
 ## 3 · 🐍 Crear el entorno e instalar dependencias
 
@@ -109,8 +95,6 @@ python -m pip install -r requirements.txt
 
 > [!CAUTION]
 > No reinstalar mientras otra terminal esté modificando ese mismo entorno.
-
----
 
 ## 4 · 👤 Configurar cuentas
 
@@ -149,8 +133,6 @@ Indicar la cuenta y confirmar con **`si`**. Un administrador puede crear, editar
 ### Registro desde la portada
 
 El formulario **Registrarse** pide usuario, correo (hasta 60 caracteres) y contraseña. Siempre asigna el rol **usuario** y tiene límites contra abusos: **5 registros cada 15 minutos** por conexión y **50 por hora** en total.
-
----
 
 ## 5 · 🚀 Iniciar la aplicación
 
@@ -193,8 +175,6 @@ Los cálculos se hacen **a pedido** y se guardan para reutilizarlos:
 > [!TIP]
 > **Antes de la exposición:** abrir una vez cada fuente, los horizontes de 15 y 30 días y la solapa Evaluación. Así, durante la demo todo responde al instante.
 
----
-
 ## 6 · ✅ Comprobar el funcionamiento
 
 | # | Acción | Resultado esperado |
@@ -211,8 +191,6 @@ Los cálculos se hacen **a pedido** y se guardan para reutilizarlos:
 
 > [!NOTE]
 > **No hace falta** un servidor aparte para el frontend: FastAPI sirve la interfaz y la API desde el mismo origen. Chart.js y SheetJS están incluidos en el proyecto, así que el panel funciona sin internet.
-
----
 
 ## 7 · 🐳 Instalación con Docker
 
@@ -246,7 +224,6 @@ Abrir http://localhost:8000.
 | **Volumen** (`agente-camas-datos`) | Carpeta fuera del contenedor donde quedan las cuentas. No se pierde al reiniciar ni al actualizar |
 
 ### 📄 El `Dockerfile`
-
 `docker build` lee el archivo **`Dockerfile`**, en la raíz del proyecto. Es la receta para armar la imagen. No hace falta modificarlo para instalar ni para actualizar.
 
 | Instrucción | Qué hace |
@@ -282,8 +259,6 @@ docker rm -f agente-camas
 docker run -d --name agente-camas -p 8000:8000 -v agente-camas-datos:/datos agente-camas
 ```
 
----
-
 ## 8 · 🧪 Demo sin servidor
 
 La carpeta `demo/` tiene dos opciones de respaldo para la exposición:
@@ -296,14 +271,11 @@ La carpeta `demo/` tiene dos opciones de respaldo para la exposición:
 > [!WARNING]
 > `panel_sin_servidor.html` solo muestra los casos grabados. Si se cambia la fecha o la capacidad a mano, avisa que ese caso no está disponible. Si cambia el modelo o los datos, conviene regenerarlo.
 
----
-
 ## 9 · 🗄️ Cuentas en PostgreSQL (Neon)
 
 *Opcional.* Por defecto las cuentas se guardan en **SQLite**, en la propia computadora. Para compartir las mismas cuentas entre varias instalaciones o publicar el sistema, se puede usar una base **PostgreSQL** gratuita, por ejemplo en [Neon](https://neon.tech/).
 
 ### Usar PostgreSQL
-
 Definir la variable `DATABASE_URL` antes de iniciar el servidor, en la misma terminal:
 
 ```powershell
@@ -327,8 +299,6 @@ python backend/app/migrar_cuentas_neon.py
 - Copia cuentas, roles, estados e historial. Las contraseñas se conservan sin conocerlas.
 - La base de Neon **debe estar vacía**. La base local queda intacta.
 
----
-
 ## 10 · 🔁 Iniciar de nuevo y detener
 
 | Forma | Encender | Apagar |
@@ -337,8 +307,6 @@ python backend/app/migrar_cuentas_neon.py
 | 🐳 Docker | `docker start agente-camas` | `docker stop agente-camas` |
 
 > Cerrar el navegador **no** apaga el servidor.
-
----
 
 ## 11 · 🩺 Resolver problemas
 
@@ -444,8 +412,6 @@ Revisar que `DATABASE_URL` empiece con `postgresql://` y que la base de Neon est
 
 </details>
 
----
-
 ## 12 · 💾 Conservación de datos y alcance
 
 | Tema | Detalle |
@@ -459,8 +425,6 @@ Revisar que `DATABASE_URL` empiece con `postgresql://` y que la base de Neon est
 
 > [!IMPORTANT]
 > Este manual cubre el uso en una PC (`127.0.0.1` / `localhost`). Publicar el sistema en internet requiere HTTPS y una configuración de despliegue específica.
-
----
 
 ## ⚡ Resumen rápido
 
@@ -487,8 +451,6 @@ docker exec -it agente-camas python crear_usuario.py
 docker exec -it agente-camas python crear_admin.py
 # Abrir http://localhost:8000
 ```
-
----
 
 <p align="center">
   <sub>Grupo 1 · Desarrollo de Sistemas de Inteligencia Artificial · Centro Politécnico Superior Malvinas Argentinas · 2026</sub>

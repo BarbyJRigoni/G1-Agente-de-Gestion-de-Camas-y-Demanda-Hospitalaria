@@ -1,10 +1,8 @@
-
 from pathlib import Path
 import pandas as pd
 
 # Ubicación de los tres datasets que ya fueron limpiados.
 CARPETA_PROCESADOS = Path(__file__).resolve().parents[2] / "data" / "procesados"
-
 
 # Carga el dataset limpio indicado, sin modificar el archivo original.
 def cargar_datos(nombre):
@@ -37,7 +35,6 @@ def cargar_datos(nombre):
         return df
     return pd.read_csv(CARPETA_PROCESADOS / f"{nombre}_limpio.csv")
 
-
 # Muestra el total de internaciones, estancia promedio y datos principales
 # de cada dataset. Los archivos se analizan por separado, sin unir pacientes.
 def analizar_dataset(nombre, columna_duracion, columnas_conteo):
@@ -52,7 +49,6 @@ def analizar_dataset(nombre, columna_duracion, columnas_conteo):
 
     return df
 
-
 # Analiza los ingresos, resultados y estancia hospitalaria de HDHI.
 def analizar_hdhi():
     return analizar_dataset(
@@ -64,7 +60,6 @@ def analizar_hdhi():
         }
     )
 
-
 # Analiza la estancia, los establecimientos y los reingresos.
 def analizar_lengthofstay():
     return analizar_dataset(
@@ -75,7 +70,6 @@ def analizar_lengthofstay():
             "Distribucion de reingresos": "rcount"
         }
     )
-
 
 # Analiza las internaciones, admisiones y patologias de Healthcare.
 def analizar_healthcare():
@@ -92,9 +86,7 @@ def analizar_healthcare():
     print("\nPrimeros 10 hospitales:\n", df["hospital"].value_counts().head(10))
     return df
 
-
-# Calcula el ALOS: cantidad de internaciones y promedio de dias de estancia
-# agrupados por una columna, como patologia o grupo etario.
+# Calcula el ALOS: cantidad de internaciones y promedio de dias de estancia agrupados por una columna, como patologia o grupo etario.
 def calcular_alos(df, columna):
     return (
         df.groupby(columna, observed=True)["duracion_internacion"]
@@ -102,14 +94,12 @@ def calcular_alos(df, columna):
         .round(2)
     )
 
-
 # Calcula el ALOS por enfermedad y ordena de mayor a menor promedio.
 def calcular_alos_por_patologia():
     df = cargar_datos("healthcare")
     return calcular_alos(df, "medical_condition").sort_values(
         "alos_promedio", ascending=False
     )
-
 
 # Agrupa pacientes por edades y calcula el ALOS de cada grupo.
 def calcular_alos_por_grupo_etario():
@@ -124,7 +114,6 @@ def calcular_alos_por_grupo_etario():
 
     return calcular_alos(df, "grupo_etario")
 
-
 # Calcula promedio, desviacion estandar, mediana y percentiles de estancia.
 def calcular_estadisticas_estancia():
     dias = cargar_datos("healthcare")["duracion_internacion"]
@@ -137,7 +126,6 @@ def calcular_estadisticas_estancia():
         "percentil_75": round(float(dias.quantile(0.75)), 2),
         "percentil_90": round(float(dias.quantile(0.90)), 2)
     }
-
 
 # Cuenta los movimientos diarios y completa con cero los dias sin registros.
 def calcular_movimientos_diarios(columna_fecha):
@@ -154,16 +142,13 @@ def calcular_movimientos_diarios(columna_fecha):
     movimientos.index.name = "fecha"
     return movimientos
 
-
 # Cuenta los pacientes que ingresaron cada dia.
 def calcular_ingresos_diarios():
     return calcular_movimientos_diarios("date_of_admission")
 
-
 # Cuenta los pacientes que egresaron cada dia.
 def calcular_egresos_diarios():
     return calcular_movimientos_diarios("discharge_date")
-
 
 # Calcula la diferencia diaria entre ingresos y egresos y su acumulado.
 # El balance acumulado NO equivale a la ocupacion real de camas.
@@ -177,9 +162,7 @@ def calcular_balance_diario():
     balance["balance_acumulado"] = balance["balance_diario"].cumsum()
     return balance
 
-
-# Reune los principales indicadores historicos para el agente y FastAPI.
-# Estos indicadores corresponden a Healthcare, no a los tres datasets unidos.
+# Reune los principales indicadores historicos para el agente y FastAPI. Estos indicadores corresponden a Healthcare, no a los tres datasets unidos.
 def obtener_indicadores_generales():
     estadisticas = calcular_estadisticas_estancia()
 
@@ -194,7 +177,6 @@ def obtener_indicadores_generales():
         "promedio_ingresos_diarios": round(float(calcular_ingresos_diarios().mean()), 2),
         "promedio_egresos_diarios": round(float(calcular_egresos_diarios().mean()), 2)
     }
-
 
 # Ejecuta los analisis y muestra resultados para comprobar los calculos.
 # Este bloque no se ejecuta cuando otro archivo importa las funciones.

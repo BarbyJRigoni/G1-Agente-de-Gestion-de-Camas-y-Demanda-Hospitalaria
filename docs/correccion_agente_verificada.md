@@ -1,9 +1,7 @@
 # Corrección integrada del agente
-
 Actualización del 17/10/2026. Rama de trabajo: prueba-sabrina.
 
 ## Qué cambia
-
 - HDHI utiliza un modelo Ridge directo de ocupación por horizonte, ajustado solamente con observaciones disponibles al censo. Los ingresos siguen estimándose con el modelo de demanda.
 - Las altas previstas se infieren del balance: ocupación anterior + ingresos - ocupación siguiente. No representan una predicción clínica individual de alta.
 - Healthcare y Length of Stay conservan el modelo por estancias. Las tres fuentes se analizan por separado, sin fusionar sus pacientes ni sus hospitales.

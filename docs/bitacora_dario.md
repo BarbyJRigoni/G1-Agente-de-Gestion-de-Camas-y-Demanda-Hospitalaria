@@ -1,6 +1,5 @@
 # Bitácora de trabajo – Darío Martínez
 
-**Proyecto:** Agente de Gestión de Camas y Demanda Hospitalaria (Grupo 1)
 **Rol:** Backend y API con FastAPI
 **Rama:** `dario`
 
@@ -14,10 +13,7 @@
 
 **Criterio de trabajo:** el backend se construyó sobre los datos limpios y las funciones de Sabrina (`data/procesados/` y `services/analisis.py`), sin modificarlos.
 
----
-
 ## Cómo ejecutar
-
 ```powershell
 # Desde la raíz del repositorio
 python -m venv .venv
@@ -27,21 +23,14 @@ pip install pandas numpy fastapi uvicorn
 cd backend\app
 uvicorn main:app --reload
 ```
-
 Documentación interactiva: http://localhost:8000/docs
 
----
-
 ## Datasets
-
 El sistema trabaja con los tres datasets limpiados por Sabrina:
-
 - **HDHI** (Hero DMC Heart Institute): **dataset principal**. Es un hospital real, con estacionalidad, y con sus fechas se arman los casos de la demo.
 - **LengthOfStay** y **Healthcare**: datasets de comparación. Muestran que el agente se aplica a cualquier hospital cambiando solo el parámetro `dataset`.
 
 Cada consulta trabaja con **un dataset por vez**. Son hospitales distintos, de años distintos y sin pacientes en común, por lo que no se suman en una sola ocupación.
-
----
 
 ## Paso 1 – Configuración central (`core/config.py`)
 
@@ -77,8 +66,6 @@ python -c "from core import config; print(list(config.DATASETS), config.UMBRAL_S
 ```
 Resultado: `['hdhi', 'lengthofstay', 'healthcare'] 0.9`
 
----
-
 ## Paso 2 – Lógica de alertas (`services/alertas.py`)
 
 `alertas.py` contiene la **lógica de alertas de ocupación**. Responde dos cosas que pide la consigna: cuál es la **Tasa de Ocupación Proyectada** de cada día y si corresponde emitir la **Alerta de Saturación**, que se activa cuando la ocupación supera el 90 % de la capacidad del hospital.
@@ -86,7 +73,6 @@ Resultado: `['hdhi', 'lengthofstay', 'healthcare'] 0.9`
 Es un archivo independiente: no lee datos ni depende del trabajo de otros integrantes. Solo recibe números (cuántas camas están ocupadas y cuál es la capacidad) y devuelve un resultado. Tampoco tiene la capacidad escrita adentro: la recibe como parámetro. La capacidad de cada dataset está en `config.py`, y el agente se la pasa según el dataset elegido. Por eso la misma lógica sirve para los tres.
 
 Tiene tres funciones que se apoyan una en la otra.
-
 La primera, `calcular_tasa_ocupacion`, calcula el porcentaje de ocupación: divide las camas ocupadas por la capacidad, lo multiplica por 100 y lo redondea a un decimal. Si la capacidad es cero o negativa, avisa con un error, porque no se puede dividir por cero.
 
 La segunda, `evaluar_dia`, analiza un solo día y devuelve la tasa de ocupación, cuántas camas quedan libres y si hay alerta. La comparación contra el 90 % se hace con el valor exacto, sin redondear: un día con 90,04 % de ocupación se muestra como 90,0 %, pero igual dispara la alerta. Además, se usa "mayor que" y no "mayor o igual", porque la consigna dice que la alerta se emite cuando la ocupación **supera** el 90 %. Una ocupación de exactamente 90 % no la dispara, y ese es el caso límite de la demo. Las camas libres nunca dan un número negativo: si el hospital está sobreocupado, quedan cero.
@@ -104,8 +90,6 @@ Al final, el archivo incluye una prueba que se ejecuta solo al correrlo directam
 | Crítico | 95,5 % | **Alerta de Saturación** (5 de 7 días) |
 
 **Prueba:** `python -m services.alertas`
-
----
 
 ## Paso 3 – Agente provisorio (`agents/inventario_agent.py`)
 
@@ -142,8 +126,6 @@ Para cada uno de los 7 días suma los pacientes actuales que siguen internados y
 | Crítico | 2018-01-09 | 100 % | 94,1 % | **Sí** (2 días) |
 
 **Prueba:** `python -m agents.inventario_agent`
-
----
 
 ## Paso 4 – Endpoints (`routers/inventario.py`)
 
@@ -185,8 +167,6 @@ python -c "from routers.inventario import router; print([r.path for r in router.
 ```
 Resultado: `['/datasets', '/estadisticas', '/censo', '/proyeccion-camas']`
 
----
-
 ## Paso 5 – Aplicación (`main.py`)
 
 `main.py` es el **punto de entrada de la API**, el archivo que se ejecuta para poner en marcha el sistema. No tiene lógica de cálculo propia: **arma y conecta** las piezas de los demás archivos.
@@ -204,8 +184,6 @@ Por último, define la **página de inicio**. Si `frontend/index.html` tiene con
 **Prueba en `/docs` – Caso crítico:**
 `"alerta_saturacion": true` · `ALERTA DE SATURACION: la ocupacion proyectada supera el 90 % en 2 de 7 dias. Pico: 94.1 % el 2018-01-10.`
 La respuesta incluye el encabezado `access-control-allow-origin: *`, que confirma que CORS está activo.
-
----
 
 ## Observaciones para el equipo
 

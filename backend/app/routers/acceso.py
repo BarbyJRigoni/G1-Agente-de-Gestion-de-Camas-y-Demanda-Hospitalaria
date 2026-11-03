@@ -38,7 +38,6 @@ def sesion(request: Request):
     return {"autenticado": bool(request.state.usuario), "usuario": request.state.usuario,
             "acceso_configurado": acceso.hay_usuarios()}
 
-
 @router.post("/ingresar")
 def ingresar(datos: Credenciales, request: Request, response: Response):
     try:
@@ -53,7 +52,6 @@ def ingresar(datos: Credenciales, request: Request, response: Response):
                         secure=request.url.scheme == "https", samesite="strict", path="/")
     return {"autenticado": True, "usuario": usuario}
 
-
 @router.post("/salir")
 def salir(request: Request, response: Response):
     acceso.cerrar_sesion(request.cookies.get(acceso.COOKIE))
@@ -62,8 +60,7 @@ def salir(request: Request, response: Response):
 
 @router.post("/registrar", status_code=201)
 def registrar(datos: Registro, request: Request):
-    # El registro admite visitantes de internet; todos reciben rol de usuario.
-    # Se conserva la verificación de origen, además del control en main.py.
+    # El registro admite visitantes de internet; todos reciben rol de usuario comun. Se conserva la verificación de origen, además del control en main.py.
     origen = request.headers.get('origin')
     if origen:
         from urllib.parse import urlsplit
@@ -91,7 +88,6 @@ def registrar(datos: Registro, request: Request):
         raise HTTPException(status_code=400, detail=str(error)) from None
     return {'mensaje': 'Usuario registrado correctamente. Ya podés iniciar sesión.', 'usuario': usuario}
     
-
 # Las operaciones administrativas tienen su propio módulo.
 from routers.administracion_usuarios import router as router_administracion
 router.include_router(router_administracion)

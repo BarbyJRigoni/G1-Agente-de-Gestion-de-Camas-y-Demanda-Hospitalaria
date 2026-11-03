@@ -1,8 +1,6 @@
 """Administración de cuentas y auditoría, compatible con SQLite y PostgreSQL.
+Las escrituras y la revisión de permisos comparten una transacción serializada. No elimina cuentas ni devuelve contraseñas o sus hashes."""
 
-Las escrituras y la revisión de permisos comparten una transacción serializada.
-No elimina cuentas ni devuelve contraseñas o sus hashes.
-"""
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -10,16 +8,13 @@ import re
 import secrets
 from services import acceso
 
-
 class ConflictoCuenta(ValueError):
     pass
-
 
 def _administrador(db, actor):
     fila = db.execute('SELECT rol,activo FROM usuarios WHERE usuario=?', (actor,)).fetchone()
     if not fila or fila[0] != 'administrador' or not fila[1]:
         raise PermissionError('No tenés permisos de administrador.')
-
 
 def _nombre(valor):
     valor = ' '.join(valor.split())
@@ -27,25 +22,21 @@ def _nombre(valor):
         raise ValueError('El nombre completo debe tener entre 2 y 120 caracteres.')
     return valor
 
-
 def _correo(valor):
     valor = valor.strip().lower()
     if len(valor) > 254 or not re.fullmatch(r'[^@\s]+@[^@\s]+\.[^@\s]+', valor):
         raise ValueError('Ingresá un correo electrónico válido.')
     return valor
 
-
 def _rol(valor):
     if valor not in ('usuario', 'administrador'):
         raise ValueError('El rol debe ser usuario o administrador.')
     return valor
 
-
 def _auditar(db, actor, accion, usuario, cambios):
     db.execute('INSERT INTO auditoria_usuarios(instante,actor,accion,usuario_afectado,cambios) VALUES (?,?,?,?,?)',
                (datetime.now(timezone.utc).isoformat(timespec='seconds'), actor, accion, usuario,
                 json.dumps(cambios, ensure_ascii=False)))
-
 
 def _cuenta(db, usuario):
     fila = db.execute('SELECT usuario,correo,rol,nombre_completo,activo FROM usuarios WHERE usuario=?',
@@ -53,7 +44,6 @@ def _cuenta(db, usuario):
     if not fila:
         raise LookupError('La cuenta no existe.')
     return dict(zip(('usuario', 'correo', 'rol', 'nombre_completo', 'activo'), fila))
-
 
 def listar(actor):
     with acceso.conexion() as db:
@@ -65,7 +55,6 @@ def listar(actor):
     activos = sum(u['activo'] for u in usuarios)
     return {'usuarios': usuarios, 'resumen': {'total': len(usuarios), 'activos': activos,
             'inactivos': len(usuarios) - activos}, 'usuario_actual': actor}
-
 
 def crear(actor, usuario, nombre_completo, correo, rol, clave):
     usuario = acceso.normalizar_usuario(usuario)
@@ -86,7 +75,6 @@ def crear(actor, usuario, nombre_completo, correo, rol, clave):
     except acceso.ErrorIntegridad:
         raise ConflictoCuenta('El usuario o el correo ya están registrados.') from None
     return {'mensaje': 'Cuenta creada correctamente.'}
-
 
 def editar(actor, usuario, nombre_completo, correo, rol):
     nombre_completo, correo, rol = _nombre(nombre_completo), _correo(correo), _rol(rol)
@@ -112,12 +100,10 @@ def editar(actor, usuario, nombre_completo, correo, rol):
         raise ConflictoCuenta('Ese correo ya está registrado.') from None
     return {'mensaje': 'Cuenta actualizada.'}
 
-
 def _proteger_ultimo(db):
     cantidad = db.execute("SELECT COUNT(*) FROM usuarios WHERE rol='administrador' AND activo=1").fetchone()[0]
     if cantidad <= 1:
         raise ConflictoCuenta('Debe quedar al menos un administrador activo.')
-
 
 def cambiar_estado(actor, usuario, activo):
     with acceso.conexion(escritura=True) as db:
@@ -134,7 +120,6 @@ def cambiar_estado(actor, usuario, activo):
             _auditar(db, actor, 'reactivar' if activo else 'desactivar', usuario,
                      {'activo': {'antes': bool(anterior['activo']), 'despues': activo}})
     return {'mensaje': 'Cuenta reactivada.' if activo else 'Cuenta desactivada; sesiones revocadas.'}
-
 
 def auditoria(actor, limite=100):
     with acceso.conexion() as db:

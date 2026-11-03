@@ -1,33 +1,25 @@
-"""
-Configuracion central del backend.
-
+"""Configuracion central del backend.
 Reune en un solo lugar las rutas, los datasets disponibles, la capacidad
 de camas y el umbral de alerta. Los demas modulos importan estos valores
-en lugar de escribirlos a mano.
-"""
+en lugar de escribirlos a mano."""
+
 from pathlib import Path
 
-# ============================================================
 # Rutas
-# ============================================================
 BACKEND_DIR = Path(__file__).resolve().parents[2]          # .../backend
 CARPETA_PROCESADOS = BACKEND_DIR / "data" / "procesados"   # CSV limpios (Sabrina)
 RUTA_FRONTEND = BACKEND_DIR.parent / "frontend" / "index.html"
 
-# ============================================================
 # Datos de la API (se muestran en /docs)
-# ============================================================
 APP_TITULO = "Agente de Gestion de Camas y Demanda Hospitalaria"
 APP_VERSION = "1.0.0"
 
-# ============================================================
-# Datasets
-# ============================================================
-# Cada dataset nombra distinto las mismas columnas. Este mapa las traduce
+# Datasets. Cada dataset nombra distinto las mismas columnas. Este mapa las traduce
 # para que el backend trabaje con los tres sin modificar la limpieza.
 #   capacidad_total: capacidad supuesta para la simulacion academica.
 #   Estos CSV no documentan camas habilitadas reales; no se infieren de los picos.
 #   fecha_demo: "hoy" simulado para las pruebas (dentro del rango de datos).
+
 DATASETS = {
     "hdhi": {
         "nombre": "HDHI Admission (Hero DMC Heart Institute)",
@@ -54,11 +46,10 @@ DATASETS = {
         "fecha_demo": "2024-04-01",
     },
 }
+
 DATASET_POR_DEFECTO = "hdhi"
 
-# ============================================================
 # Agente y alertas (consigna Grupo 1)
-# ============================================================
 DIAS_PROYECCION = 7          # proyeccion de los proximos 7 dias (la de la consigna)
 DIAS_PROYECCION_MAX = 30     # horizonte maximo admitido (proyecciones a 15 y 30 dias)
 HORIZONTES_PROYECCION = (7, 15, 30)   # opciones que ofrece el panel

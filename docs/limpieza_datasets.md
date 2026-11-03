@@ -1,5 +1,4 @@
 # Informe de limpieza y preparación de datasets
-
 Se realizó la carga, exploración, limpieza y preparación de tres datasets hospitalarios utilizando Python y la librería Pandas.
 El objetivo fue obtener datos organizados y confiables para calcular estadísticas de internación y utilizarlas posteriormente en el agente inteligente y la API.
 Los tres datasets se procesaron por separado porque provienen de distintas fuentes y no tienen un identificador común que permita relacionar sus pacientes.
@@ -139,7 +138,6 @@ Estos indicadores corresponden a cada dataset por separado y no deben interpreta
 ### API – FastAPI
 
 Los endpoints pueden utilizar las funciones de `analisis.py` para consultar y devolver los indicadores estadísticos.
-
 De esta manera, la API trabaja con información ya procesada, sin repetir la limpieza de los datasets.
 
 ### Agente inteligente
@@ -149,13 +147,10 @@ El agente puede utilizar las fechas de ingreso, egreso y duración de internaci�
 ### Alertas de saturación
 
 Las proyecciones del agente pueden compararse con la capacidad hospitalaria recibida mediante el censo actual.
-
 Si la ocupación proyectada supera el 90 % de esa capacidad, el sistema podrá generar una alerta de saturación.
-
 Los datasets históricos no incluyen una capacidad total de camas confirmada, por lo que este dato deberá recibirse mediante el censo hospitalario o definirse explícitamente para las pruebas.
 
 ## 8. Resumen del trabajo realizado
-
 Se completó la primera etapa de limpieza y preparación de los tres datasets con Pandas.
 
 Se revisaron valores nulos, duplicados, formatos de fechas, nombres de columnas y duraciones de internación.
@@ -163,4 +158,3 @@ Se revisaron valores nulos, duplicados, formatos de fechas, nombres de columnas 
 Los resultados se guardaron en archivos independientes, conservando los datos originales.
 
 Esta organización permite que el análisis estadístico, la API y el agente inteligente trabajen sobre datos previamente preparados y consistentes.
-

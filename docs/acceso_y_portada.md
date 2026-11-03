@@ -6,7 +6,7 @@ Una vez instalado:
 
     python backend/app/crear_usuario.py
 
-Ingresar el usuario y escribir dos veces una contrasena de 12 a 128 caracteres. No se muestra mientras se escribe. Luego iniciar:
+Ingresar el usuario y escribir dos veces una contraseña de 5 a 14 caracteres. No se muestra mientras se escribe. Luego iniciar:
 
     python -m uvicorn main:app --app-dir backend/app --reload
 

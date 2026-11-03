@@ -1,12 +1,9 @@
-"""Revision reproducible de HDHI. No reemplaza hdhi_limpio.csv.
-Copiar en backend/app/data/ y ejecutar desde la raiz del proyecto:
+"""Revision reproducible de HDHI. No reemplaza hdhi_limpio.csv. Copiar en backend/app/data/ y ejecutar desde la raiz del proyecto:
 python backend/app/data/limpieza_hdhi_revision.py
 
-Elimina solo repeticiones identicas excepto SNO, conservando una copia
-y exportando las adicionales. No fusiona episodios con datos distintos.
-Valida fechas con duracion inclusiva y month_year. Conserva valores
-originales y marca inconsistencias de UCI e indicadores binarios.
-"""
+Elimina solo repeticiones identicas excepto SNO, conservando una copia y exportando las adicionales. No fusiona episodios con datos distintos.
+Valida fechas con duracion inclusiva y month_year. Conserva valores originales y marca inconsistencias de UCI e indicadores binarios."""
+
 from pathlib import Path
 import argparse
 import json
@@ -23,7 +20,6 @@ BINARIAS = [
     "pulmonary_embolism", "chest_infection",
 ]
 FORMATOS = ["%m/%d/%Y", "%d/%m/%Y"]
-
 
 def validar_fechas(df):
     df = df.copy()
@@ -61,7 +57,6 @@ def validar_fechas(df):
             df.at[i, "estado_fechas"] = "ambigua"
     return df
 
-
 def revisar(ruta, carpeta):
     df = pd.read_csv(ruta)
     originales = len(df)
@@ -76,8 +71,7 @@ def revisar(ruta, carpeta):
     if faltantes:
         raise ValueError(f"Faltan columnas: {sorted(faltantes)}")
 
-    # Comparar datos fuente antes de convertir: no confundir dos valores
-    # distintos que despues se conviertan al mismo NaN.
+    # Comparar datos fuente antes de convertir: no confundir dos valores distintos que despues se conviertan al mismo NaN.
     repetida = df.duplicated(subset=[c for c in df.columns if c != "sno"])
     duplicados = df.loc[repetida].copy()
     df = df.loc[~repetida].copy()
@@ -101,6 +95,7 @@ def revisar(ruta, carpeta):
         | (df["duration_of_intensive_unit_stay"] < 0)
         | (df["duration_of_intensive_unit_stay"] > df["duration_of_stay"])
     )
+    
     # Estos limites son controles tecnicos, no validacion clinica.
     df["edad_invalida"] = df.age.isna() | (df.age < 0) | (df.age > 120)
     df["duracion_invalida"] = (
@@ -112,6 +107,7 @@ def revisar(ruta, carpeta):
     df["episodio_repetido_revisar"] = False
     df.loc[valida, "episodio_repetido_revisar"] = (
         df.loc[valida].duplicated(clave, keep=False))
+    
     # No equivale a aprobado: quedan episodios repetidos pendientes.
     df["apto_temporal"] = valida & ~df.duracion_invalida
 
@@ -148,7 +144,6 @@ def revisar(ruta, carpeta):
     print(json.dumps(resumen, ensure_ascii=False, indent=2))
     print(f"Archivos de revision guardados en: {carpeta.resolve()}")
     return df, resumen
-
 
 if __name__ == "__main__":
     base = Path(__file__).resolve().parents[2] / "data"

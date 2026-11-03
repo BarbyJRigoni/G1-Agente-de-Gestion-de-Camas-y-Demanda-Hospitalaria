@@ -1,5 +1,4 @@
 """Pronostico directo de ocupacion HDHI con Ridge por horizonte.
-
 Variables: censo y sus siete retardos, medias 7/14/28 dias, cambio semanal,
 dia de semana de destino y calendario anual. Cada ajuste usa objetivos
 completamente observados al cierre del censo. No conoce los egresos futuros.
@@ -7,8 +6,8 @@ Ventana 365 y lambda 100 elegidas en desarrollo anterior al 29/09/2018.
 Validacion posterior: origenes desde 29/09/2018. Los resultados anteriores
 son de desarrollo. Las altas se infieren del balance, no son predicciones
 individuales de alta. Censos manuales y otros datasets conservan el agente
-por estancias hasta disponer de validacion especifica.
-"""
+por estancias hasta disponer de validacion especifica."""
+
 from functools import lru_cache
 from services.rendimiento import cache_calculo
 from math import ceil, erf, sqrt
@@ -19,13 +18,11 @@ VENTANA_DIAS = 365
 RIDGE_LAMBDA = 100.
 INICIO_VALIDACION_HDHI = '2018-09-29'
 
-
 @lru_cache(maxsize=None)
 def serie_ocupacion(dataset):
     from agents.inventario_agent import cargar_internaciones
     from services.prediccion import ocupacion_real
     return ocupacion_real(cargar_internaciones(dataset)).astype(float)
-
 
 def variables(y, horizonte):
     X = pd.DataFrame(index=y.index)
@@ -41,12 +38,10 @@ def variables(y, horizonte):
     X['sin'], X['cos'] = np.sin(fase), np.cos(fase)
     return X
 
-
 @cache_calculo(maxsize=30)
 def _variables_guardadas(dataset, horizonte):
     # Solo retardos/medias hacia atras y calendario, sin egresos ni objetivos futuros.
     return variables(serie_ocupacion(dataset), horizonte)
-
 
 @cache_calculo(maxsize=512)
 def predecir_ocupacion(dataset, fecha_iso, dias):
@@ -75,7 +70,6 @@ def predecir_ocupacion(dataset, fecha_iso, dias):
         predicciones.append(max(0., float(y.iloc[-1] + delta)))
     return tuple(predicciones)
 
-
 def limitar_por_balance(predicciones, resultado):
     # No puede haber mas ocupadas que las previas mas los ingresos previstos.
     # No se limita a la capacidad: una demanda superior debe activar la alerta.
@@ -87,13 +81,11 @@ def limitar_por_balance(predicciones, resultado):
         anterior = valor
     return tuple(salida)
 
-
 @cache_calculo(maxsize=512)
 def _historico(dataset, fecha_iso, dias):
     from agents.inventario_agent import _proyectar_camas_base
     base = _proyectar_camas_base(dataset, fecha=fecha_iso, dias=dias)
     return tuple(round(v, 1) for v in limitar_por_balance(predecir_ocupacion(dataset, fecha_iso, dias), base))
-
 
 @cache_calculo(maxsize=256)
 def residuos_anteriores(dataset, fecha_iso, dias):
@@ -115,7 +107,6 @@ def residuos_anteriores(dataset, fecha_iso, dias):
             raise ValueError('Faltan ocupaciones historicas para calibrar.')
         filas.append(tuple(obs.to_numpy() - np.asarray(_historico(dataset, origen.date().isoformat(), dias))))
     return tuple(filas), tuple(o.date().isoformat() for o in origenes)
-
 
 def aplicar_modelo(resultado, dias_internados=None):
     from core import config
@@ -172,5 +163,3 @@ def aplicar_modelo(resultado, dias_internados=None):
         'nota': 'Limite superior empirico nominal 90 %; no garantiza cobertura futura. '
                 'Excedencia suavizada: (casos + 1) / (muestra + 1). Altas inferidas por balance.'}
     return resultado
-
-# CALIBRACION_Y_CALENDARIO_V2

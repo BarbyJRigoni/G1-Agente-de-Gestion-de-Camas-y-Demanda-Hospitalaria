@@ -1364,5 +1364,3 @@ actualizarDisponibilidadExportacion();
   revisarTablas();
   new MutationObserver(revisarTablas).observe(document.body, { childList: true, subtree: true });
 })();
-
-// CALIBRACION_Y_CALENDARIO_V2

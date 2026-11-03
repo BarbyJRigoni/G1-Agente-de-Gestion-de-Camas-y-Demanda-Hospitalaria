@@ -2,17 +2,14 @@
 Ubicacion: backend/app/data/preparar_episodios_hdhi.py
 Ejecutar desde la raiz: python backend/app/data/preparar_episodios_hdhi.py
 
-Supuesto documentado: MRD + ingreso + egreso identifican un episodio.
-Los grupos con contradicciones de edad/sexo se separan para revision.
-En los demas, cada campo se conserva SOLO si todos sus valores coinciden,
-incluidos los faltantes. Una diferencia se convierte a faltante y se registra.
-No usa OR, maximos ni promedios para inventar condiciones clinicas.
-"""
+Supuesto documentado: MRD + ingreso + egreso identifican un episodio. Los grupos con contradicciones de edad/sexo se separan para revision.
+En los demas, cada campo se conserva SOLO si todos sus valores coinciden, incluidos los faltantes. Una diferencia se convierte a faltante y se registra.
+No usa OR, maximos ni promedios para inventar condiciones clinicas."""
+
 from pathlib import Path
 import argparse
 import json
 import pandas as pd
-
 
 def preparar(entrada, salida):
     df = pd.read_csv(entrada, low_memory=False)
@@ -117,14 +114,12 @@ def preparar(entrada, salida):
     print(f"Salida: {salida.resolve()}")
     return episodios, reporte
 
-
 PATOLOGIAS = {
     "dm": "Diabetes mellitus", "htn": "Hipertension",
     "cad": "Enfermedad coronaria", "ckd": "Enfermedad renal cronica",
     "heart_failure": "Insuficiencia cardiaca", "aki": "Lesion renal aguda",
     "acs": "Sindrome coronario agudo", "anaemia": "Anemia",
 }
-
 
 def indicadores_hdhi(df):
     """Resume episodios candidatos sin imputar diagnosticos contradictorios."""
@@ -176,7 +171,6 @@ def indicadores_hdhi(df):
             "Este archivo no reemplaza la respuesta actual de la API.",
         ],
     }
-
 
 if __name__ == "__main__":
     base = Path(__file__).resolve().parents[2] / "data" / "procesados" / "revision_hdhi"

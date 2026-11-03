@@ -1,13 +1,10 @@
-"""
-Endpoints del modelo de demanda y de la evaluacion del agente.
-
+"""Endpoints del modelo de demanda y de la evaluacion del agente.
 Responsable: Barbara (Inteligencia artificial e interfaz)
-
   GET /modelo/demanda            -> metodo elegido y metricas del backtesting
   GET /modelo/backtest           -> ingresos reales vs. pronosticados (para graficar)
   GET /modelo/evaluacion-agente  -> error del agente y precision / recall de las alertas
-  GET /modelo/ocupacion-real     -> camas que realmente se ocuparon despues de una fecha
-"""
+  GET /modelo/ocupacion-real     -> camas que realmente se ocuparon despues de una fecha"""
+  
 from datetime import date
 from typing import Literal, Optional
 
@@ -21,7 +18,6 @@ from services import prediccion
 router = APIRouter(prefix="/modelo", tags=["Modelo de prediccion"])
 NombreDataset = Literal["hdhi", "lengthofstay", "healthcare"]
 
-
 @router.get("/demanda", summary="Modelo de demanda: metodo elegido y metricas")
 def demanda(dataset: NombreDataset = Query(config.DATASET_POR_DEFECTO),
             fecha: Optional[date] = Query(None, description="Corte temporal; sin fecha, evaluacion del historial completo")):
@@ -31,13 +27,11 @@ def demanda(dataset: NombreDataset = Query(config.DATASET_POR_DEFECTO),
     m = modelo_para_consulta(dataset, fecha)
     return {**m.resumen(), **alcance(m, fecha), "coeficientes_regresion": m.coeficientes()}
 
-
 @router.get("/backtest", summary="Ingresos reales vs. pronosticados")
 def backtest(dataset: NombreDataset = Query(config.DATASET_POR_DEFECTO),
              fecha: Optional[date] = Query(None, description="Corte temporal; sin fecha, historial completo")):
     m = modelo_para_consulta(dataset, fecha)
     return {"dataset": dataset, "metodo_elegido": m.metodo_elegido, **alcance(m, fecha), **m.evaluacion["serie"]}
-
 
 @router.get("/evaluacion-agente", summary="Que tan bien proyecta el agente (contra la realidad)")
 def evaluacion_agente(dataset: NombreDataset = Query(config.DATASET_POR_DEFECTO),
@@ -48,7 +42,6 @@ def evaluacion_agente(dataset: NombreDataset = Query(config.DATASET_POR_DEFECTO)
     de distintas reglas de alerta. A 15 y 30 dias se evalua una fecha cada dos semanas
     (el primer calculo tarda unos minutos y despues queda en memoria)."""
     return prediccion.evaluar_agente(dataset, cada_dias=7 if dias == 7 else 14, dias=dias)
-
 
 @router.get("/ocupacion-real", summary="Camas que realmente se ocuparon despues de una fecha")
 def ocupacion_real(dataset: NombreDataset = Query(config.DATASET_POR_DEFECTO),
@@ -64,7 +57,6 @@ def ocupacion_real(dataset: NombreDataset = Query(config.DATASET_POR_DEFECTO),
             "camas_ocupadas": tramo.astype(int).tolist(),
             "tasa_ocupacion_pct": (100 * tramo / capacidad).round(1).tolist()}
 
-
 def modelo_para_consulta(dataset, fecha):
     if fecha is None:
         return prediccion.modelo_demanda(dataset)
@@ -75,7 +67,6 @@ def modelo_para_consulta(dataset, fecha):
         return prediccion.modelo_demanda_hasta(dataset, fecha.isoformat())
     except ValueError as error:
         raise HTTPException(400, str(error))
-
 
 def alcance(modelo, fecha):
     return {'alcance_evaluacion': 'hasta_el_censo' if fecha else 'historial_completo',

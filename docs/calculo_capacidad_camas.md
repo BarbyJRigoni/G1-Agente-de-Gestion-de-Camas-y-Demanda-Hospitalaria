@@ -1,16 +1,11 @@
 # Cálculo de la capacidad de camas
-
 **Archivo relacionado:** `backend/app/core/config.py` (valores `capacidad_total`)
-
----
 
 ## 1. El problema
 
 Para decir *"el hospital está al 90 %"* hace falta saber **cuántas camas tiene**.
 Los datasets no traen ese dato: solo informan qué pacientes ingresaron y cuándo se fueron.
 Por eso la capacidad se **estima** a partir de lo que pasó en el hospital.
-
----
 
 ## 2. Paso 1 – Contar las camas ocupadas cada día
 
@@ -30,8 +25,6 @@ En HDHI hubo, en promedio, **116 camas ocupadas**, y el día más lleno llegó a
 
 Se descartan los primeros y los últimos 60 días del registro. Al inicio el hospital "arranca vacío", porque no figuran los pacientes que ya estaban internados antes. Al final faltan los ingresos posteriores. En los dos casos la ocupación saldría falsamente baja.
 
----
-
 ## 3. Paso 2 – El percentil 95
 
 Si se **ordenan los 610 días de menos ocupado a más ocupado**, como una fila de personas de la más baja a la más alta, el **percentil 95** es el valor que queda en la posición 95 de cada 100. Es decir:
@@ -45,8 +38,6 @@ En HDHI, el percentil 95 es **163 camas**:
 
 Esos días son los **picos de demanda**, justo los que la alerta tiene que detectar.
 
----
-
 ## 4. Paso 3 – De ahí sale la capacidad
 
 La consigna dice que la alerta se emite cuando la ocupación **supera el 90 %**.
@@ -57,8 +48,6 @@ Queremos que ese 90 % coincida con los picos, es decir, con las 163 camas:
 Entonces:
 
 > **capacidad = 163 ÷ 0,90 = 181 camas** → redondeado hacia arriba a la decena: **190 camas**
-
----
 
 ## 5. Comprobación
 
@@ -74,8 +63,6 @@ La alerta se activa solo en los peores días, que es lo que se busca.
 
 Por el redondeo hacia arriba, el umbral real (171 camas) queda un poco por encima del percentil 95 (163). Por eso la alerta salta en **menos del 5 %** de los días: solo en los picos más altos.
 
----
-
 ## 6. ¿Por qué este método y no otro?
 
 | Opción | Resultado |
@@ -84,8 +71,6 @@ Por el redondeo hacia arriba, el umbral real (171 camas) queda un poco por encim
 | Capacidad = un número grande (300) | Nunca llegaría al 90 %: la alerta no saltaría nunca |
 | Capacidad = máximo histórico | Depende de un solo día excepcional |
 | **Capacidad según el percentil 95** | **La alerta salta solo en los picos reales de demanda** ✅ |
-
----
 
 ## 7. Resultados de los tres datasets
 
@@ -96,8 +81,6 @@ Se aplicó la misma cuenta a cada dataset:
 | HDHI | 610 | 115,7 | 190 | 163 | 181,1 | **190** |
 | LengthOfStay | 247 | 1.090,9 | 1.187 | 1.144 | 1.271,3 | **1.280** |
 | Healthcare | 1.707 | 466,4 | 552 | 508 | 564,4 | **570** |
-
----
 
 ## 8. Código utilizado para el cálculo
 
@@ -135,7 +118,6 @@ for dataset in config.DATASETS:
     print(f"{dataset:13s} | dias: {len(dias):4d} | promedio: {ocupacion.mean():7.1f} | "
           f"maximo: {ocupacion.max():5d} | p95: {p95:7.1f} | capacidad: {capacidad}")
 ```
-
 Resultado obtenido:
 
 ```
@@ -143,8 +125,6 @@ hdhi          | dias:  610 | promedio:   115.7 | maximo:   190 | p95:   163.0 | 
 lengthofstay  | dias:  247 | promedio:  1090.9 | maximo:  1187 | p95:  1144.2 | capacidad: 1280
 healthcare    | dias: 1707 | promedio:   466.4 | maximo:   552 | p95:   508.0 | capacidad: 570
 ```
-
----
 
 ## 9. En una frase (para la exposición)
 

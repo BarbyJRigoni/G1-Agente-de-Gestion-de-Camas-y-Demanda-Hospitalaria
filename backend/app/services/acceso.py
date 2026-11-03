@@ -1,8 +1,7 @@
 """Cuentas y sesiones: SQLite local o PostgreSQL en la nube.
-
 Conserva PBKDF2-SHA256, tokens opacos, vencimiento y roles existentes.
-Las credenciales se configuran fuera del repositorio.
-"""
+Las credenciales se configuran fuera del repositorio."""
+
 import hashlib
 import hmac
 import re
@@ -17,10 +16,8 @@ DURACION_SESION = 8 * 60 * 60
 COOKIE = 'camas_sesion'
 _SAL_FICTICIA = b'validacion-usuario-no-existente'
 
-
 def normalizar_usuario(usuario):
     return usuario.strip().lower()
-
 
 def crear_usuario(usuario, clave, reemplazar=False, correo=None, *, registro_publico=False):
     if registro_publico and reemplazar:
@@ -54,11 +51,9 @@ def crear_usuario(usuario, clave, reemplazar=False, correo=None, *, registro_pub
                            (datetime.now(timezone.utc).isoformat(timespec='seconds'), usuario, 'crear', usuario,
                             json.dumps({'rol': 'usuario', 'activo': True, 'origen': 'Registro público'}, ensure_ascii=False)))
 
-
 def hay_usuarios():
     with conexion() as db:
         return db.execute('SELECT 1 FROM usuarios LIMIT 1').fetchone() is not None
-
 
 def es_administrador(usuario):
     if not usuario:
@@ -68,7 +63,6 @@ def es_administrador(usuario):
                           (normalizar_usuario(usuario),)).fetchone()
     return bool(fila and fila[0] == 'administrador' and fila[1])
 
-
 def asignar_administrador_local(usuario):
     usuario = normalizar_usuario(usuario)
     with conexion(escritura=True) as db:
@@ -76,10 +70,8 @@ def asignar_administrador_local(usuario):
             raise ValueError('El usuario no existe.')
         db.execute("UPDATE usuarios SET rol='administrador' WHERE usuario=?", (usuario,))
 
-
 class DemasiadosIntentos(ValueError):
     pass
-
 
 def autenticar(usuario, clave, ip, token_anterior=None):
     usuario = normalizar_usuario(usuario)
@@ -109,10 +101,8 @@ def autenticar(usuario, clave, ip, token_anterior=None):
                    (_hash_token(token), usuario, ahora + DURACION_SESION))
         return token, usuario
 
-
 def _hash_token(token):
     return hashlib.sha256(token.encode()).hexdigest()
-
 
 def usuario_de_sesion(token):
     if not token or len(token) > 100:
@@ -122,7 +112,6 @@ def usuario_de_sesion(token):
             WHERE s.token_hash=? AND s.vence>? AND u.activo=1''',
                           (_hash_token(token), time.time())).fetchone()
     return fila[0] if fila else None
-
 
 def cerrar_sesion(token):
     if token:

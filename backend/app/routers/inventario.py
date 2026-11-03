@@ -1,14 +1,10 @@
-"""
-Endpoints de la API del agente de gestion de camas.
-
+"""Endpoints de la API del agente de gestion de camas.
   GET  /datasets           -> datasets disponibles y su capacidad
   GET  /estadisticas       -> indicadores historicos (ALOS, ingresos por dia)
   GET  /censo              -> camas ocupadas en una fecha y su tasa de ocupacion
   POST /proyeccion-camas   -> proyeccion de 7 dias + Alerta de Saturacion (consigna)
+Los modelos Pydantic validan los datos que entran y documentan los que salen (se ven en /docs)."""
 
-Los modelos Pydantic validan los datos que entran y documentan los que salen
-(se ven en /docs).
-"""
 from datetime import date
 from typing import Annotated, Literal, Optional
 
@@ -25,10 +21,7 @@ router = APIRouter()
 # Solo se aceptan los datasets definidos en config.py
 NombreDataset = Literal["hdhi", "lengthofstay", "healthcare"]
 
-
-# ============================================================
 # Modelos Pydantic
-# ============================================================
 
 class CensoActual(BaseModel):
     """Datos que recibe /proyeccion-camas."""
@@ -55,7 +48,6 @@ class CensoActual(BaseModel):
     dias: int = Field(config.DIAS_PROYECCION, ge=1, le=config.DIAS_PROYECCION_MAX,
                       description="Dias a proyectar: 7 por defecto (consigna); el panel ofrece 7, 15 y 30")
 
-
 class DiaProyectado(BaseModel):
     fecha: date
     ingresos_previstos: float
@@ -66,7 +58,6 @@ class DiaProyectado(BaseModel):
     camas_libres: int
     tasa_ocupacion_pct: float
     alerta_saturacion: bool
-
 
 class ProyeccionRespuesta(BaseModel):
     dataset: str
@@ -90,7 +81,6 @@ class ProyeccionRespuesta(BaseModel):
     dia_pico: date
     proyeccion: list[DiaProyectado]
 
-
 class EstadoSectorRespuesta(BaseModel):
     model_config = ConfigDict(allow_inf_nan=False)
     camas_ocupadas: float = Field(ge=0)
@@ -100,23 +90,19 @@ class EstadoSectorRespuesta(BaseModel):
     tasa_ocupacion_pct: float = Field(ge=0)
     alerta_saturacion: bool
 
-
 class CensoSectoresRespuesta(BaseModel):
     uti: EstadoSectorRespuesta
     general: EstadoSectorRespuesta
-
 
 class FlujoUTIRespuesta(EstadoSectorRespuesta):
     ingresos_externos: float = Field(ge=0)
     salidas_sector: float = Field(ge=0)
     altas_hospital: float = Field(ge=0)
 
-
 class FlujoGeneralRespuesta(EstadoSectorRespuesta):
     ingresos_externos: float = Field(ge=0)
     traslados_recibidos: float = Field(ge=0)
     altas_hospital: float = Field(ge=0)
-
 
 class DiaSectoresRespuesta(BaseModel):
     model_config = ConfigDict(allow_inf_nan=False)
@@ -126,7 +112,6 @@ class DiaSectoresRespuesta(BaseModel):
     traslados_uti_a_general: float = Field(ge=0)
     uti: FlujoUTIRespuesta
     general: FlujoGeneralRespuesta
-
 
 class ProyeccionSectoresRespuesta(BaseModel):
     modo: Literal["simulacion_sectores"]
@@ -148,13 +133,11 @@ class ProyeccionSectoresRespuesta(BaseModel):
     proyeccion: list[DiaSectoresRespuesta]
     advertencias: list[str]
 
-
 class DatasetInfo(BaseModel):
     clave: str
     nombre: str
     capacidad_total: int
     fecha_demo: date
-
 
 class Estadisticas(BaseModel):
     dataset: str
@@ -166,7 +149,6 @@ class Estadisticas(BaseModel):
     percentil_90_dias: float
     ingresos_promedio_dia: float
 
-
 class Censo(BaseModel):
     dataset: str
     fecha: date
@@ -175,7 +157,6 @@ class Censo(BaseModel):
     camas_libres: int
     tasa_ocupacion_pct: float
     alerta_saturacion: bool
-
 
 # Ejemplos que aparecen en /docs para la demo (fechas reales de HDHI)
 EJEMPLOS_CENSO = {
@@ -196,11 +177,7 @@ EJEMPLOS_CENSO = {
                    "value": {"dataset": "healthcare", "fecha": "2024-04-01"}},
 }
 
-
-# ============================================================
 # Endpoints
-# ============================================================
-
 @router.get("/datasets", response_model=list[DatasetInfo], tags=["Datos"],
             summary="Datasets disponibles")
 def listar_datasets():
@@ -210,7 +187,6 @@ def listar_datasets():
          "capacidad_total": d["capacidad_total"], "fecha_demo": d["fecha_demo"]}
         for clave, d in config.DATASETS.items()
     ]
-
 
 @router.get("/estadisticas", response_model=Estadisticas, tags=["Datos"],
             summary="Indicadores historicos de internacion")
@@ -231,7 +207,6 @@ def estadisticas(dataset: NombreDataset = Query(config.DATASET_POR_DEFECTO)):
         "ingresos_promedio_dia": round(ingresos_por_dia.sum() / dias_totales, 1),
     }
 
-
 @router.get("/censo", response_model=Censo, tags=["Datos"],
             summary="Camas ocupadas en una fecha")
 def censo(dataset: NombreDataset = Query(config.DATASET_POR_DEFECTO),
@@ -251,15 +226,12 @@ def censo(dataset: NombreDataset = Query(config.DATASET_POR_DEFECTO),
     evaluado = alertas.evaluar_dia(fecha, ocupadas, config.DATASETS[dataset]["capacidad_total"])
     return {"dataset": dataset, **evaluado}
 
-
 @router.post("/proyeccion-camas", response_model=ProyeccionRespuesta | ProyeccionSectoresRespuesta, tags=["Agente"],
              summary="Proyeccion semanal de camas y Alerta de Saturacion")
 def proyeccion_camas(censo_actual: CensoActual = Body(openapi_examples=EJEMPLOS_CENSO)):
-    """
-    Recibe el **censo actual** del hospital y devuelve, para cada uno de los proximos dias:
+    """Recibe el **censo actual** del hospital y devuelve, para cada uno de los proximos dias:
     ingresos y altas previstas, camas ocupadas y libres, **Tasa de Ocupacion Proyectada (%)**
-    y si corresponde la **Alerta de Saturacion** (ocupacion > 90 %).
-    """
+    y si corresponde la **Alerta de Saturacion** (ocupacion > 90 %)."""
     try:
         if censo_actual.sectores is not None:
             return proyectar_sectores(censo_actual.fecha, censo_actual.sectores, censo_actual.dias)
@@ -283,8 +255,6 @@ from services.analisis_hdhi import obtener_indicadores_hdhi
 def estadisticas_hdhi():
     return obtener_indicadores_hdhi()
 
-
-
 @router.get('/escenarios', tags=['Agente'], summary='Escenarios simulados de capacidad para la demostracion')
 def escenarios(dataset: NombreDataset = Query(config.DATASET_POR_DEFECTO)):
     """Conserva las fechas y los ingresos; varia explicitamente la capacidad supuesta.
@@ -306,7 +276,6 @@ def escenarios(dataset: NombreDataset = Query(config.DATASET_POR_DEFECTO)):
             'casos': [{'tipo': tipo, 'fecha': r['fecha_censo'], 'capacidad': capacidad,
                        'maximo_proyectado_pct': round(100 * pico / capacidad, 1)}
                       for tipo, capacidad in capacidades.items()]}
-
 
 @router.get("/sectores/parametros", tags=["Datos"], summary="Auditoria historica anterior al censo; no infiere parametros UTI/general")
 def referencias_sectores(fecha: Optional[date] = Query(None)):

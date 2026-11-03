@@ -1,5 +1,4 @@
 # Proyección a 15 y 30 días
-
 La consigna pide 7 días, y sigue siendo el valor por defecto. El sistema ahora también permite proyectar a **15 y 30 días**.
 
 ## Qué cambió

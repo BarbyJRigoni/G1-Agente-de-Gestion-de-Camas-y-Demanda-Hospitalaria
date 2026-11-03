@@ -5,21 +5,20 @@ import pandas as pd
 CARPETA_DATOS = Path(__file__).resolve().parents[2] / "data"
 RUTA_CSV = CARPETA_DATOS / "LengthOfStay.csv"
 
-
 def limpiar_lengthofstay():
-    # 1. Cargar el dataset original.
+    # Cargar el dataset original.
     df = pd.read_csv(RUTA_CSV)
     print("\n===== LIMPIEZA LENGTHOFSTAY =====")
     print("Dimensiones originales:", df.shape)
 
-    # 2. Revisar nulos y duplicados antes de procesar.
+    # Revisar nulos y duplicados antes de procesar.
     print("Valores nulos:", df.isna().sum().sum())
     print("Filas duplicadas:", df.duplicated().sum())
 
     # Trabajar con una copia para no modificar los datos originales.
     df_limpio = df.copy()
 
-    # 3. Conservar las fechas originales y convertirlas a formato fecha.
+    # Conservar las fechas originales y convertirlas a formato fecha.
     for columna in ["vdate", "discharged"]:
         df_limpio[f"{columna}_original"] = df_limpio[columna]
         df_limpio[columna] = pd.to_datetime(
@@ -28,7 +27,7 @@ def limpiar_lengthofstay():
             errors="coerce"
         )
 
-    # 4. Comprobar que la duracion registrada coincide con las fechas.
+    # Comprobar que la duracion registrada coincide con las fechas.
     dias_calculados = (
         df_limpio["discharged"] - df_limpio["vdate"]
     ).dt.days
@@ -42,9 +41,8 @@ def limpiar_lengthofstay():
 
     return df_limpio
 
-
 if __name__ == "__main__":
-    # 5. Guardar el dataset procesado sin alterar el archivo original.
+    # Guardar el dataset procesado sin alterar el archivo original.
     df_limpio = limpiar_lengthofstay()
 
     carpeta_procesados = CARPETA_DATOS / "procesados"

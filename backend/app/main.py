@@ -1,8 +1,5 @@
-"""
-Punto de entrada de la API (FastAPI).
-
-Crea la aplicacion, protege el acceso, registra los endpoints
-y sirve la portada, el panel y sus archivos de estilos y JavaScript.
+"""Punto de entrada de la API (FastAPI).
+Crea la aplicacion, protege el acceso, registra los endpoints y sirve la portada, el panel y sus archivos de estilos y JavaScript.
 
 Ejecutar desde la carpeta backend/app:
     uvicorn main:app --reload
@@ -28,10 +25,10 @@ from pathlib import Path
 from services import prediccion
 from threadpoolctl import threadpool_limits
 
-# Matrices pequenas: evitar competir con multiples hilos BLAS por cada ajuste.
+# Matrices pequeñas: evitar competir con multiples hilos BLAS por cada ajuste.
 _limites_blas = threadpool_limits(limits=1, user_api="blas")
 from routers.inventario import router as router_camas
-from routers.prediccion import router as router_prediccion   # modelo de demanda (Barbara)
+from routers.prediccion import router as router_prediccion   # modelo de demanda 
 
 app = FastAPI(
     title=config.APP_TITULO,
@@ -44,13 +41,10 @@ app = FastAPI(
     ),
 )
 
-# Los modelos se calculan bajo demanda. No se entrenan los tres datasets
-# ni se ejecuta la evaluacion completa al arrancar el servidor.
+# Los modelos se calculan bajo demanda. No se entrenan los tres datasets, ni se ejecuta la evaluacion completa al arrancar el servidor.
 # Las caches acotadas coordinan consultas repetidas sin espera global.
 
-# ============================================================
 # Evaluacion guardada en un archivo
-# ============================================================
 # La evaluacion del agente siempre da lo mismo para los mismos datos y el mismo
 # codigo. La primera vez se calcula y se guarda en un .json; en los siguientes
 # arranques se lee del archivo (menos de 1 s en vez de ~1 min).
@@ -60,7 +54,6 @@ CARPETA_EVALUACIONES = Path(tempfile.gettempdir()) / "AgenteCamas" / "evaluacion
 _evaluar_agente_original = prediccion.evaluar_agente
 _evaluaciones = {}
 _candado_evaluacion = threading.Lock()
-
 
 def huella_datos_y_codigo():
     """Resume en 16 caracteres los CSV procesados y el codigo del agente."""
@@ -73,7 +66,6 @@ def huella_datos_y_codigo():
         for ruta in sorted((carpeta_app / carpeta).glob("*.py")):
             h.update(ruta.read_bytes())
     return h.hexdigest()[:16]
-
 
 def evaluar_agente_guardada(dataset="hdhi", cada_dias=7, dias=config.DIAS_PROYECCION):
     """Igual que prediccion.evaluar_agente, pero lee y guarda el resultado en disco.
@@ -94,10 +86,8 @@ def evaluar_agente_guardada(dataset="hdhi", cada_dias=7, dias=config.DIAS_PROYEC
                     pass                               # si no se puede guardar, sigue en memoria
         return _evaluaciones[clave]
 
-
 # El endpoint /modelo/evaluacion-agente usa esta version
 prediccion.evaluar_agente = evaluar_agente_guardada
-
 
 @app.middleware("http")
 async def medir_calculos(request: Request, siguiente):
@@ -115,7 +105,6 @@ async def medir_calculos(request: Request, siguiente):
     except Exception:
         log.exception("Calculo %x fallo: %s tras %.2f s", id(request), ruta, time.perf_counter() - inicio)
         raise
-
 
 # El frontend y la API se sirven desde el mismo origen; no se habilita CORS abierto.
 @app.middleware("http")
@@ -139,7 +128,6 @@ async def proteger_acceso(request: Request, siguiente):
         "/favicon.ico",
     } or ruta.startswith("/vendor/")
 
-
     if not publica and not request.state.usuario:
         respuesta = (RedirectResponse("/ingresar", status_code=303) if ruta in {"/panel", "/docs", "/redoc", "/docs/oauth2-redirect"}
                      else JSONResponse(status_code=401, content={"detail":"Inicia sesion para acceder al agente."}))
@@ -162,8 +150,6 @@ async def proteger_acceso(request: Request, siguiente):
 
 app.include_router(router_acceso)
 
-
-
 # Endpoints del agente (paso 4)
 app.include_router(router_camas)
 app.include_router(router_prediccion)
@@ -176,14 +162,12 @@ def css_portada():
         media_type="text/css"
     )
 
-
 @app.get("/portada/js/acceso.js", include_in_schema=False)
 def js_acceso():
     return FileResponse(
         config.RUTA_FRONTEND.parent / "js" / "acceso.js",
         media_type="text/javascript"
     )
-
 
 @app.get("/portada/js/registro.js", include_in_schema=False)
 def js_registro():
@@ -197,16 +181,13 @@ def js_registro():
 def css_panel():
     return FileResponse(config.RUTA_FRONTEND.parent / "css" / "panel.css", media_type="text/css")
 
-
 @app.get("/panel/js/panel.js", include_in_schema=False)
 def js_panel():
     return FileResponse(config.RUTA_FRONTEND.parent / "js" / "panel.js", media_type="text/javascript")
 
-
 @app.get("/panel/js/administracion.js", include_in_schema=False)
 def js_administracion():
     return FileResponse(config.RUTA_FRONTEND.parent / "js" / "administracion.js", media_type="text/javascript")
-
 
 @app.get("/salud", tags=["Sistema"], summary="Estado de la API")
 def salud():
@@ -220,13 +201,10 @@ def salud():
             "version": config.APP_VERSION, "datasets": list(config.DATASETS),
             "datos_disponibles": all(archivos.values()), "archivos_disponibles": archivos}
 
-
 @app.exception_handler(FileNotFoundError)
 def archivo_faltante(request, error):
     return JSONResponse(status_code=503, content={
         "detail": "Falta un archivo de datos necesario. Revise /salud y los CSV procesados."})
-
-
 
 @app.get("/", include_in_schema=False)
 def inicio(request: Request):
@@ -234,18 +212,15 @@ def inicio(request: Request):
         return RedirectResponse("/panel", status_code=303)
     return FileResponse(config.RUTA_FRONTEND.parent / "portada.html")
 
-
 @app.get("/ingresar", include_in_schema=False)
 def portada(request: Request):
     if request.state.usuario:
         return RedirectResponse("/panel", status_code=303)
     return FileResponse(config.RUTA_FRONTEND.parent / "portada.html")
 
-
 @app.get("/panel", include_in_schema=False)
 def panel():
     return FileResponse(config.RUTA_FRONTEND)
-
 
 @app.get("/portada/hospital", include_in_schema=False)
 def imagen_hospital():
@@ -266,5 +241,3 @@ def logo_politecnico():
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
     return Response(status_code=204)
-
-
