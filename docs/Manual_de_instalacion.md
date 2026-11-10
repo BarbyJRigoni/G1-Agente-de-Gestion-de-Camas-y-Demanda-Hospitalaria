@@ -16,7 +16,7 @@
   <img src="https://img.shields.io/badge/Docker-opcional-2496ED?logo=docker&logoColor=white" alt="Docker">
 </p>
 
-Este manual explica cómo instalar y poner en marcha el sistema en una PC con Windows. Cubre las tres formas de usarlo, la creación de cuentas, las comprobaciones de funcionamiento y cómo resolver los errores más comunes.
+Este manual explica cómo instalar y poner en marcha el sistema en una PC con Windows. Cubre las dos formas de usarlo, la creación de cuentas, las comprobaciones de funcionamiento y cómo resolver los errores más comunes.
 
 ## 🧭 ¿Qué forma de instalación elijo?
 
@@ -24,7 +24,6 @@ Este manual explica cómo instalar y poner en marcha el sistema en una PC con Wi
 |---|---|---|---|
 | 🅰️ **Entorno local** | Desarrollo y exposición | Python 3.11 o superior | [3 a 6](#3--crear-el-entorno-e-instalar-dependencias) |
 | 🐳 **Docker** | Probar sin instalar Python o publicar en la nube | Docker Desktop | [7](#7--instalación-con-docker) |
-| 🧪 **Demo sin servidor** | Respaldo si falla la PC en la exposición | Solo un navegador | [9](#8--demo-sin-servidor) |
 
 > [!TIP]
 > **¿Apurado?** Ver el [⚡ resumen rápido](#-resumen-rápido) al final.
@@ -37,11 +36,10 @@ Este manual explica cómo instalar y poner en marcha el sistema en una PC con Wi
 5. [🚀 Iniciar la aplicación](#5--iniciar-la-aplicación)
 6. [✅ Comprobar el funcionamiento](#6--comprobar-el-funcionamiento)
 7. [🐳 Instalación con Docker](#7--instalación-con-docker)
-8. [🧪 Demo sin servidor](#8--demo-sin-servidor)
-9. [🗄️ Cuentas en PostgreSQL (Neon)](#9-️-cuentas-en-postgresql-neon)
-10. [🔁 Iniciar de nuevo y detener](#10--iniciar-de-nuevo-y-detener)
-11. [🩺 Resolver problemas](#11--resolver-problemas)
-12. [💾 Conservación de datos y alcance](#12--conservación-de-datos-y-alcance)
+8. [🗄️ Cuentas en PostgreSQL (Neon)](#8-️-cuentas-en-postgresql-neon)
+9. [🔁 Iniciar de nuevo y detener](#9--iniciar-de-nuevo-y-detener)
+10. [🩺 Resolver problemas](#10--resolver-problemas)
+11. [💾 Conservación de datos y alcance](#11--conservación-de-datos-y-alcance)
 
 ## 1 · 📋 Requisitos previos
 
@@ -69,7 +67,6 @@ cd G1-Agente-de-Gestion-de-Camas-y-Demanda-Hospitalaria
 Comprobar que estén:
 - [ ] `requirements.txt` y `Dockerfile`
 - [ ] `backend/` y `frontend/`
-- [ ] `demo/`
 
 Y dentro de `backend/data/procesados/`:
 - [ ] `healthcare_limpio.csv`
@@ -259,19 +256,7 @@ docker rm -f agente-camas
 docker run -d --name agente-camas -p 8000:8000 -v agente-camas-datos:/datos agente-camas
 ```
 
-## 8 · 🧪 Demo sin servidor
-
-La carpeta `demo/` tiene dos opciones de respaldo para la exposición:
-
-| Archivo | Qué hace |
-|---|---|
-| 🌐 `panel_sin_servidor.html` | Doble clic y se abre en el navegador. **No necesita Python, internet ni sesión.** Muestra resultados reales grabados de la API para los tres datasets y los escenarios Normal, Límite y Crítico |
-| ▶️ `iniciar_demo.bat` | Levanta el sistema completo con el `.venv` del proyecto y abre el navegador. Si faltan librerías, las instala. Se cierra cerrando la ventana negra |
-
-> [!WARNING]
-> `panel_sin_servidor.html` solo muestra los casos grabados. Si se cambia la fecha o la capacidad a mano, avisa que ese caso no está disponible. Si cambia el modelo o los datos, conviene regenerarlo.
-
-## 9 · 🗄️ Cuentas en PostgreSQL (Neon)
+## 8 · 🗄️ Cuentas en PostgreSQL (Neon)
 
 *Opcional.* Por defecto las cuentas se guardan en **SQLite**, en la propia computadora. Para compartir las mismas cuentas entre varias instalaciones o publicar el sistema, se puede usar una base **PostgreSQL** gratuita, por ejemplo en [Neon](https://neon.tech/).
 
@@ -299,7 +284,7 @@ python backend/app/migrar_cuentas_neon.py
 - Copia cuentas, roles, estados e historial. Las contraseñas se conservan sin conocerlas.
 - La base de Neon **debe estar vacía**. La base local queda intacta.
 
-## 10 · 🔁 Iniciar de nuevo y detener
+## 9 · 🔁 Iniciar de nuevo y detener
 
 | Forma | Encender | Apagar |
 |---|---|---|
@@ -308,7 +293,7 @@ python backend/app/migrar_cuentas_neon.py
 
 > Cerrar el navegador **no** apaga el servidor.
 
-## 11 · 🩺 Resolver problemas
+## 10 · 🩺 Resolver problemas
 
 <details>
 <summary><b>🚫 PowerShell bloquea <code>Activate.ps1</code></b></summary>
@@ -412,7 +397,7 @@ Revisar que `DATABASE_URL` empiece con `postgresql://` y que la base de Neon est
 
 </details>
 
-## 12 · 💾 Conservación de datos y alcance
+## 11 · 💾 Conservación de datos y alcance
 
 | Tema | Detalle |
 |---|---|
