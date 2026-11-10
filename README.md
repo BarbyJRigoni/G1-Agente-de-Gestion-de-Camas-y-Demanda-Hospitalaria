@@ -82,7 +82,6 @@ La aplicación incluye una **portada con registro e inicio de sesión**, un **pa
 │   ├── css/  js/                       # Estilos y lógica (panel.js, administracion.js, ...)
 │   ├── assets/                         # Imagen de portada y logo
 │   └── vendor/                         # Chart.js y SheetJS locales (funciona sin internet)
-├── demo/                               # Panel sin servidor y arranque con doble clic
 ├── docs/                               # Documentación técnica y manual de instalación
 ├── Dockerfile · .dockerignore
 ├── requirements.txt
@@ -248,13 +247,12 @@ Guardar cambios en la computadora no actualiza por sí solo la página pública.
 
 ## ⚙️ Requisitos e instalación
 
-Hay tres formas de usar el sistema:
+Hay dos formas de usar el sistema:
 
 | Opción | Para quién | Necesita |
 |---|---|---|
 | 🅰️ **Entorno local** | Desarrollo | Python 3.11 o superior |
 | 🐳 **Docker** | Probar sin instalar Python | Docker Desktop |
-| 🧪 **Demo sin servidor** (`demo/panel_sin_servidor.html`) | Respaldo para la exposición | Solo un navegador |
 
 ### 🅰️ Entorno local (Windows · PowerShell)
 
