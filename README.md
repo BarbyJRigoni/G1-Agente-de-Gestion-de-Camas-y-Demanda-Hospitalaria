@@ -144,7 +144,7 @@ Todas las tablas se pueden **exportar a Excel**. El menú lateral se pliega y el
  └────────────┬────────────┘    └────────────┬─────────────┘
               │       ┌──────────────────┐   │
               └──────►│ Altas esperadas  │◄──┘
-                      │ (curva de estancia)
+                      │ (balance de camas)
                       └────────┬─────────┘
                                ▼
          Ocupación proyectada D+1 … D+7 / 15 / 30  (+ P90)
@@ -154,11 +154,12 @@ Todas las tablas se pueden **exportar a Excel**. El menú lateral se pliega y el
 ```
 
 - **Ingresos:** se comparan cinco métodos (media 28 días, semana anterior, día de la semana, estacional y regresión Ridge) y se elige el de menor WAPE, solo si mejora a la media en ≥ 3 % (parsimonia).
-- **Altas:** se estiman de forma agregada con la distribución histórica de duración de estancia.
+- **Ocupación y altas:** un modelo de ocupación ajusta la proyección con la historia del hospital; las altas se obtienen por balance (camas de ayer + ingresos − camas previstas).
 - **Alertas:**
   - **Saturación:** ocupación esperada **> 90 %** de la capacidad.
   - **Preventiva:** sin saturación esperada, pero la probabilidad diaria de superar el umbral es **≥ 30 %**.
 - **UTI y general:** simulación por sectores con censos, capacidades, estancias y traslados ingresados por el usuario.
+- **Modo contingencia:** simula una demanda excepcional (por ejemplo, una pandemia) con aumento de ingresos, días extra de estancia y camas de emergencia; informa cuándo se satura el hospital y cuántos pacientes quedarían sin cama. Ver [`docs/modo_contingencia.md`](docs/modo_contingencia.md).
 
 ---
 
@@ -315,31 +316,35 @@ FastAPI sirve la interfaz y la API desde el mismo origen: no hace falta levantar
 
 ### Escenarios de demostración (HDHI, censo 01/03/2019)
 
-| Escenario | Ocupación máxima proyectada | Resultado |
-|---|---|---|
-| 🟢 Normal | 68,3 % | Sin alerta |
-| 🟡 Límite | 89,1 % | Sin alerta |
-| 🔴 Crítico | 94,1 % | **Alerta de Saturación** |
-| 🔴 Capacidad reducida a 140 camas | 92,7 % | **Alerta de Saturación** |
+Los escenarios conservan la fecha y la demanda; solo cambia la capacidad supuesta.
+
+| Escenario | Capacidad | Ocupación máxima proyectada | Resultado |
+|---|---|---|---|
+| 🟢 Normal | 168 camas | 70,4 % | Sin alerta |
+| 🟡 Límite | 132 camas | 89,5 % | Sin alerta |
+| 🔴 Crítico | 124 camas | 95,3 % | **Alerta de Saturación** |
+
+Con la capacidad base de 190 camas, el máximo proyectado es 62,2 %.
 
 ### Pronóstico de ingresos (backtest)
 
 | Dataset | Método elegido | MAE (ingresos/día) | WAPE diario | WAPE semanal | Cobertura IC 80 % |
 |---|---|---|---|---|---|
-| HDHI | Día de la semana (8 sem.) | 5,02 | 20,2 % | 10,1 % | 77,5 % |
+| HDHI | Regresión Ridge | 4,35 | 20,0 % | 10,4 % | 80,8 % |
 | LengthOfStay | Media 28 días | 14,75 | 5,4 % | 2,1 % | 83,0 % |
 | Healthcare | Media 28 días | 4,76 | 16,0 % | 8,5 % | 77,5 % |
 
-> ℹ️ En HDHI el patrón semanal explica casi toda la variación (los lunes ingresan más pacientes y los domingos menos). En LengthOfStay y Healthcare gana la media: el sistema **no inventa patrones donde no los hay**.
+> ℹ️ En HDHI gana la **regresión Ridge**, que combina el día de la semana con la época del año: mejora a la media de 28 días (22,3 %) en un 10,5 % y supera la regla del 3 %. El método por día de la semana queda muy cerca (20,6 %). En LengthOfStay y Healthcare gana la media: el sistema **no inventa patrones donde no los hay**. HDHI recibe en promedio 19,6 ingresos por día.
 
 ### Evaluación del agente (ocupación, HDHI)
 
 | Horizonte | D+1 | D+2 | D+3 | D+4 | D+5 | D+6 | D+7 |
 |---|---|---|---|---|---|---|---|
-| Error medio (camas) | 6,3 | 10,5 | 13,2 | 15,5 | 15,4 | 16,9 | 18,3 |
-| % de la capacidad | 3,3 | 5,6 | 6,9 | 8,2 | 8,1 | 8,9 | 9,6 |
+| Error medio del agente (camas) | 4,5 | 7,5 | 9,3 | 10,5 | 11,9 | 13,4 | 13,6 |
+| % de la capacidad (190) | 2,4 | 3,9 | 4,9 | 5,5 | 6,3 | 7,1 | 7,2 |
+| Referencia "mantener el censo" (camas) | 4,6 | 8,1 | 10,1 | 11,5 | 13,4 | 14,4 | 14,9 |
 
-El error crece con la anticipación, como es esperable. Tras la corrección del agente, el límite superior P90 cubrió el **93,6 %** de las ocupaciones observadas en 497 predicciones comparables.
+El error crece con la anticipación, como es esperable, y el agente le gana a la referencia simple en todos los horizontes (10,1 contra 11,0 camas en promedio; 9,1 contra 10,6 en la validación posterior con 26 censos). El límite superior P90 cubrió el **93,6 %** de las ocupaciones observadas en 497 predicciones comparables.
 
 ### Proyección a 7, 15 y 30 días (HDHI)
 

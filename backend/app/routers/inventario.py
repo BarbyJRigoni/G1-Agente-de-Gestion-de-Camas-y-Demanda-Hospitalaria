@@ -5,6 +5,7 @@
   POST /proyeccion-camas   -> proyeccion de 7 dias + Alerta de Saturacion (consigna)
 Los modelos Pydantic validan los datos que entran y documentan los que salen (se ven en /docs)."""
 
+import copy
 from datetime import date
 from typing import Annotated, Literal, Optional
 
@@ -15,6 +16,7 @@ from agents import inventario_agent as agente
 from core import config
 from services import alertas
 from services.sectores import EscenarioSectores, proyectar_sectores, parametros_historicos
+from services.contingencia import aplicar_contingencia
 
 router = APIRouter()
 
@@ -22,6 +24,14 @@ router = APIRouter()
 NombreDataset = Literal["hdhi", "lengthofstay", "healthcare"]
 
 # Modelos Pydantic
+
+class EscenarioContingencia(BaseModel):
+    """Supuestos de una demanda excepcional (por ejemplo, una pandemia)."""
+    model_config = ConfigDict(extra="forbid")
+    aumento_ingresos_pct: float = Field(0, ge=0, le=300, description="Aumento de los ingresos diarios, en %")
+    estancia_extra_dias: float = Field(0, ge=0, le=30, description="Dias extra que se queda cada paciente")
+    camas_contingencia: int = Field(0, ge=0, le=5000, description="Camas extra que se habilitan")
+
 
 class CensoActual(BaseModel):
     """Datos que recibe /proyeccion-camas."""
@@ -35,6 +45,8 @@ class CensoActual(BaseModel):
                     "Si se omite, se reconstruye desde el historial",
     )
     sectores: Optional[EscenarioSectores] = Field(None, description="Simulacion UTI/general HDHI: censo y capacidad de cada sector. No reconstruye censos historicos UTI.")
+    contingencia: Optional[EscenarioContingencia] = Field(
+        None, description="Modo contingencia: simula una demanda excepcional sobre la proyeccion normal")
 
     @model_validator(mode="after")
     def validar_sectores(self):
@@ -43,6 +55,8 @@ class CensoActual(BaseModel):
                 raise ValueError("La simulacion por sectores usa solo HDHI, que registra duracion UTI.")
             if self.capacidad is not None or self.dias_internados is not None:
                 raise ValueError("Con sectores, envie censo y capacidad dentro de cada sector, sin capacidad ni dias_internados agregados.")
+            if self.contingencia is not None:
+                raise ValueError("El modo contingencia se aplica a la proyeccion general, no a la simulacion por sectores.")
         return self
 
     dias: int = Field(config.DIAS_PROYECCION, ge=1, le=config.DIAS_PROYECCION_MAX,
@@ -58,6 +72,38 @@ class DiaProyectado(BaseModel):
     camas_libres: int
     tasa_ocupacion_pct: float
     alerta_saturacion: bool
+
+class DiaContingencia(BaseModel):
+    fecha: date
+    ingresos: float
+    altas: float
+    camas_necesarias: float
+    camas_ocupadas_normal: float
+    camas_libres: int
+    demanda_sin_cama: float
+    tasa_ocupacion_pct: float
+    alerta_saturacion: bool
+
+
+class ContingenciaRespuesta(BaseModel):
+    parametros: EscenarioContingencia
+    capacidad_base: int
+    capacidad_total: int
+    umbral_camas: float
+    alos_base: float
+    alos_contingencia: float
+    alerta_saturacion: bool
+    colapso: bool = Field(description="La demanda supera el 100 % de las camas")
+    dia_supera_90: Optional[date] = None
+    dia_supera_100: Optional[date] = None
+    tasa_ocupacion_maxima_pct: float
+    dia_pico: date
+    demanda_sin_cama_maxima: float
+    camas_faltantes_para_90: int
+    mensaje: str
+    dias: list[DiaContingencia]
+    aclaracion: str
+
 
 class ProyeccionRespuesta(BaseModel):
     dataset: str
@@ -80,6 +126,8 @@ class ProyeccionRespuesta(BaseModel):
     tasa_ocupacion_maxima_pct: float
     dia_pico: date
     proyeccion: list[DiaProyectado]
+    contingencia: Optional[ContingenciaRespuesta] = Field(
+        None, description="Solo si se envio el modo contingencia: la misma semana con demanda excepcional")
 
 class EstadoSectorRespuesta(BaseModel):
     model_config = ConfigDict(allow_inf_nan=False)
@@ -167,6 +215,10 @@ EJEMPLOS_CENSO = {
                                              "proporcion_ingresos_uti": 0.2, "estancia_media_uti": 2,
                                              "estancia_media_general": 5, "fraccion_salidas_uti_a_general": 0.8,
                                              "origen_parametros": "ejemplo_ficticio"}}},
+    "contingencia": {"summary": "Modo contingencia (pandemia): +50 % ingresos y +4 dias de estancia",
+                     "value": {"dataset": "hdhi", "fecha": "2019-03-01",
+                               "contingencia": {"aumento_ingresos_pct": 50, "estancia_extra_dias": 4,
+                                                "camas_contingencia": 0}}},
     "capacidad_base": {"summary": "HDHI: censo historico con capacidad supuesta de 190",
                        "value": {"dataset": "hdhi", "fecha": "2019-01-01", "capacidad": 190}},
     "capacidad_reducida": {"summary": "HDHI: misma fecha, escenario de capacidad reducida (120)",
@@ -235,13 +287,20 @@ def proyeccion_camas(censo_actual: CensoActual = Body(openapi_examples=EJEMPLOS_
     try:
         if censo_actual.sectores is not None:
             return proyectar_sectores(censo_actual.fecha, censo_actual.sectores, censo_actual.dias)
-        return agente.proyectar_camas(
+        resultado = agente.proyectar_camas(
             dataset=censo_actual.dataset,
             fecha=censo_actual.fecha,
             dias_internados=censo_actual.dias_internados,
             capacidad=censo_actual.capacidad,
             dias=censo_actual.dias,
         )
+        if censo_actual.contingencia is not None:
+            # Copia: la proyeccion normal queda guardada en memoria y no se debe modificar
+            resultado = copy.deepcopy(resultado)
+            c = censo_actual.contingencia
+            resultado["contingencia"] = aplicar_contingencia(
+                resultado, c.aumento_ingresos_pct, c.estancia_extra_dias, c.camas_contingencia)
+        return resultado
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
 

@@ -133,6 +133,39 @@
     <details class="datos-grafico"><summary>Ver el detalle diario completo</summary><div class="scroll"><table id="tDias"></table></div></details>
   </section>
 
+  <section class="panel" id="panelContingencia" aria-labelledby="tituloContingencia">
+    <style>
+      #mensajeContingencia{border:1px solid #d9e6ea;border-left:5px solid #2b8a8a;border-radius:12px;padding:14px 18px;margin:14px 0;background:#f2fafa;color:#1d4b57;font-weight:600}
+      #mensajeContingencia.alerta{border-color:#f0dfb0;border-left-color:#c98500;background:#fff8e6;color:#7a5200}
+      #mensajeContingencia.colapso{border-color:#efcbd3;border-left-color:#c0284a;background:#fff3f5;color:#a32640}
+      #kpisContingencia{margin:6px 0 14px}
+    </style>
+    <div class="encabezado-tabla"><h3 id="tituloContingencia">Modo contingencia: simular una crisis</h3></div>
+    <p class="nota">Simulá una situación excepcional, como una pandemia: indicá cuánto aumentan los ingresos, cuántos días más se queda cada paciente y cuántas camas de emergencia se habilitan. El sistema muestra cuándo se satura el hospital y cuántos pacientes quedarían sin cama. Es un <b>escenario simulado</b>, no un pronóstico.</p>
+    <form id="formContingencia" class="sector-form" novalidate>
+      <div class="campos-sector">
+        <label>Aumento de ingresos (%)<input id="contAumento" type="number" min="0" max="300" step="1" required></label>
+        <label>Días extra de estancia<input id="contEstancia" type="number" min="0" max="30" step="1" required></label>
+        <label>Camas de contingencia<input id="contCamas" type="number" min="0" max="5000" step="1" required></label>
+      </div>
+      <div class="acciones-sector">
+        <button type="submit" id="contSimular">Simular contingencia</button>
+        <button type="button" data-cont="30,2,0">Ola moderada (+30 %, +2 días)</button>
+        <button type="button" data-cont="50,4,0">Pandemia (+50 %, +4 días)</button>
+        <button type="button" data-cont="50,4,60">Pandemia + 60 camas de emergencia</button>
+      </div>
+    </form>
+    <div id="resultadoContingencia" hidden>
+      <div id="mensajeContingencia" role="status"></div>
+      <section class="kpis" id="kpisContingencia"></section>
+      <div class="grafico grafico-vivo"><canvas id="gContingencia" role="img" aria-label="Camas necesarias en la proyección normal y en la contingencia, frente a la capacidad"></canvas></div>
+      <p class="nota">Verde: proyección normal del agente. Rojo: camas necesarias en la contingencia. Línea gris: camas disponibles. Punteada: umbral del 90 %.
+        Lo que pasa la línea gris es <b>demanda sin cama</b>: pacientes que el hospital no podría internar.</p>
+      <details class="datos-grafico"><summary>Ver el detalle diario de la contingencia</summary><div class="scroll"><table id="tContingencia"></table></div></details>
+      <p class="nota" id="aclaracionContingencia"></p>
+    </div>
+  </section>
+
 </section>
 <section id="vista-estadisticas"
          class="tab-panel"
@@ -359,5 +392,6 @@
   <div id="cargando" class="cargando" role="status" aria-live="polite" hidden><span class="spinner" aria-hidden="true"></span><span id="cargandoTexto">Procesando datos…</span></div>
 <script src="/panel/js/administracion.js"></script>
 <script src="/panel/js/panel.js"></script>
+<script src="/panel/js/contingencia.js"></script>
 </body>
 </html>

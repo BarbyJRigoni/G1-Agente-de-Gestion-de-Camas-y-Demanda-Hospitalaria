@@ -189,6 +189,10 @@ def js_panel():
 def js_administracion():
     return FileResponse(config.RUTA_FRONTEND.parent / "js" / "administracion.js", media_type="text/javascript")
 
+@app.get("/panel/js/contingencia.js", include_in_schema=False)
+def js_contingencia():
+    return FileResponse(config.RUTA_FRONTEND.parent / "js" / "contingencia.js", media_type="text/javascript")
+
 @app.get("/salud", tags=["Sistema"], summary="Estado de la API")
 def salud():
     """Permite comprobar rapidamente que el servidor esta funcionando."""
